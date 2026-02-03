@@ -57,6 +57,21 @@
                             <input type="text" name="conducting" placeholder="Irmão...">
                         </div>
                     </div>
+
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="fastMeeting" name="fastMeeting">
+                        <label for="fastMeeting">Reunião de Jejum e Testemunhos</label>
+                    </div>
+                </section>
+
+                <!-- Recognitions (New) -->
+                <section class="form-group">
+                    <h2>Reconhecimentos</h2>
+                    <p class="helper-text">Adicione pessoas para serem reconhecidas.</p>
+                    <div id="recognitions-input-container" class="dynamic-list-input">
+                        <!-- Dynamic inputs will be added here via JS -->
+                    </div>
+                    <button class="btn-add" onclick="addListItem('recognitions')">+ Adicionar Pessoa</button>
                 </section>
 
                 <!-- Music & Prayers -->
@@ -70,10 +85,14 @@
                         <label>Regente</label>
                         <input type="text" name="chorister">
                     </div>
-                    <div class="input-wrapper">
-                        <label>Hino de Abertura (# e Título)</label>
-                        <input type="text" name="openingHymn" placeholder="Ex: 5 - O Vem, ó Rei...">
+
+                    <div class="hymn-input-wrapper">
+                        <label>Hino de Abertura</label>
+                        <input type="text" class="hymn-search" name="openingHymn"
+                            placeholder="Buscar por número ou título...">
+                        <div class="hymn-results"></div>
                     </div>
+
                     <div class="input-wrapper">
                         <label>Primeira Oração</label>
                         <input type="text" name="invocation">
@@ -83,38 +102,58 @@
                 <!-- Business -->
                 <section class="form-group">
                     <h2>Assuntos da Ala</h2>
+
                     <div class="input-wrapper">
-                        <label>Anúncios / Desobrigações / Apoios</label>
-                        <textarea name="business" rows="4" placeholder="Lista de assuntos..."></textarea>
+                        <label>Anúncios</label>
+                        <div id="announcements-input-container" class="dynamic-list-input"></div>
+                        <button class="btn-add" onclick="addListItem('announcements')">+ Adicionar Anúncio</button>
+                    </div>
+
+                    <div class="input-wrapper" style="margin-top: 1rem;">
+                        <label>Desobrigações / Apoios (Chamados)</label>
+                        <div id="callings-input-container" class="dynamic-list-input"></div>
+                        <button class="btn-add" onclick="addListItem('callings')">+ Adicionar Chamado</button>
                     </div>
                 </section>
 
                 <!-- Sacrament -->
                 <section class="form-group">
                     <h2>Sacramento</h2>
-                    <div class="input-wrapper">
-                        <label>Hino Sacramental (# e Título)</label>
-                        <input type="text" name="sacramentHymn" placeholder="Ex: 102 - Onde Encontro a Paz?">
+                    <div class="hymn-input-wrapper">
+                        <label>Hino Sacramental</label>
+                        <input type="text" class="hymn-search" name="sacramentHymn"
+                            placeholder="Buscar por número ou título...">
+                        <div class="hymn-results"></div>
                     </div>
                 </section>
 
                 <!-- Program -->
-                <section class="form-group">
+                <section class="form-group" id="program-section">
                     <h2>Programa Espiritual</h2>
-                    <div class="input-wrapper">
-                        <label>Oradores / Mensagens (Um por linha)</label>
-                        <textarea name="speakers" rows="6" placeholder="1. Orador - Nome
-2. Hino Especial - Coro
-3. Orador - Nome"></textarea>
+                    <div id="speakers-input-container" class="dynamic-list-input">
+                        <!-- Speakers added here -->
+                    </div>
+                    <button class="btn-add" onclick="addSpeaker()">+ Adicionar Orador</button>
+
+                    <!-- Intermediate Hymn (Hidden if Fast Meeting) -->
+                    <div id="intermediate-hymn-wrapper" class="hymn-input-wrapper"
+                        style="margin-top: 1rem; border-top: 1px dashed #ddd; padding-top: 1rem;">
+                        <label>Hino Intermediário (Opcional)</label>
+                        <input type="text" class="hymn-search" name="intermediateHymn"
+                            placeholder="Buscar por número ou título...">
+                        <div class="hymn-results"></div>
+                        <p class="helper-text">Arraste oradores para antes ou depois deste hino.</p>
                     </div>
                 </section>
 
                 <!-- Closing -->
                 <section class="form-group">
                     <h2>Encerramento</h2>
-                    <div class="input-wrapper">
-                        <label>Hino de Encerramento (# e Título)</label>
-                        <input type="text" name="closingHymn">
+                    <div class="hymn-input-wrapper">
+                        <label>Hino de Encerramento</label>
+                        <input type="text" class="hymn-search" name="closingHymn"
+                            placeholder="Buscar por número ou título...">
+                        <div class="hymn-results"></div>
                     </div>
                     <div class="input-wrapper">
                         <label>Última Oração</label>
@@ -164,6 +203,12 @@
                             </div>
                         </div>
 
+                        <!-- Recognitions Section -->
+                        <div id="preview-recognitions" class="program-section" style="display:none;">
+                            <h3>Reconhecimentos</h3>
+                            <ul class="clean-list" data-bind="recognitions"></ul>
+                        </div>
+
                         <hr class="divider">
 
                         <div class="program-item">
@@ -176,9 +221,21 @@
                             <span class="program-value" data-bind="invocation">...</span>
                         </div>
 
-                        <div class="program-section business-section" id="business-container">
+                        <!-- Business Section -->
+                        <div id="preview-business" class="program-section business-section" style="display:none;">
                             <h3>Assuntos da Ala</h3>
-                            <div class="business-content" data-bind="business"></div>
+
+                            <!-- Announcements (First) -->
+                            <div id="preview-announcements" style="display:none; margin-bottom: 0.5rem;">
+                                <h4>Anúncios</h4>
+                                <ul class="clean-list" data-bind="announcements"></ul>
+                            </div>
+
+                            <!-- Callings (Second) -->
+                            <div id="preview-callings" style="display:none;">
+                                <h4>Desobrigações / Apoios</h4>
+                                <ul class="clean-list" data-bind="callings"></ul>
+                            </div>
                         </div>
 
                         <div class="program-item highlight-box">
@@ -190,10 +247,19 @@
                             <p>Administração do Sacramento</p>
                         </div>
 
+                        <!-- Program Section -->
                         <div class="program-section speakers-section">
                             <h3>Programa</h3>
+
+                            <!-- Fast Meeting Text -->
+                            <div id="fast-meeting-note"
+                                style="display:none; text-align: center; margin: 1rem 0; font-style: italic;">
+                                Testemunhos da Congregação
+                            </div>
+
+                            <!-- Standard Speakers List -->
                             <div id="speakers-list" class="speakers-list">
-                                <!-- Dynamic Speakers go here -->
+                                <!-- Dynamic Content -->
                             </div>
                         </div>
 
@@ -216,6 +282,7 @@
         </main>
     </div>
 
+    <script src="hymns.js"></script>
     <script src="app.js"></script>
 </body>
 
