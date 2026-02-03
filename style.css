@@ -1,0 +1,368 @@
+/* CSS Variables & Reset */
+:root {
+    --primary: #1e3a8a; /* Navy Blue */
+    --primary-dark: #1e293b;
+    --accent: #d97706; /* Gold/Amber for subtle highlights */
+    --bg-app: #f3f4f6;
+    --bg-paper: #ffffff;
+    --text-main: #1f2937;
+    --text-light: #6b7280;
+    --border: #e5e7eb;
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden; /* App-like feel on desktop */
+}
+
+/* Layout */
+.app-layout {
+    display: flex;
+    height: 100vh;
+}
+
+.editor-pane {
+    width: 400px;
+    background: white;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 10;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.05);
+}
+
+.preview-pane {
+    flex: 1;
+    background: #e5e7eb; /* Darker bg to make paper pop */
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* Editor Styling */
+.editor-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: white;
+}
+
+.editor-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.editor-header p {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+#agendaForm {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 2rem;
+}
+
+.form-group h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.input-wrapper {
+    margin-bottom: 1rem;
+}
+
+.input-wrapper label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+}
+
+.input-wrapper input,
+.input-wrapper textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.input-wrapper input:focus,
+.input-wrapper textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+}
+
+.actions-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: white;
+    display: flex;
+    gap: 1rem;
+}
+
+.btn {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #25D366; /* WhatsApp green */
+    color: white;
+}
+
+/* Paper Preview Styling */
+.paper-wrapper {
+    width: 100%;
+    max-width: 210mm; /* A4 width */
+    /* aspect-ratio: 210/297;  Remove aspect ratio to allow growth */
+    min-height: 297mm;
+}
+
+.agenda-paper {
+    background: white;
+    width: 100%;
+    min-height: 100%;
+    padding: 20mm; /* Standard print margin */
+    box-shadow: var(--shadow);
+    color: #000;
+    font-family: var(--font-heading); /* Serif for the document feels more formal */
+    position: relative;
+}
+
+/* Agenda Content Styling */
+.agenda-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header-line {
+    width: 40px;
+    height: 2px;
+    background: var(--primary);
+    margin: 0 auto 1rem;
+}
+
+.agenda-header h1 {
+    font-weight: 700;
+    font-size: 24pt;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.2rem;
+    color: black;
+}
+
+.agenda-header h2 {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 14pt;
+    color: #444;
+    margin-bottom: 0.2rem;
+}
+
+.agenda-date {
+    font-family: var(--font-body);
+    font-size: 11pt;
+    color: #666;
+}
+
+.agenda-body {
+    font-family: var(--font-body);
+    font-size: 11pt;
+    line-height: 1.5;
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 2rem;
+    margin-bottom: 1.5rem;
+    font-size: 10pt;
+}
+
+.meta-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #444;
+}
+
+.divider {
+    border: 0;
+    border-top: 1px solid #ddd;
+    margin: 1rem 0;
+}
+
+.program-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.program-label {
+    font-weight: 600;
+    color: #222;
+    min-width: 140px;
+}
+
+.program-value {
+    text-align: right;
+    flex: 1;
+}
+
+.hymn {
+    font-weight: 500;
+    font-style: italic;
+}
+
+.program-section {
+    margin: 1.5rem 0;
+}
+
+.program-section h3 {
+    font-family: var(--font-heading);
+    font-size: 14pt;
+    border-bottom: 1px solid #000;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.25rem;
+}
+
+.business-content {
+    font-size: 10pt;
+    white-space: pre-line;
+}
+
+.highlight-box {
+    margin: 1.5rem 0 0.5rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+}
+
+.sacrament-note {
+    text-align: center;
+    font-style: italic;
+    font-size: 10pt;
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.speakers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.speaker-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.agenda-footer {
+    margin-top: 3rem;
+    text-align: center;
+    font-size: 9pt;
+    color: #888;
+    position: absolute;
+    bottom: 20mm;
+    left: 0;
+    right: 0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 800px) {
+    .app-layout {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .editor-pane {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        box-shadow: none;
+    }
+    
+    #agendaForm {
+        max-height: 50vh; /* Allow scrolling form on mobile */
+    }
+
+    .preview-pane {
+        padding: 1rem;
+        min-height: 100vh; /* Ensure full view of preview */
+    }
+
+    .paper-wrapper {
+        transform: scale(0.9); /* Scale down slightly for mobile */
+        transform-origin: top center;
+    }
+    
+    .actions-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+    }
+    
+    body {
+        padding-bottom: 80px; /* Space for fixed footer */
+    }
+}

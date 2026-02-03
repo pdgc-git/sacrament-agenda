@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Sacramental SUD</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- PDF Lib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Icons (Phosphor Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app-layout">
+        <!-- Sidebar / Form Section -->
+        <aside class="editor-pane">
+            <header class="editor-header">
+                <h1>Criar Agenda</h1>
+                <p>Preencha os detalhes da reunião</p>
+            </header>
+
+            <form id="agendaForm" onsubmit="return false;">
+
+                <!-- General Info -->
+                <section class="form-group">
+                    <h2>Informações Gerais</h2>
+                    <div class="input-grid">
+                        <div class="input-wrapper">
+                            <label>Ala / Ramo</label>
+                            <input type="text" name="ward" placeholder="Ex: Lisboa 5">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Data</label>
+                            <input type="date" name="date">
+                        </div>
+                    </div>
+                    <div class="input-grid">
+                        <div class="input-wrapper">
+                            <label>Preside</label>
+                            <input type="text" name="presiding" placeholder="Bispo...">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Dirige</label>
+                            <input type="text" name="conducting" placeholder="Irmão...">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Music & Prayers -->
+                <section class="form-group">
+                    <h2>Música e Orações</h2>
+                    <div class="input-wrapper">
+                        <label>Pianista / Organista</label>
+                        <input type="text" name="organist">
+                    </div>
+                    <div class="input-wrapper">
+                        <label>Regente</label>
+                        <input type="text" name="chorister">
+                    </div>
+                    <div class="input-wrapper">
+                        <label>Hino de Abertura (# e Título)</label>
+                        <input type="text" name="openingHymn" placeholder="Ex: 5 - O Vem, ó Rei...">
+                    </div>
+                    <div class="input-wrapper">
+                        <label>Primeira Oração</label>
+                        <input type="text" name="invocation">
+                    </div>
+                </section>
+
+                <!-- Business -->
+                <section class="form-group">
+                    <h2>Assuntos da Ala</h2>
+                    <div class="input-wrapper">
+                        <label>Anúncios / Desobrigações / Apoios</label>
+                        <textarea name="business" rows="4" placeholder="Lista de assuntos..."></textarea>
+                    </div>
+                </section>
+
+                <!-- Sacrament -->
+                <section class="form-group">
+                    <h2>Sacramento</h2>
+                    <div class="input-wrapper">
+                        <label>Hino Sacramental (# e Título)</label>
+                        <input type="text" name="sacramentHymn" placeholder="Ex: 102 - Onde Encontro a Paz?">
+                    </div>
+                </section>
+
+                <!-- Program -->
+                <section class="form-group">
+                    <h2>Programa Espiritual</h2>
+                    <div class="input-wrapper">
+                        <label>Oradores / Mensagens (Um por linha)</label>
+                        <textarea name="speakers" rows="6" placeholder="1. Orador - Nome
+2. Hino Especial - Coro
+3. Orador - Nome"></textarea>
+                    </div>
+                </section>
+
+                <!-- Closing -->
+                <section class="form-group">
+                    <h2>Encerramento</h2>
+                    <div class="input-wrapper">
+                        <label>Hino de Encerramento (# e Título)</label>
+                        <input type="text" name="closingHymn">
+                    </div>
+                    <div class="input-wrapper">
+                        <label>Última Oração</label>
+                        <input type="text" name="benediction">
+                    </div>
+                </section>
+
+            </form>
+
+            <div class="actions-footer">
+                <button class="btn btn-primary" onclick="exportPDF()">
+                    <i class="ph ph-file-pdf"></i> Gerar / Partilhar PDF
+                </button>
+            </div>
+        </aside>
+
+        <!-- Preview Section -->
+        <main class="preview-pane">
+            <div class="paper-wrapper">
+                <div id="agenda-paper" class="agenda-paper">
+
+                    <div class="agenda-header">
+                        <div class="header-line"></div>
+                        <h1>Agenda da Reunião Sacramental</h1>
+                        <h2 data-bind="ward">Ala de [Nome]</h2>
+                        <p class="agenda-date" data-bind="date">--/--/----</p>
+                    </div>
+
+                    <div class="agenda-body">
+
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <span class="meta-label">Preside:</span>
+                                <span class="meta-value" data-bind="presiding">...</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Dirige:</span>
+                                <span class="meta-value" data-bind="conducting">...</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Pianista:</span>
+                                <span class="meta-value" data-bind="organist">...</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Regente:</span>
+                                <span class="meta-value" data-bind="chorister">...</span>
+                            </div>
+                        </div>
+
+                        <hr class="divider">
+
+                        <div class="program-item">
+                            <span class="program-label">Hino de Abertura</span>
+                            <span class="program-value hymn" data-bind="openingHymn">...</span>
+                        </div>
+
+                        <div class="program-item">
+                            <span class="program-label">Primeira Oração</span>
+                            <span class="program-value" data-bind="invocation">...</span>
+                        </div>
+
+                        <div class="program-section business-section" id="business-container">
+                            <h3>Assuntos da Ala</h3>
+                            <div class="business-content" data-bind="business"></div>
+                        </div>
+
+                        <div class="program-item highlight-box">
+                            <span class="program-label">Hino Sacramental</span>
+                            <span class="program-value hymn" data-bind="sacramentHymn">...</span>
+                        </div>
+
+                        <div class="sacrament-note">
+                            <p>Administração do Sacramento</p>
+                        </div>
+
+                        <div class="program-section speakers-section">
+                            <h3>Programa</h3>
+                            <div id="speakers-list" class="speakers-list">
+                                <!-- Dynamic Speakers go here -->
+                            </div>
+                        </div>
+
+                        <hr class="divider">
+
+                        <div class="program-item">
+                            <span class="program-label">Hino de Encerramento</span>
+                            <span class="program-value hymn" data-bind="closingHymn">...</span>
+                        </div>
+
+                        <div class="program-item">
+                            <span class="program-label">Última Oração</span>
+                            <span class="program-value" data-bind="benediction">...</span>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
