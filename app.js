@@ -1,31 +1,78 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // === Data Binding ===
-    const form = document.getElementById('agendaForm');
-    const inputs = form.querySelectorAll('input, textarea');
+    // === State Management ===
+    const state = {
+        recognitions: [],
+        callings: [],
+        announcements: [],
+        speakers: [], // Objects: { id, name, type: 'speaker'|'hymn' }
+        fastMeeting: false
+    };
 
-    // Initial sync
+    // Helper to identify dynamic fields
+    const dynamicFields = ['recognitions', 'callings', 'announcements', 'speakers'];
+
+    // === Initialization ===
+    const form = document.getElementById('agendaForm');
+    const inputs = form.querySelectorAll('input:not(.hymn-search), textarea');
+
+    // Bind static inputs
     inputs.forEach(input => {
-        updatepreview(input);
-        input.addEventListener('input', (e) => updatepreview(e.target));
+        if (input.name === 'fastMeeting') {
+            input.addEventListener('change', (e) => toggleFastMeeting(e.target.checked));
+        } else {
+            // Initial sync
+            updatePreview(input);
+            input.addEventListener('input', (e) => updatePreview(e.target));
+        }
     });
 
-    function updatepreview(input) {
+    // Initialize Hymn Searchers
+    const hymnInputs = document.querySelectorAll('.hymn-search');
+    hymnInputs.forEach(setupHymnSearch);
+
+    // Initial Render of Dynamic Lists (Empty)
+    // renderDynamicList('recognitions');
+    // renderDynamicList('callings');
+    // renderDynamicList('announcements');
+    // renderSpeakersInput();
+
+    // === Core Logic ===
+
+    function toggleFastMeeting(isFast) {
+        state.fastMeeting = isFast;
+
+        // UI Updates
+        const interHymnWrapper = document.getElementById('intermediate-hymn-wrapper');
+        const fastNote = document.getElementById('fast-meeting-note');
+        // Controls to hide
+        const addSpeakerBtn = document.querySelector('button[onclick="addSpeaker()"]');
+        const speakersContainer = document.getElementById('speakers-input-container');
+
+        if (isFast) {
+            interHymnWrapper.style.display = 'none';
+            if (addSpeakerBtn) addSpeakerBtn.style.display = 'none';
+            if (speakersContainer) speakersContainer.style.display = 'none';
+
+            fastNote.style.display = 'block';
+        } else {
+            interHymnWrapper.style.display = 'block';
+            if (addSpeakerBtn) addSpeakerBtn.style.display = 'block';
+            if (speakersContainer) speakersContainer.style.display = 'flex'; // Restore flex from css class
+
+            fastNote.style.display = 'none';
+        }
+
+        // Re-render speakers output to reflect changes (e.g. hiding intermediate hymn in output)
+        renderSpeakersOutput();
+    }
+
+    function updatePreview(input) {
         const key = input.name;
         const value = input.value;
         const bindElements = document.querySelectorAll(`[data-bind="${key}"]`);
 
         bindElements.forEach(el => {
-            if (key === 'speakers') {
-                renderSpeakers(value);
-            } else if (key === 'business') {
-                el.innerHTML = value.replace(/\n/g, '<br>');
-                // Hide container if empty
-                const container = document.getElementById('business-container');
-                if (container) {
-                    container.style.display = value.trim() ? 'block' : 'none';
-                }
-            } else if (key === 'date') {
-                // Format date nicely (PT-PT)
+            if (key === 'date') {
                 if (value) {
                     const dateObj = new Date(value);
                     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -39,42 +86,275 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderSpeakers(text) {
-        const container = document.getElementById('speakers-list');
-        container.innerHTML = ''; // Clear
+    // === Dynamic List Logic (Generic) ===
+    window.addListItem = (type) => {
+        const id = Date.now().toString();
+        state[type].push({ id, text: '' });
+        renderDynamicListInput(type);
+    };
 
-        if (!text.trim()) return;
+    window.removeListItem = (type, id) => {
+        state[type] = state[type].filter(item => item.id !== id);
+        renderDynamicListInput(type);
+        renderDynamicListOutput(type);
+    };
 
-        const lines = text.split('\n');
+    window.updateListItem = (type, id, value) => {
+        const item = state[type].find(i => i.id === id);
+        if (item) {
+            item.text = value;
+            renderDynamicListOutput(type);
+        }
+    };
 
-        lines.forEach((line, index) => {
-            if (!line.trim()) return;
+    function renderDynamicListInput(type) {
+        const container = document.getElementById(`${type}-input-container`);
+        container.innerHTML = '';
 
-            const div = document.createElement('div');
-
-            // Check if it's a hymn or special item (heuristic: contains digits or "Hino")
-            const isSpecial = line.toLowerCase().includes('hino') || /^\d/.test(line);
-
-            div.className = isSpecial ? 'program-item highlight-box' : 'program-item'; // simple variant
-            div.className = 'program-item'; // Reset to standard for now, add logic if needed
-
-            // Naive split for "Role - Name"
-            let label = `Orador ${index + 1}`;
-            let value = line;
-
-            // If user typed "Hino - ...", make it look like a label
-            if (line.includes('-')) {
-                const parts = line.split('-');
-                label = parts[0].trim();
-                value = parts.slice(1).join('-').trim();
-            }
-
-            div.innerHTML = `
-                <span class="program-label">${label}</span>
-                <span class="program-value">${value}</span>
+        state[type].forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'input-row';
+            row.innerHTML = `
+                <input type="text" value="${item.text}" 
+                    oninput="updateListItem('${type}', '${item.id}', this.value)" 
+                    placeholder="Novo item...">
+                <button class="btn-remove" onclick="removeListItem('${type}', '${item.id}')">×</button>
             `;
-            container.appendChild(div);
+            container.appendChild(row);
         });
+    }
+
+    function renderDynamicListOutput(type) {
+        const container = document.querySelector(`[data-bind="${type}"]`); // ul
+        const section = document.getElementById(`preview-${type}`); // wrapper div
+
+        // Filter empty items
+        const validItems = state[type].filter(i => i.text.trim().length > 0);
+
+        if (validItems.length === 0) {
+            section.style.display = 'none';
+        } else {
+            section.style.display = 'block';
+            container.innerHTML = validItems.map(i => `<li>${i.text}</li>`).join('');
+
+            // Parent visibility logic for business section
+            if (type === 'callings' || type === 'announcements') {
+                const callingsHasItems = state.callings.some(i => i.text.trim().length > 0);
+                const announceHasItems = state.announcements.some(i => i.text.trim().length > 0);
+
+                const businessContainer = document.getElementById('preview-business');
+                if (callingsHasItems || announceHasItems) {
+                    businessContainer.style.display = 'block';
+                } else {
+                    businessContainer.style.display = 'none';
+                }
+            } else if (type === 'recognitions') {
+                // Ensure parent container is visible if it exists/needed (it's direct child of paper)
+                document.getElementById('preview-recognitions').style.display = 'block';
+            }
+        }
+
+        // Explicit hide if empty (redundant but safe)
+        if (validItems.length === 0) {
+            if (type === 'recognitions') {
+                document.getElementById('preview-recognitions').style.display = 'none';
+            }
+        }
+
+        // Parent visibility logic for business section (Must run always)
+        if (type === 'callings' || type === 'announcements') {
+            const callingsHasItems = state.callings.some(i => i.text.trim().length > 0);
+            const announceHasItems = state.announcements.some(i => i.text.trim().length > 0);
+
+            const businessContainer = document.getElementById('preview-business');
+            if (callingsHasItems || announceHasItems) {
+                businessContainer.style.display = 'block';
+            } else {
+                businessContainer.style.display = 'none';
+            }
+        }
+    }
+
+    // === Speaker Logic (Refactored for Reordering) ===
+
+    // Add Speaker
+    window.addSpeaker = () => {
+        state.speakers.push({ id: Date.now().toString(), type: 'speaker', text: '' });
+        renderSpeakersInput();
+        renderSpeakersOutput();
+    };
+
+    // Add Intermediate Hymn to List
+    window.addProgramHymn = () => {
+        state.speakers.push({ id: Date.now().toString(), type: 'hymn', text: '' });
+        renderSpeakersInput();
+        renderSpeakersOutput();
+    };
+
+    window.removeSpeaker = (id) => {
+        state.speakers = state.speakers.filter(s => s.id !== id);
+        renderSpeakersInput();
+        renderSpeakersOutput();
+    };
+
+    window.updateSpeaker = (id, value) => {
+        const s = state.speakers.find(i => i.id === id);
+        if (s) {
+            s.text = value;
+            renderSpeakersOutput();
+        }
+    }
+
+    window.moveSpeaker = (id, direction) => {
+        const index = state.speakers.findIndex(s => s.id === id);
+        if (index < 0) return;
+
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < state.speakers.length) {
+            // Swap
+            [state.speakers[index], state.speakers[newIndex]] = [state.speakers[newIndex], state.speakers[index]];
+            renderSpeakersInput();
+            renderSpeakersOutput();
+        }
+    };
+
+    function renderSpeakersInput() {
+        const container = document.getElementById('speakers-input-container');
+        container.innerHTML = '';
+
+        state.speakers.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'input-row speaker-row';
+
+            const isHymn = item.type === 'hymn';
+            const placeholder = isHymn ? 'Hino (Número - Título)' : 'Orador / Item...';
+            const extraClass = isHymn ? 'hymn-input-row' : '';
+
+            // For hymn inputs, enable search behavior?
+            // We need to attach the search listener if it's a hymn.
+            // But simple input for now is safer to avoid complex re-binding on re-render.
+            // We'll mark it with a class and attach listeners after? No, let's keep it simple text for now
+            // OR use the existing helper if we can.
+
+            row.innerHTML = `
+                <div class="speaker-order-controls">
+                    <button class="btn-move" onclick="moveSpeaker('${item.id}', -1)">▲</button>
+                    <button class="btn-move" onclick="moveSpeaker('${item.id}', 1)">▼</button>
+                </div>
+                <div style="flex: 1; position: relative;" class="${isHymn ? 'hymn-input-wrapper' : ''}">
+                    ${isHymn ? '<span style="font-size: 0.7rem; color: #666; display: block; margin-bottom: 2px;">Hino Intermediário / Especial</span>' : ''}
+                    <input type="text" value="${item.text}" 
+                        class="${isHymn ? 'hymn-searchable-dynamic' : ''}"
+                        oninput="updateSpeaker('${item.id}', this.value)" 
+                        placeholder="${placeholder}">
+                     ${isHymn ? '<div class="hymn-results"></div>' : ''}
+                </div>
+                <button class="btn-remove" onclick="removeSpeaker('${item.id}')">×</button>
+            `;
+            container.appendChild(row);
+
+            // If it's a hymn, attach search logic
+            if (isHymn) {
+                const input = row.querySelector('input');
+                setupHymnSearch(input, (val) => updateSpeaker(item.id, val));
+            }
+        });
+    }
+
+    function renderSpeakersOutput() {
+        const container = document.getElementById('speakers-list');
+        container.innerHTML = '';
+
+        const speakers = state.speakers.filter(s => s.text.trim());
+
+        speakers.forEach((item) => {
+            if (item.type === 'hymn') {
+                const hDiv = document.createElement('div');
+                hDiv.className = 'program-item highlight-box';
+                hDiv.innerHTML = `
+                    <span class="program-label">Hino Intermediário</span>
+                    <span class="program-value hymn">${item.text}</span>
+                `;
+                container.appendChild(hDiv);
+            } else {
+                const li = document.createElement('div');
+                li.className = 'program-item';
+
+                let label = `Orador`;
+                let val = item.text;
+                if (val.includes('-')) {
+                    const parts = val.split('-');
+                    label = parts[0].trim();
+                    val = parts.slice(1).join('-').trim();
+                }
+
+                li.innerHTML = `
+                    <span class="program-label">${label}</span>
+                    <span class="program-value">${val}</span>
+                `;
+                container.appendChild(li);
+            }
+        });
+    }
+
+    // === Hymn Search Logic (Updated) ===
+    function setupHymnSearch(input, callback) {
+        const wrapper = input.parentElement;
+        const resultsBox = wrapper.querySelector('.hymn-results');
+        if (!resultsBox) return; // Guard
+
+        input.addEventListener('input', () => {
+            filterHymns(input.value, resultsBox, input, callback);
+            // If main callback not provided, use default update
+            if (!callback) updatePreview(input);
+        });
+
+        // Hide on outside click handled globally, but we need to ensure unique handling
+        // ... handled by global click listener theoretically if wrapped correctly
+    }
+
+    function filterHymns(query, resultsBox, inputField, callback) {
+        if (!query) {
+            resultsBox.style.display = 'none';
+            return;
+        }
+
+        const q = query.toLowerCase();
+        // Use window.hymns
+        if (!window.hymns) return;
+
+        let matches = window.hymns.filter(h => {
+            return h.number.toString() === q || h.title.toLowerCase().includes(q) || h.number.toString().startsWith(q);
+        });
+
+        matches = matches.slice(0, 10);
+
+        if (matches.length === 0) {
+            resultsBox.style.display = 'none';
+            return;
+        }
+
+        resultsBox.innerHTML = '';
+        matches.forEach(h => {
+            const div = document.createElement('div');
+            div.className = 'hymn-result-item';
+            div.textContent = `${h.number} - ${h.title}`;
+            div.onclick = () => {
+                const val = `${h.number} - ${h.title}`;
+                inputField.value = val;
+                resultsBox.style.display = 'none';
+
+                if (callback) {
+                    callback(val);
+                    renderSpeakersOutput(); // force re-render to update UI
+                } else {
+                    updatePreview(inputField);
+                }
+            };
+            resultsBox.appendChild(div);
+        });
+
+        resultsBox.style.display = 'block';
     }
 });
 
@@ -83,7 +363,8 @@ async function exportPDF() {
     const element = document.getElementById('agenda-paper');
 
     // Get date for filename
-    const dateValue = document.querySelector('input[name="date"]').value;
+    const dateInput = document.querySelector('input[name="date"]');
+    const dateValue = dateInput ? dateInput.value : '';
     const filename = dateValue ? `agenda_sacramental_${dateValue}.pdf` : 'agenda_sacramental.pdf';
 
     // Config for html2pdf
@@ -117,38 +398,4 @@ async function exportPDF() {
 
     // Fallback or Desktop: Direct Download
     html2pdf(element, opt);
-}
-
-// === Share Links ===
-function generateShareLink(platform) {
-    const formData = new FormData(document.getElementById('agendaForm'));
-    const data = Object.fromEntries(formData);
-
-    // Construct a nice text summary
-    const text = `
-*Agenda Sacramental - ${data.ward || 'Ala ...'}*
-📅 ${data.date || 'Data'}
-
-*Preside:* ${data.presiding}
-*Dirige:* ${data.conducting}
-
-🎵 *Hino Abertura:* ${data.openingHymn}
-🙏 *Oração:* ${data.invocation}
-
-📣 *Anúncios:*
-${data.business}
-
-🍞 *Hino Sacramental:* ${data.sacramentHymn}
-
-🗣️ *Programa:*
-${data.speakers}
-
-🎵 *Hino Encerramento:* ${data.closingHymn}
-🙏 *Oração:* ${data.benediction}
-    `.trim();
-
-    if (platform === 'whatsapp') {
-        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    }
 }
