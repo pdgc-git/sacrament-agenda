@@ -1058,3 +1058,8 @@ const hymnal = [
 ];
 
 window.hymns = hymnal;
+
+// Export for Node.js environment (Unit Testing)
+if (typeof module !== 'undefined') {
+    module.exports = hymnal;
+}

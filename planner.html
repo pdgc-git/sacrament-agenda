@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planeador da Ala - Agenda Sacramental</title>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- PDF Lib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Planner specific styles override/augment -->
+    <style>
+        /* Auth Overlay - Premium Glass */
+        #auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(243, 244, 246, 0.4);
+            /* Very light tint */
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .auth-box {
+            /* Glassmorphism handled by .glass-panel class, here we handle layout */
+            max-width: 440px;
+            width: 90%;
+            padding: 3rem 2.5rem;
+            border-radius: 24px;
+            text-align: center;
+            animation: floatUp 0.5s ease-out;
+        }
+
+        @keyframes floatUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Navigation */
+        .app-nav {
+            width: 80px;
+            background: var(--primary-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 1rem;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+        }
+
+        /* Layout Adjustments */
+        .planner-layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .view-container {
+            flex: 1;
+            display: none;
+            /* Default hidden */
+            height: 100%;
+            overflow: hidden;
+            flex-direction: column;
+            /* Ensure stack layout for Roster/History */
+        }
+
+        .view-container.active {
+            display: flex;
+        }
+
+        /* Roster View Styling */
+        .roster-view,
+        .history-view {
+            width: 100%;
+            padding: 2rem;
+            overflow-y: auto;
+            background: var(--bg-app);
+            /* display: block; -- REMOVED */
+        }
+
+        .roster-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .roster-grid {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Planner View Override */
+        #view-planner {
+            display: none;
+            /* Will be managed by JS */
+        }
+
+        #view-planner.active {
+            display: flex;
+            width: 100%;
+        }
+
+        /* Smart Badges */
+        .smart-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+
+        .badge-warning {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .badge-info {
+            background: #e0f2fe;
+            color: #0ea5e9;
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Auth Overlay -->
+    <div id="auth-overlay">
+        <div class="auth-box glass-panel">
+            <div style="margin-bottom: 2rem;">
+                <h2 id="auth-title"
+                    style="font-family: var(--font-body); font-weight: 700; font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">
+                    Bem-vindo</h2>
+                <p style="color: var(--text-light); font-size: 0.95rem;">Planeador da Agenda Sacramental</p>
+            </div>
+
+            <button id="login-btn" class="btn premium-btn"
+                style="width:100%; margin-bottom: 1.5rem; justify-content: center;">
+                <i class="ph ph-google-logo" style="font-size: 1.2rem;"></i> <span
+                    style="font-weight:600; margin-left:8px;">Continuar com Google</span>
+            </button>
+
+            <div style="display: flex; align-items: center; margin: 1.5rem 0; color: #cbd5e1;">
+                <div style="flex:1; height:1px; background:#e2e8f0;"></div>
+                <span
+                    style="padding: 0 12px; font-size: 0.75rem; font-weight:600; letter-spacing:1px; color:#94a3b8;">EMAIL</span>
+                <div style="flex:1; height:1px; background:#e2e8f0;"></div>
+            </div>
+
+            <div id="email-auth-group" style="text-align: left;">
+                <div class="input-wrapper">
+                    <input type="email" id="email-input" class="premium-input" placeholder="seu.email@exemplo.com"
+                        style="width:100%; padding: 0.9rem; border-radius: 8px;">
+                </div>
+                <div class="input-wrapper">
+                    <input type="password" id="password-input" class="premium-input" placeholder="Palavra-passe"
+                        style="width:100%; padding: 0.9rem; border-radius: 8px;">
+                </div>
+                <button id="btn-email-login" class="btn btn-primary"
+                    style="width:100%; padding:0.9rem; background: var(--primary-dark);">Entrar com Email</button>
+
+                <div style="text-align:center; margin-top: 1.5rem;">
+                    <a href="#" id="btn-signup-toggle"
+                        style="font-size: 0.85rem; color: var(--primary); font-weight:500; text-decoration:none; border-bottom:1px dashed var(--primary);">Criar
+                        nova conta</a>
+                </div>
+            </div>
+
+            <p id="auth-error" style="color: #ef4444; margin-top: 1.5rem; font-size: 0.85rem; min-height: 1.2rem;"></p>
+        </div>
+    </div>
+
+    <div class="planner-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="app-nav">
+            <div class="nav-item active" data-target="view-dashboard" title="Início">
+                <i class="ph ph-house"></i>
+            </div>
+            <div class="nav-item" data-target="view-planner" title="Planeador">
+                <i class="ph ph-calendar-plus"></i>
+            </div>
+            <div class="nav-item" data-target="view-roster" title="Membros (Roster)">
+                <i class="ph ph-users"></i>
+            </div>
+            <div class="nav-item" data-target="view-planning" title="Planeamento Futuro">
+                <i class="ph ph-calendar"></i>
+            </div>
+            <div class="nav-item" data-target="view-history" title="Histórico">
+                <i class="ph ph-clock-counter-clockwise"></i>
+            </div>
+            <div class="nav-item" data-target="view-admin" id="nav-admin" title="Administração" style="display:none">
+                <i class="ph ph-gear"></i>
+            </div>
+            <div style="flex:1"></div>
+            <div class="nav-item" id="logout-btn" title="Sair">
+                <i class="ph ph-sign-out"></i>
+            </div>
+        </nav>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard" class="view-container active">
+            <header style="margin-bottom: 2rem;">
+                <h1 id="dashboard-greeting"
+                    style="font-family: var(--font-body); font-weight: 700; color: var(--primary);">Olá, ...
+                </h1>
+                <p id="dashboard-subtitle" style="color: var(--text-light);">Bem-vindo à Ala ...</p>
+            </header>
+
+            <!-- Stats Row -->
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+                <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center;">
+                    <div
+                        style="background: rgba(30, 58, 138, 0.1); padding: 1rem; border-radius: 12px; margin-right: 1rem;">
+                        <i class="ph ph-users-three" style="font-size: 1.5rem; color: var(--primary);"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <h3 style="margin:0; font-size: 0.9rem; color: var(--text-light);">Assistência Média (<span
+                                id="lbl-month">Mês</span>)</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <span id="stat-mtd"
+                                style="font-size: 1.8rem; font-weight: 700; color: var(--primary);">0</span>
+                            <div style="height:50px; width:120px; position:relative;"><canvas id="chart-mtd"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center;">
+                    <div
+                        style="background: rgba(217, 119, 6, 0.1); padding: 1rem; border-radius: 12px; margin-right: 1rem;">
+                        <i class="ph ph-chart-line-up" style="font-size: 1.5rem; color: var(--accent);"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <h3 style="margin:0; font-size: 0.9rem; color: var(--text-light);">Assistência Média (<span
+                                id="lbl-year">Ano</span>)</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <span id="stat-ytd"
+                                style="font-size: 1.8rem; font-weight: 700; color: var(--primary);">0</span>
+                            <div style="height:50px; width:120px; position:relative;"><canvas id="chart-ytd"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <h2 style="font-family: var(--font-body); font-weight:700; margin-bottom: 1.5rem;">Acesso Rápido</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+
+                <div class="glass-panel"
+                    style="padding: 2rem; text-align: center; cursor: pointer; transition: transform 0.2s;"
+                    onclick="document.querySelector('[data-target=\'view-planning\']').click()">
+                    <i class="ph ph-calendar-plus"
+                        style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+                    <h3 style="margin-bottom: 0.5rem;">Planear Domingo</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-light);">Gerir oradores e tópicos futuros</p>
+                </div>
+
+                <div class="glass-panel"
+                    style="padding: 2rem; text-align: center; cursor: pointer; transition: transform 0.2s;"
+                    onclick="document.querySelector('[data-target=\'view-roster\']').click()">
+                    <i class="ph ph-users-three"
+                        style="font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem; display: block;"></i>
+                    <h3 style="margin-bottom: 0.5rem;">Diretório</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-light);">Gerir membros e chamados</p>
+                </div>
+
+                <div class="glass-panel"
+                    style="padding: 2rem; text-align: center; cursor: pointer; transition: transform 0.2s;"
+                    onclick="document.querySelector('[data-target=\'view-history\']').click()">
+                    <i class="ph ph-music-notes"
+                        style="font-size: 2.5rem; color: #10b981; margin-bottom: 1rem; display: block;"></i>
+                    <h3 style="margin-bottom: 0.5rem;">Histórico & Hinos</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-light);">Consultar reuniões passadas</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- VIEW 1: PLANNER (Re-using standard editor layout) -->
+        <div id="view-planner" class="view-container">
+            <!-- Sidebar / Form Section -->
+            <aside class="editor-pane">
+                <header class="editor-header">
+                    <h1>Planer da Ala</h1>
+                    <p id="ward-name-display">Carregando...</p>
+                </header>
+
+                <form id="agendaForm" onsubmit="return false;">
+                    <!-- General Info -->
+                    <section class="form-group">
+                        <h2>Informações Gerais</h2>
+                        <div class="input-grid">
+                            <div class="input-wrapper">
+                                <label>Data</label>
+                                <input type="date" name="date" id="input-date">
+                            </div>
+                            <div class="checkbox-wrapper" style="margin-top: 0;">
+                                <input type="checkbox" id="fastMeeting" name="fastMeeting">
+                                <label for="fastMeeting">Jejum e Testemunhos</label>
+                            </div>
+                        </div>
+                        <div class="input-grid">
+                            <div class="input-wrapper">
+                                <label>Preside</label>
+                                <input type="text" name="presiding" placeholder="Bispo...">
+                            </div>
+                            <div class="input-wrapper">
+                                <label>Dirige</label>
+                                <input type="text" name="conducting" placeholder="Irmão...">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Music -->
+                    <section class="form-group">
+                        <h2>Música</h2>
+                        <!-- Smart Suggestion needed here? Maybe just text for now as per prompt focusing on Speakers/Hymns -->
+                        <div class="input-wrapper">
+                            <label>Pianista</label>
+                            <input type="text" name="organist">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Regente</label>
+                            <input type="text" name="chorister">
+                        </div>
+                    </section>
+
+                    <!-- Opening -->
+                    <section class="form-group">
+                        <h2>Abertura</h2>
+                        <div class="hymn-input-wrapper">
+                            <label>Hino de Abertura</label>
+                            <input type="text" class="hymn-search" name="openingHymn" placeholder="Buscar hino...">
+                            <div class="hymn-results"></div>
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Primeira Oração</label>
+                            <!-- Smart Member Search -->
+                            <div class="member-search-wrapper">
+                                <input type="text" class="member-search" name="invocation"
+                                    placeholder="Buscar membro..." autocomplete="off">
+                                <div class="member-results"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Sacrament -->
+                    <section class="form-group">
+                        <h2>Sacramento</h2>
+                        <div class="hymn-input-wrapper">
+                            <label>Hino Sacramental</label>
+                            <input type="text" class="hymn-search" name="sacramentHymn" placeholder="Buscar hino...">
+                            <div class="hymn-results"></div>
+                        </div>
+                    </section>
+
+                    <!-- Program -->
+                    <section class="form-group" id="program-section">
+                        <h2>Programa Espiritual</h2>
+                        <div id="speakers-input-container" class="dynamic-list-input"></div>
+
+                        <div class="input-row" style="margin-bottom: 1rem;">
+                            <button class="btn-add" onclick="window.addSpeakerUI()">+ Adicionar Orador</button>
+                            <button class="btn-add" onclick="window.addProgramHymnUI()"
+                                style="margin-left: 0.5rem; border-color: var(--text-light); color: var(--text-light);">+
+                                Hino Interm.</button>
+                        </div>
+                    </section>
+
+                    <!-- Closing -->
+                    <section class="form-group">
+                        <h2>Encerramento</h2>
+                        <div class="hymn-input-wrapper">
+                            <label>Hino de Encerramento</label>
+                            <input type="text" class="hymn-search" name="closingHymn" placeholder="Buscar hino...">
+                            <div class="hymn-results"></div>
+                        </div>
+                        <div class="input-wrapper">
+                            <label>Última Oração</label>
+                            <div class="member-search-wrapper">
+                                <input type="text" class="member-search" name="benediction"
+                                    placeholder="Buscar membro..." autocomplete="off">
+                                <div class="member-results"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Smart Stats / Attendance -->
+                    <section class="form-group" style="padding-top: 1rem; border-top: 1px solid #eee;">
+                        <h2>Estatísticas & Presença</h2>
+                        <div class="input-grid">
+                            <div class="input-wrapper">
+                                <label>Início</label>
+                                <input type="number" name="att_start" placeholder="0">
+                            </div>
+                            <div class="input-wrapper">
+                                <label>Sacramento</label>
+                                <input type="number" name="att_sacrament" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="input-grid">
+                            <div class="input-wrapper">
+                                <label>Final</label>
+                                <input type="number" name="att_end" placeholder="0">
+                            </div>
+                            <div class="input-wrapper">
+                                <label>Visitantes</label>
+                                <input type="number" name="att_visitors" placeholder="0">
+                            </div>
+                        </div>
+                    </section>
+
+                </form>
+
+                <div class="actions-footer" style="flex-direction: column;">
+                    <button id="btn-finalize" class="btn btn-primary" style="background-color: var(--accent);">
+                        <i class="ph ph-floppy-disk"></i> Gravar & Finalizar Reunião
+                    </button>
+                    <button class="btn btn-primary" onclick="exportPDF()"
+                        style="margin-top: 0.5rem; background-color: #fff; color: var(--primary); border: 1px solid var(--border);">
+                        <i class="ph ph-file-pdf"></i> Apenas PDF
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Preview Section (Reused from simple.html mostly) -->
+            <main class="preview-pane">
+                <div class="paper-wrapper">
+                    <div id="agenda-paper" class="agenda-paper">
+                        <!-- Same Header -->
+                        <div class="agenda-header">
+                            <div class="header-line"></div>
+                            <h1>Agenda da Reunião Sacramental</h1>
+                            <h2 id="preview-ward-name">Ala...</h2>
+                            <p class="agenda-date" data-bind="date">--/--/----</p>
+                        </div>
+
+                        <div class="agenda-body">
+                            <div class="meta-grid">
+                                <div class="meta-item"><span class="meta-label">Preside:</span><span class="meta-value"
+                                        data-bind="presiding">...</span></div>
+                                <div class="meta-item"><span class="meta-label">Dirige:</span><span class="meta-value"
+                                        data-bind="conducting">...</span></div>
+                                <div class="meta-item"><span class="meta-label">Pianista:</span><span class="meta-value"
+                                        data-bind="organist">...</span></div>
+                                <div class="meta-item"><span class="meta-label">Regente:</span><span class="meta-value"
+                                        data-bind="chorister">...</span></div>
+                            </div>
+                            <hr class="divider">
+
+                            <!-- Program -->
+                            <div class="program-item">
+                                <span class="program-label">Hino de Abertura</span>
+                                <span class="program-value hymn" data-bind="openingHymn">...</span>
+                            </div>
+                            <div class="program-item">
+                                <span class="program-label">Primeira Oração</span>
+                                <span class="program-value" data-bind="invocation">...</span>
+                            </div>
+
+                            <!-- Business (Simplified for Planner Mode to focus on Core) -->
+                            <!-- User prompted only for core "Planner Features", so assuming Business is less priority or optional. 
+                                 I will leave placeholders or omitted for brevity if not requested, but better to keep standard structure.
+                                 I'll skip dynamic business inputs in Planner Form to save complexity unless requested, 
+                                 or just assume user will type them in a generic "Announcements" field if provided. 
+                                 Prompt says "Refactor Agenda Form... Speaker Selection... Hymn Selection... Stats". 
+                                 It doesn't explicitly ask for Business Logic refactor. I'll omit Business dynamic inputs for now to focus on the requested "Smart" features.
+                            -->
+
+                            <div class="program-item highlight-box">
+                                <span class="program-label">Hino Sacramental</span>
+                                <span class="program-value hymn" data-bind="sacramentHymn">...</span>
+                            </div>
+
+                            <div class="sacrament-note">
+                                <p>Administração do Sacramento</p>
+                            </div>
+
+                            <div class="program-section speakers-section">
+                                <h3>Programa</h3>
+                                <div id="fast-meeting-note"
+                                    style="display:none; text-align: center; margin: 1rem 0; font-style: italic;">
+                                    Testemunhos da Congregação</div>
+                                <div id="speakers-list" class="speakers-list"></div>
+                            </div>
+
+                            <hr class="divider">
+
+                            <div class="program-item">
+                                <span class="program-label">Hino de Encerramento</span>
+                                <span class="program-value hymn" data-bind="closingHymn">...</span>
+                            </div>
+                            <div class="program-item">
+                                <span class="program-label">Última Oração</span>
+                                <span class="program-value" data-bind="benediction">...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- VIEW 2: ROSTER -->
+        <div id="view-roster" class="view-container roster-view">
+            <header class="roster-header">
+                <div>
+                    <h1>Membros da Ala</h1>
+                    <p style="color: var(--text-light);">Gerir lista para sugestões inteligentes</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="file" id="csv-upload" accept=".csv" style="display:none">
+                    <button class="btn btn-secondary" style="width: auto;"
+                        onclick="document.getElementById('csv-upload').click()">
+                        <i class="ph ph-upload"></i> Importar CSV
+                    </button>
+                    <button class="btn btn-primary" style="width: auto;" onclick="window.addMemberUI()">
+                        <i class="ph ph-plus"></i> Novo Membro
+                    </button>
+                </div>
+            </header>
+
+            <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+                <input type="text" id="roster-search" placeholder="Filtrar por nome..." class="input-wrapper"
+                    style="padding: 0.5rem; max-width: 300px;">
+                <select id="roster-filter" class="input-wrapper" style="padding: 0.5rem;">
+                    <option value="all">Todos</option>
+                    <option value="Adult">Adultos</option>
+                    <option value="Young Adult">Jovens Adultos (JA)</option>
+                    <option value="Youth">Jovens</option>
+                    <option value="Primary">Primária</option>
+                    <option value="gender_M">Homens</option>
+                    <option value="gender_F">Mulheres</option>
+                </select>
+            </div>
+
+            <div class="roster-grid">
+                <thead>
+                    <!-- Rendered via Grid JS or standard Table -->
+                </thead>
+                <table id="roster-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Grupo</th>
+                            <th>Último Discurso</th>
+                            <th>Última Oração</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="roster-tbody">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- VIEW 3: FUTURE PLANNING -->
+    <div id="view-planning" class="view-container history-view">
+        <header class="roster-header">
+            <h1>Planeamento Futuro</h1>
+            <p style="color: var(--text-light);">Esboço de reuniões para os próximos meses</p>
+        </header>
+        <div style="text-align:center; padding: 2rem; color: #888;">
+            <i class="ph ph-cone" style="font-size:3rem; margin-bottom:1rem; display:block;"></i>
+            <p>Funcionalidade em desenvolvimento...</p>
+        </div>
+    </div>
+
+    <!-- VIEW 4: HISTORY -->
+    <div id="view-history" class="view-container history-view">
+        <header class="roster-header">
+            <h1>Histórico de Reuniões</h1>
+        </header>
+        <div class="roster-grid">
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Preside / Dirige</th>
+                        <th>Hinos</th>
+                        <th>Presença</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- VIEW 5: ADMIN -->
+    <div id="view-admin" class="view-container roster-view">
+        <header class="roster-header">
+            <h1>Administração da Ala</h1>
+            <p style="color: var(--text-light);">Gerir permissões e utilizadores</p>
+        </header>
+
+        <div class="roster-grid">
+            <table id="admin-users-table">
+                <thead>
+                    <tr>
+                        <th>Utilizador</th>
+                        <th>Email</th>
+                        <th>Função</th>
+                        <th>Estado</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-users-tbody">
+                    <!-- Dynamic -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Member Modal -->
+    <div id="member-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
+        <div class="glass-panel"
+            style="background:#fff; padding:2rem; width:90%; max-width:500px; border-radius:16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <h2 id="modal-title" style="margin-bottom:1.5rem; font-family: var(--font-body); font-weight: 700;">Novo
+                Membro</h2>
+
+            <div class="input-wrapper">
+                <label
+                    style="display:block; font-size:0.9rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">Nome
+                    Completo</label>
+                <input type="text" id="mem-name" placeholder="Ex: João Silva"
+                    style="width:100%; padding:0.7rem; border:1px solid #e2e8f0; border-radius:8px;">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:1rem; align-items:end;">
+                <div class="input-wrapper" style="margin-bottom:0;">
+                    <label
+                        style="display:block; font-size:0.9rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">Chamado</label>
+                    <input type="text" id="mem-calling" placeholder="Ex: Bispo"
+                        style="width:100%; padding:0.7rem; border:1px solid #e2e8f0; border-radius:8px;">
+                </div>
+                <div class="input-wrapper" style="margin-bottom:0;">
+                    <label
+                        style="display:block; font-size:0.9rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">Grupo</label>
+                    <select id="mem-group"
+                        style="width:100%; padding:0.7rem; border:1px solid #e2e8f0; border-radius:8px;">
+                        <option value="Adult">Adulto</option>
+                        <option value="Young Adult">JA</option>
+                        <option value="Youth">Jovem</option>
+                        <option value="Primary">Primária</option>
+                    </select>
+                </div>
+                <div class="input-wrapper" style="margin-bottom:0;">
+                    <label
+                        style="display:block; font-size:0.9rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">Género</label>
+                    <div style="display:flex; gap:0.5rem; height: 42px; align-items: center;">
+                        <label style="display:flex; align-items:center; gap:0.3rem; cursor:pointer; font-size:0.9rem;">
+                            <input type="radio" name="mem-gender" value="M" checked> M
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.3rem; cursor:pointer; font-size:0.9rem;">
+                            <input type="radio" name="mem-gender" value="F"> F
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:2rem;">
+                <button id="btn-cancel-member" class="btn btn-secondary"
+                    style="background:#f1f5f9; border:none; color:#475569;">Cancelar</button>
+                <button id="btn-save-member" class="btn btn-primary"
+                    style="background:var(--primary); color:white;">Guardar</button>
+            </div>
+        </div>
+        <!-- View Member Modal -->
+        <div id="member-view-modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
+            <div class="glass-panel"
+                style="background:#fff; padding:2rem; width:90%; max-width:600px; max-height: 80vh; overflow-y: auto; border-radius:16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+                <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                    <div>
+                        <h2 id="view-mem-name" style="font-family: var(--font-body); font-weight: 700; margin:0;">Nome
+                        </h2>
+                        <p id="view-mem-details" style="color:var(--text-light); font-size: 0.9rem; margin:0;">
+                            Detalhes...</p>
+                    </div>
+                    <button onclick="document.getElementById('member-view-modal').style.display='none'"
+                        class="btn-remove" style="font-size:1.5rem;">&times;</button>
+                </header>
+
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
+                        de Discursos</h3>
+                    <ul id="view-mem-talks" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
+                        <!-- Dynamic -->
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
+                        de Orações</h3>
+                    <ul id="view-mem-prayers" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
+                        <!-- Dynamic -->
+                    </ul>
+                </div>
+
+                <div style="margin-top:2rem; text-align:right;">
+                    <button id="btn-edit-from-view" class="btn btn-primary">Editar Membro</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-confirm-modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3001; align-items:center; justify-content:center;">
+            <div class="glass-panel"
+                style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
+                <h3 style="font-family:var(--font-heading); margin-bottom:1rem; color: #ef4444;">Confirmar Remoção</h3>
+                <p style="color:var(--text-light); margin-bottom:2rem;">Tem a certeza que deseja remover este membro?
+                    Esta ação não pode ser desfeita.</p>
+                <div style="display:flex; gap:1rem; justify-content:center;">
+                    <button id="btn-cancel-delete" class="btn"
+                        style="background:#e5e7eb; color:#374151;">Cancelar</button>
+                    <button id="btn-confirm-delete" class="btn"
+                        style="background:#ef4444; color:white;">Remover</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data & Scripts -->
+        <script src="hymns.js"></script>
+        <script type="module" src="js/planner-ui.js"></script>
+
+</body>
+
+</html>

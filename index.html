@@ -4,306 +4,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Sacramental SUD</title>
-
-    <!-- Fonts -->
+    <title>Agenda Sacramental - Gateway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
-
-    <!-- PDF Lib -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-    <!-- Icons (Phosphor Icons) -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
     <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        .gateway-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            background-color: var(--bg-app);
+            text-align: center;
+        }
+
+        .gateway-header {
+            margin-bottom: 3rem;
+        }
+
+        .gateway-header h1 {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        @media (min-width: 640px) {
+            .cards-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: inherit;
+            border: 2px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            background: #eff6ff;
+            padding: 1rem;
+            border-radius: 50%;
+            display: inline-flex;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .card p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-fake {
+            margin-top: auto;
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="gateway-container">
+        <header class="gateway-header">
+            <h1>Agenda Sacramental</h1>
+            <p style="color: var(--text-light);">Escolha como deseja planear a reunião</p>
+        </header>
 
-    <div class="app-layout">
-        <!-- Sidebar / Form Section -->
-        <aside class="editor-pane">
-            <header class="editor-header">
-                <h1>Criar Agenda</h1>
-                <p>Preencha os detalhes da reunião</p>
-            </header>
-
-            <form id="agendaForm" onsubmit="return false;">
-
-                <!-- General Info -->
-                <section class="form-group">
-                    <h2>Informações Gerais</h2>
-                    <div class="input-grid">
-                        <div class="input-wrapper">
-                            <label>Ala / Ramo</label>
-                            <input type="text" name="ward" placeholder="Ex: Lisboa 5">
-                        </div>
-                        <div class="input-wrapper">
-                            <label>Data</label>
-                            <input type="date" name="date">
-                        </div>
-                    </div>
-                    <div class="input-grid">
-                        <div class="input-wrapper">
-                            <label>Preside</label>
-                            <input type="text" name="presiding" placeholder="Bispo...">
-                        </div>
-                        <div class="input-wrapper">
-                            <label>Dirige</label>
-                            <input type="text" name="conducting" placeholder="Irmão...">
-                        </div>
-                    </div>
-
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="fastMeeting" name="fastMeeting">
-                        <label for="fastMeeting">Reunião de Jejum e Testemunhos</label>
-                    </div>
-                </section>
-
-                <!-- Music (Pianist & Chorister only) -->
-                <section class="form-group">
-                    <h2>Música</h2>
-                    <div class="input-wrapper">
-                        <label>Pianista / Organista</label>
-                        <input type="text" name="organist">
-                    </div>
-                    <div class="input-wrapper">
-                        <label>Regente</label>
-                        <input type="text" name="chorister">
-                    </div>
-                </section>
-
-                <!-- Recognitions -->
-                <section class="form-group">
-                    <h2>Reconhecimentos</h2>
-                    <p class="helper-text">Adicione pessoas para serem reconhecidas.</p>
-                    <div id="recognitions-input-container" class="dynamic-list-input">
-                        <!-- Dynamic inputs will be added here via JS -->
-                    </div>
-                    <button class="btn-add" onclick="addListItem('recognitions')">+ Adicionar Pessoa</button>
-                </section>
-
-                <!-- Announcements (Standalone) -->
-                <section class="form-group">
-                    <h2>Anúncios</h2>
-                    <div id="announcements-input-container" class="dynamic-list-input"></div>
-                    <button class="btn-add" onclick="addListItem('announcements')">+ Adicionar Anúncio</button>
-                </section>
-
-                <!-- Opening Hymn & Prayer -->
-                <section class="form-group">
-                    <h2>Abertura</h2>
-                    <div class="hymn-input-wrapper">
-                        <label>Hino de Abertura</label>
-                        <input type="text" class="hymn-search" name="openingHymn"
-                            placeholder="Buscar por número ou título...">
-                        <div class="hymn-results"></div>
-                    </div>
-
-                    <div class="input-wrapper">
-                        <label>Primeira Oração</label>
-                        <input type="text" name="invocation">
-                    </div>
-                </section>
-
-                <!-- Business (Ward Affairs) -->
-                <section class="form-group">
-                    <h2>Assuntos da Ala</h2>
-
-                    <div class="input-wrapper">
-                        <label>Desobrigações</label>
-                        <p class="helper-text">Pessoas a serem desobrigadas.</p>
-                        <div id="releases-input-container" class="dynamic-list-input"></div>
-                        <button class="btn-add" onclick="addListItem('releases')">+ Adicionar Desobrigação</button>
-                    </div>
-
-                    <div class="input-wrapper" style="margin-top: 1rem;">
-                        <label>Chamados (Apoios)</label>
-                        <p class="helper-text">Novos chamados para serem apoiados.</p>
-                        <div id="callings-input-container" class="dynamic-list-input"></div>
-                        <button class="btn-add" onclick="addListItem('callings')">+ Adicionar Chamado</button>
-                    </div>
-                </section>
-
-                <!-- Sacrament -->
-                <section class="form-group">
-                    <h2>Sacramento</h2>
-                    <div class="hymn-input-wrapper">
-                        <label>Hino Sacramental</label>
-                        <input type="text" class="hymn-search" name="sacramentHymn"
-                            placeholder="Buscar por número ou título...">
-                        <div class="hymn-results"></div>
-                    </div>
-                </section>
-
-                <!-- Program -->
-                <section class="form-group" id="program-section">
-                    <h2>Programa Espiritual</h2>
-                    <div id="speakers-input-container" class="dynamic-list-input">
-                        <!-- Speakers added here -->
-                    </div>
-                    <button class="btn-add" onclick="addSpeaker()">+ Adicionar Orador</button>
-
-                    <!-- Intermediate Hymn (Hidden if Fast Meeting) -->
-                    <div id="intermediate-hymn-wrapper" class="hymn-input-wrapper"
-                        style="margin-top: 1rem; border-top: 1px dashed #ddd; padding-top: 1rem;">
-                        <label>Hino Intermediário (Opcional)</label>
-                        <input type="text" class="hymn-search" name="intermediateHymn"
-                            placeholder="Buscar por número ou título...">
-                        <div class="hymn-results"></div>
-                        <p class="helper-text">Arraste oradores para antes ou depois deste hino.</p>
-                    </div>
-                </section>
-
-                <!-- Closing -->
-                <section class="form-group">
-                    <h2>Encerramento</h2>
-                    <div class="hymn-input-wrapper">
-                        <label>Hino de Encerramento</label>
-                        <input type="text" class="hymn-search" name="closingHymn"
-                            placeholder="Buscar por número ou título...">
-                        <div class="hymn-results"></div>
-                    </div>
-                    <div class="input-wrapper">
-                        <label>Última Oração</label>
-                        <input type="text" name="benediction">
-                    </div>
-                </section>
-
-            </form>
-
-            <div class="actions-footer">
-                <button class="btn btn-primary" onclick="exportPDF()">
-                    <i class="ph ph-file-pdf"></i> Gerar / Partilhar PDF
-                </button>
-            </div>
-        </aside>
-
-        <!-- Preview Section -->
-        <main class="preview-pane">
-            <div class="paper-wrapper">
-                <div id="agenda-paper" class="agenda-paper">
-
-                    <div class="agenda-header">
-                        <div class="header-line"></div>
-                        <h1>Agenda da Reunião Sacramental</h1>
-                        <h2 data-bind="ward">Ala de [Nome]</h2>
-                        <p class="agenda-date" data-bind="date">--/--/----</p>
-                    </div>
-
-                    <div class="agenda-body">
-
-                        <div class="meta-grid">
-                            <div class="meta-item">
-                                <span class="meta-label">Preside:</span>
-                                <span class="meta-value" data-bind="presiding">...</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Dirige:</span>
-                                <span class="meta-value" data-bind="conducting">...</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Pianista:</span>
-                                <span class="meta-value" data-bind="organist">...</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Regente:</span>
-                                <span class="meta-value" data-bind="chorister">...</span>
-                            </div>
-                        </div>
-
-                        <hr class="divider">
-
-                        <!-- Recognitions Section -->
-                        <div id="preview-recognitions" class="program-section" style="display:none;">
-                            <h3>Reconhecimentos</h3>
-                            <ul class="clean-list" data-bind="recognitions"></ul>
-                        </div>
-
-                        <!-- Announcements (Standalone) -->
-                        <div id="preview-announcements" class="program-section" style="display:none;">
-                            <h3>Anúncios</h3>
-                            <ul class="clean-list" data-bind="announcements"></ul>
-                        </div>
-
-                        <div class="program-item">
-                            <span class="program-label">Hino de Abertura</span>
-                            <span class="program-value hymn" data-bind="openingHymn">...</span>
-                        </div>
-
-                        <div class="program-item">
-                            <span class="program-label">Primeira Oração</span>
-                            <span class="program-value" data-bind="invocation">...</span>
-                        </div>
-
-                        <!-- Business Section (Ward Affairs) -->
-                        <div id="preview-business" class="program-section business-section" style="display:none;">
-                            <h3>Assuntos da Ala</h3>
-
-                            <!-- Releases (First) -->
-                            <div id="preview-releases" style="display:none; margin-bottom: 0.5rem;">
-                                <h4>Desobrigações</h4>
-                                <ul class="clean-list" data-bind="releases"></ul>
-                            </div>
-
-                            <!-- Callings (Second) -->
-                            <div id="preview-callings" style="display:none;">
-                                <h4>Chamados</h4>
-                                <ul class="clean-list" data-bind="callings"></ul>
-                            </div>
-
-                        </div>
-
-                        <div class="program-item highlight-box">
-                            <span class="program-label">Hino Sacramental</span>
-                            <span class="program-value hymn" data-bind="sacramentHymn">...</span>
-                        </div>
-
-                        <div class="sacrament-note">
-                            <p>Administração do Sacramento</p>
-                        </div>
-
-                        <!-- Program Section -->
-                        <div class="program-section speakers-section">
-                            <h3>Programa</h3>
-
-                            <!-- Fast Meeting Text -->
-                            <div id="fast-meeting-note"
-                                style="display:none; text-align: center; margin: 1rem 0; font-style: italic;">
-                                Testemunhos da Congregação
-                            </div>
-
-                            <!-- Standard Speakers List -->
-                            <div id="speakers-list" class="speakers-list">
-                                <!-- Dynamic Content -->
-                            </div>
-                        </div>
-
-                        <hr class="divider">
-
-                        <div class="program-item">
-                            <span class="program-label">Hino de Encerramento</span>
-                            <span class="program-value hymn" data-bind="closingHymn">...</span>
-                        </div>
-
-                        <div class="program-item">
-                            <span class="program-label">Última Oração</span>
-                            <span class="program-value" data-bind="benediction">...</span>
-                        </div>
-
-                    </div>
-
+        <div class="cards-grid">
+            <!-- Simple Tool Card -->
+            <a href="simple.html" class="card">
+                <div class="card-icon">
+                    <i class="ph ph-note-pencil"></i>
                 </div>
-            </div>
-        </main>
-    </div>
+                <h2>Ferramenta Simples</h2>
+                <p>Modo visitante. Crie uma agenda rápida usando o armazenamento local do navegador. Ideal para uso
+                    ocasional.</p>
+                <div class="btn-fake">
+                    Abrir Editor <i class="ph ph-arrow-right"></i>
+                </div>
+            </a>
 
-    <script src="hymns.js"></script>
-    <script src="app.js"></script>
+            <!-- Planner Tool Card -->
+            <a href="planner.html" class="card">
+                <div class="card-icon">
+                    <i class="ph ph-users-three"></i>
+                </div>
+                <h2>Planeador da Ala</h2>
+                <p>Modo autenticado. Gerir membros, acompanhar histórico de oradores e músicas, e sincronizar na nuvem.
+                </p>
+                <div class="btn-fake">
+                    Entrar <i class="ph ph-arrow-right"></i>
+                </div>
+            </a>
+        </div>
+    </div>
 </body>
 
 </html>

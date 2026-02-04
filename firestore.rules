@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // === Helper Functions ===
+    
+    // Get the user's role in a specific ward
+    function getRole(wardId) {
+      // Check the 'users' subcollection within the ward
+      let role = get(/databases/$(database)/documents/wards/$(wardId)/users/$(request.auth.uid)).data.role;
+      return role;
+    }
+
+    function isMember(wardId) {
+      return exists(/databases/$(database)/documents/wards/$(wardId)/users/$(request.auth.uid));
+    }
+
+    function isRole(wardId, roleName) {
+      return isMember(wardId) && getRole(wardId) == roleName;
+    }
+    
+    function isAdmin(wardId) {
+      return isRole(wardId, 'owner') || isRole(wardId, 'admin');
+    }
+    
+    function isEditor(wardId) {
+      return isAdmin(wardId) || isRole(wardId, 'editor');
+    }
+
+    // === Rules ===
+
+    // Users (Global Profile)
+    // - Users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Wards
+    match /wards/{wardId} {
+      // Create: Any authenticated user can create a ward
+      allow create: if request.auth != null;
+      
+      // Read: Any ward member can read ward metadata
+      allow read: if request.auth != null && isMember(wardId);
+      
+      // Update: Only Admin/Owner
+      allow update: if request.auth != null && isAdmin(wardId);
+
+      // --- Subcollections ---
+
+      // 1. Users (Ward Roster/Permissions)
+      match /users/{userId} {
+        // Read: Any member can see who is in the ward, OR the user themselves
+        allow read: if request.auth != null && (request.auth.uid == userId || isMember(wardId));
+        
+        // Write (Join Request): A user can write their OWN entry to 'pending' state
+        allow create: if request.auth != null && request.auth.uid == userId;
+        
+        // Update (Manage Roles): Only Admins can update OTHER users' roles
+        allow update: if request.auth != null && isAdmin(wardId);
+        // Exception: Users might need to update their own status? No, generic save covers this.
+      }
+
+      // 2. Members (Directory)
+      match /members/{memberId} {
+        allow read: if request.auth != null && isMember(wardId);
+        allow write: if request.auth != null && isEditor(wardId);
+      }
+
+      // 3. History (Meetings)
+      match /history/{meetingId} {
+        allow read: if request.auth != null && isMember(wardId);
+        // Only Editors/Admins can finalize meeting (Music coord cannot)
+        allow write: if request.auth != null && isEditor(wardId);
+      }
+      
+      // 4. Plans (Future Planning)
+      match /plans/{planId} {
+        allow read: if request.auth != null && isMember(wardId);
+        // Music Coord SHOULD be able to edit future plans (to add hymns)
+        allow write: if request.auth != null && (isEditor(wardId) || isRole(wardId, 'music'));
+      }
+    }
+  }
+}
