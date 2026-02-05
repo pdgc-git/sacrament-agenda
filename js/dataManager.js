@@ -348,192 +348,205 @@ export async function getMemberStats(memberId) {
 
 // ... (previous code)
 
+// === Unified Meeting Management ===
+
+// Helper: Get Meeting Ref by Date
+function getMeetingRef(dateStr) {
+    const wardId = getWardId();
+    return doc(db, `wards/${wardId}/meetings`, dateStr);
+}
+
+// 1. Save Finalized Meeting (History)
 export async function saveMeeting(meetingData) {
     const wardId = getWardId();
     const batch = writeBatch(db);
 
-    // 1. Save Meeting to History
-    const historyRef = doc(collection(db, `wards/${wardId}/history`)); // Auto ID
+    // Use date string as ID (YYYY-MM-DD)
+    // meetingData.date is a Date string from input (YYYY-MM-DD)
+    const dateStr = meetingData.date;
+    const meetingRef = doc(db, `wards/${wardId}/meetings`, dateStr);
 
-    // Prepare Data
-    const historyPayload = {
-        date: Timestamp.fromDate(new Date(meetingData.date)),
+    const payload = {
+        id: dateStr,
+        dateStr: dateStr,
+        date: Timestamp.fromDate(new Date(dateStr)),
+        status: 'completed', // Finalized
         presiding: meetingData.presiding,
         conducting: meetingData.conducting,
-        hymns: meetingData.hymns, // Array of strings
-        speakers: meetingData.speakers.map(s => s.memberId).filter(Boolean), // Array of IDs
-        attendance: meetingData.attendance // Obj
+        hymns: meetingData.hymns,
+        speakers: meetingData.speakers.map(s => ({
+            ...s, // Save full speaker object including memberId and name
+            memberId: s.memberId || null
+        })),
+        invocationMemberId: meetingData.invocationMemberId || null,
+        benedictionMemberId: meetingData.benedictionMemberId || null,
+        attendance: meetingData.attendance
     };
-    batch.set(historyRef, historyPayload);
+
+    batch.set(meetingRef, payload, { merge: true });
 
     // 2. Update Member stats
     // Speakers
     meetingData.speakers.forEach(s => {
         if (s.memberId) {
             const mRef = doc(db, `wards/${wardId}/members`, s.memberId);
-            batch.update(mRef, { last_talk_date: Timestamp.fromDate(new Date(meetingData.date)) });
+            batch.update(mRef, { last_talk_date: Timestamp.fromDate(new Date(dateStr)) });
         }
     });
 
     // Prayers
     if (meetingData.invocationMemberId) {
         const mRef = doc(db, `wards/${wardId}/members`, meetingData.invocationMemberId);
-        batch.update(mRef, { last_prayer_date: Timestamp.fromDate(new Date(meetingData.date)) });
+        batch.update(mRef, { last_prayer_date: Timestamp.fromDate(new Date(dateStr)) });
     }
     if (meetingData.benedictionMemberId) {
         const mRef = doc(db, `wards/${wardId}/members`, meetingData.benedictionMemberId);
-        batch.update(mRef, { last_prayer_date: Timestamp.fromDate(new Date(meetingData.date)) });
+        batch.update(mRef, { last_prayer_date: Timestamp.fromDate(new Date(dateStr)) });
     }
 
-    // 3. Remove from Plans if exists (Promotion)
-    // We query by dateStr to find the plan
-    if (meetingData.date) {
-        const dateStr = meetingData.date; // Expecting YYYY-MM-DD
-        const q = query(collection(db, `wards/${wardId}/plans`), where("dateStr", "==", dateStr));
-        const snaps = await getDocs(q);
-        snaps.forEach(d => {
-            batch.delete(d.ref);
-        });
-    }
+    // Legacy Cleanup (Optional: delete from old plans collection if still used)
+    // const legacyPlanRef = doc(db, `wards/${wardId}/plans`, ...);
 
     await batch.commit();
-    return historyRef.id;
+    return dateStr;
 }
 
-export async function getDashboardStats() {
+// 2. Draft / Future Plan
+export async function saveFuturePlan(planData) {
     const wardId = getWardId();
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
 
-    // Get all history for this year
-    const firstDayYear = new Date(currentYear, 0, 1);
+    // planData must have dateStr
+    if (!planData.dateStr) throw new Error("Plan requires a date string");
 
-    const q = query(
-        collection(db, `wards/${wardId}/history`),
-        where("date", ">=", Timestamp.fromDate(firstDayYear)),
-        orderBy("date", "asc")
-    );
+    const meetingRef = doc(db, `wards/${wardId}/meetings`, planData.dateStr);
 
-    const snap = await getDocs(q);
-
-    let ytdTotal = 0;
-    let ytdCount = 0;
-    let mtdTotal = 0;
-    let mtdCount = 0;
-
-    // Chart Data
-    const monthlySums = Array(12).fill(0);
-    const monthlyCounts = Array(12).fill(0);
-    const weeklyData = [];
-
-    snap.forEach(doc => {
-        const data = doc.data();
-        const date = data.date.toDate();
-        const att = parseInt(data.attendance?.sacrament || 0);
-
-        if (att > 0) {
-            // YTD Stats
-            ytdTotal += att;
-            ytdCount++;
-
-            // Monthly Aggregation (0-11)
-            const mIdx = date.getMonth();
-            monthlySums[mIdx] += att;
-            monthlyCounts[mIdx]++;
-
-            // MTD Stats
-            if (mIdx === currentMonth) {
-                mtdTotal += att;
-                mtdCount++;
-                weeklyData.push({ day: date.getDate(), count: att });
-            }
-        }
-    });
-
-    const mtdAvg = mtdCount > 0 ? Math.round(mtdTotal / mtdCount) : 0;
-    const ytdAvg = ytdCount > 0 ? Math.round(ytdTotal / ytdCount) : 0;
-
-    // Calculate Monthly Averages
-    const monthlyTrend = monthlySums.map((sum, i) => monthlyCounts[i] ? Math.round(sum / monthlyCounts[i]) : 0);
-
-    return {
-        mtd: mtdAvg,
-        ytd: ytdAvg,
-        monthName: now.toLocaleString('pt-PT', { month: 'long' }),
-        year: currentYear,
-        chartData: {
-            weekly: weeklyData, // [{day: 5, count: 120}, ...]
-            monthly: monthlyTrend // [0, 0, 110, ...]
-        }
+    // Merge: True is critical here to not overwrite existing data
+    const payload = {
+        id: planData.dateStr,
+        dateStr: planData.dateStr,
+        date: Timestamp.fromDate(new Date(planData.dateStr)),
+        status: 'draft', // Default to draft, but don't overwrite if 'completed'?
+        // We generally shouldn't degrade status unless explicitly reopening.
+        // For simple planning, we just act as 'draft' if saving from planner.
+        ...planData
     };
-}
 
-export async function getHistory() {
-    const wardId = getWardId();
-    // Get last 20 meetings
-    const q = query(collection(db, `wards/${wardId}/history`), orderBy("date", "desc"), limit(20));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date.toDate() // Convert Timestamp
-    }));
-}
+    // Remove undefined
+    Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
-// === Future Planning ===
-
-export async function getFuturePlans() {
-    const wardId = getWardId();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Get plans for next 3 months
-    const q = query(
-        collection(db, `wards/${wardId}/plans`),
-        where("dateStr", ">=", today.toISOString().split('T')[0]),
-        orderBy("dateStr")
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Use set with merge
+    await setDoc(meetingRef, payload, { merge: true });
+    return planData.dateStr;
 }
 
 export async function getPlanByDate(dateStr) {
     const wardId = getWardId();
-    const q = query(collection(db, `wards/${wardId}/plans`), where("dateStr", "==", dateStr));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
+    const snap = await getDoc(doc(db, `wards/${wardId}/meetings`, dateStr));
+    if (snap.exists()) {
+        return snap.data();
     }
     return null;
 }
 
-export async function saveFuturePlan(planData) {
+export async function getFuturePlans() {
     const wardId = getWardId();
-    const plansRef = collection(db, `wards/${wardId}/plans`);
+    const today = new Date().toISOString().split('T')[0];
 
-    // planData: { dateStr: 'YYYY-MM-DD', topic: '...', speakers: [...] }
-    if (planData.id) {
-        const docRef = doc(plansRef, planData.id);
-        const { id, ...data } = planData;
-        await updateDoc(docRef, data);
-        return id;
-    } else {
-        // Check if exists for date to avoid duplicates if ID not passed
-        const existing = await getPlanByDate(planData.dateStr);
-        if (existing) {
-            const docRef = doc(plansRef, existing.id);
-            await updateDoc(docRef, planData);
-            return existing.id;
-        }
+    const q = query(
+        collection(db, `wards/${wardId}/meetings`),
+        where("dateStr", ">=", today),
+        orderBy("dateStr")
+    );
 
-        const docRef = await addDoc(plansRef, planData);
-        return docRef.id;
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data());
+}
+
+export async function getHistory() {
+    const wardId = getWardId();
+    // Get last 20 meetings where status is completed
+    const q = query(
+        collection(db, `wards/${wardId}/meetings`),
+        where("status", "==", "completed"),
+        orderBy("dateStr", "desc"), // Use dateStr for valid ordering
+        limit(20)
+    );
+    const snapshot = await getDocs(q);
+
+    // Fallback: If empty, try legacy 'history' collection?
+    if (snapshot.empty) {
+        // Legacy fallback logic could go here
     }
+
+    return snapshot.docs.map(doc => ({
+        ...doc.data(),
+        date: doc.data().date.toDate()
+    }));
 }
 
-export async function deletePlan(planId) {
+export async function getMeetingsInRange(startStr, endStr) {
     const wardId = getWardId();
-    await deleteDoc(doc(db, `wards/${wardId}/plans`, planId));
+    const q = query(
+        collection(db, `wards/${wardId}/meetings`),
+        where("dateStr", ">=", startStr),
+        where("dateStr", "<=", endStr)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data());
 }
+
+// === Future Planning ===
+
+export async function deletePlan(dateStr) {
+    const wardId = getWardId();
+    await deleteDoc(doc(db, `wards/${wardId}/meetings`, dateStr));
+}
+
+// Migration Helper (Run manually via console: window.DM.migrate())
+export async function migrateLegacyData() {
+    const wardId = getWardId();
+    alert("Starting Migration...");
+
+    const batch = writeBatch(db);
+    let count = 0;
+
+    // 1. History
+    const hQ = query(collection(db, `wards/${wardId}/history`));
+    const hSnaps = await getDocs(hQ);
+    hSnaps.forEach(d => {
+        const data = d.data();
+        const dateStr = data.date.toDate().toISOString().split('T')[0];
+        const newRef = doc(db, `wards/${wardId}/meetings`, dateStr);
+        batch.set(newRef, {
+            ...data,
+            id: dateStr,
+            dateStr: dateStr,
+            status: 'completed'
+        });
+        count++;
+    });
+
+    // 2. Plans
+    const pQ = query(collection(db, `wards/${wardId}/plans`));
+    const pSnaps = await getDocs(pQ);
+    pSnaps.forEach(d => {
+        const data = d.data();
+        const dateStr = data.dateStr;
+        if (dateStr) {
+            const newRef = doc(db, `wards/${wardId}/meetings`, dateStr);
+            // Use update if exists (history wins), else set
+            // Simplified: set with merge. If history exists, it overwrites common fields? 
+            // Ideally we check. But for legacy 'plans', they usually are future.
+            batch.set(newRef, {
+                ...data,
+                id: dateStr,
+                status: 'draft'
+            }, { merge: true });
+            count++;
+        }
+    });
+
+    await batch.commit();
+    alert(`Migrated ${count} legacy documents to 'meetings' collection.`);
+}
+

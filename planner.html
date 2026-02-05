@@ -759,77 +759,326 @@
             </div>
         </div>
 
-        <!-- VIEW 3: FUTURE PLANNING -->
-        <div id="view-planning" class="view-container history-view">
-            <header class="roster-header">
-                <div>
-                    <h1>Planeamento Futuro</h1>
-                    <p style="color: var(--text-light);">Organize as próximas reuniões e oradores</p>
-                </div>
-                <div style="display:flex; gap: 1rem; align-items:center;">
-                    <label class="toggle-switch" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-                        <input type="checkbox" id="toggle-simple-planning" onchange="window.renderPlanning()"
-                            style="accent-color: var(--primary);">
-                        <span style="font-size:0.9rem; color:#666;">Apenas Oradores</span>
-                    </label>
-                    <button class="btn btn-primary" onclick="window.addNextSunday()">
-                        <i class="ph ph-plus"></i> Adicionar Domingo
-                    </button>
-                </div>
-            </header>
+        <style>
+            /* Calendar UI */
+            .calendar-container {
+                background: white;
+                border-radius: 12px;
+                box-shadow: var(--shadow);
+                padding: 1.5rem;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
 
-            <div id="planning-container" class="roster-grid" style="background:transparent; box-shadow:none;">
-                <!-- Dynamic Content -->
-                <div id="planning-list" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <!-- Cards will go here -->
-                </div>
-            </div>
-        </div>
+            .calendar-header-row {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                text-align: center;
+                font-weight: 600;
+                color: #94a3b8;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 1rem;
+            }
 
-        <!-- VIEW 4: HISTORY -->
-        <div id="view-history" class="view-container history-view">
-            <header class="roster-header">
-                <h1>Histórico de Reuniões</h1>
-            </header>
-            <div class="roster-grid">
-                <table id="history-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Preside / Dirige</th>
-                            <th>Hinos</th>
-                            <th>Presença</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-tbody"></tbody>
-                </table>
-            </div>
-        </div>
+            .calendar-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                grid-auto-rows: 1fr;
+                gap: 1px;
+                background: var(--border);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                overflow: hidden;
+                flex: 1;
+            }
 
-        <!-- VIEW 5: ADMIN -->
-        <div id="view-admin" class="view-container roster-view">
-            <header class="roster-header">
-                <h1>Administração da Ala</h1>
-                <p style="color: var(--text-light);">Gerir permissões e utilizadores</p>
-            </header>
+            .cal-cell {
+                background: white;
+                min-height: 100px;
+                padding: 0.5rem;
+                position: relative;
+                cursor: pointer;
+                transition: background 0.2s;
+                display: flex;
+                flex-direction: column;
+            }
 
-            <div class="roster-grid">
-                <table id="admin-users-table">
-                    <thead>
-                        <tr>
-                            <th>Utilizador</th>
-                            <th>Email</th>
-                            <th>Função</th>
-                            <th>Estado</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-users-tbody">
+            .cal-cell:hover {
+                background: #f8fafc;
+            }
+
+            .cal-cell.empty {
+                background: #fdfdfd;
+            }
+
+            .cal-cell.today {
+                background: #eff6ff;
+            }
+
+            .cal-cell.disabled {
+                background: #f1f5f9;
+                color: #ccc;
+                pointer-events: none;
+            }
+
+            .cal-date {
+                font-weight: 600;
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+                color: #334155;
+            }
+
+            .cal-indicator {
+                margin-top: auto;
+                display: flex;
+                background: #f1f5f9;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                align-items: center;
+                gap: 4px;
+                color: #64748b;
+            }
+
+            .cal-indicator.status-completed {
+                background: #dcfce7;
+                color: #166534;
+                border: 1px solid #bbf7d0;
+            }
+
+            .cal-indicator.status-draft {
+                background: #ffedd5;
+                color: #9a3412;
+                border: 1px solid #fed7aa;
+            }
+
+            /* Segmented Control */
+            .segmented-control {
+                display: flex;
+                background: #f1f5f9;
+                padding: 4px;
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
+            }
+
+            .seg-btn {
+                flex: 1;
+                border: none;
+                background: transparent;
+                padding: 0.5rem;
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: #64748b;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .seg-btn.active {
+                background: white;
+                color: var(--primary);
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                font-weight: 600;
+            }
+
+            /* Focus Modes */
+            .editor-pane[data-mode="talks"] .section-music,
+            .editor-pane[data-mode="talks"] .section-prayers,
+            .editor-pane[data-mode="talks"] .section-sacrament,
+            .editor-pane[data-mode="talks"] .section-stats {
+                display: none;
+            }
+
+            .editor-pane[data-mode="hymns"] .section-general .input-grid,
+            /* Hide presiding/conducting */
+            .editor-pane[data-mode="hymns"] .section-program,
+            /* Hide speakers */
+            .editor-pane[data-mode="hymns"] .section-stats {
+                display: none;
+            }
+
+            .editor-pane[data-mode="prayers"] .section-music,
+            .editor-pane[data-mode="prayers"] .section-program,
+            .editor-pane[data-mode="prayers"] .section-stats {
+                display: none;
+            }
+        </style>
+        </head>
+
+        <body> <!-- Force restart of body to ensure style is in head or handled ok -->
+
+            <!-- ... (Rest of file wrapper logic assumed handled by tool, replacing only detailed section) -->
+            <!-- Wait, I cannot inject into Head easily with one replace if targets are far apart.
+     I will inject CSS inside view-planning for now or overwrite Style block if I can find it specific enough.
+     Actually, style block is at top. Let's just put this style block IN view-planning for simplicity 
+     or just prepend it to the div. Browsers handle body-level styles fine. -->
+
+            <!-- VIEW 3: FUTURE PLANNING (CALENDAR) -->
+            <div id="view-planning" class="view-container history-view">
+                <style>
+                    /* Scoped styles for Calendar */
+                    .calendar-container {
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: var(--shadow);
+                        padding: 1.5rem;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                    }
+
+                    .calendar-header-row {
+                        display: grid;
+                        grid-template-columns: repeat(7, 1fr);
+                        text-align: center;
+                        font-weight: 600;
+                        color: #94a3b8;
+                        padding-bottom: 0.5rem;
+                        border-bottom: 1px solid var(--border);
+                        margin-bottom: 0.5rem;
+                    }
+
+                    .calendar-grid {
+                        display: grid;
+                        grid-template-columns: repeat(7, 1fr);
+                        grid-auto-rows: 1fr;
+                        /* Equal height rows */
+                        gap: 1px;
+                        background: #e2e8f0;
+                        border: 1px solid #e2e8f0;
+                        flex: 1;
+                        /* Fill remaining space */
+                    }
+
+                    .cal-cell {
+                        background: white;
+                        min-height: 80px;
+                        padding: 0.5rem;
+                        cursor: pointer;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                    }
+
+                    .cal-cell:hover {
+                        background: #f8fafc;
+                    }
+
+                    .cal-cell.disabled {
+                        background: #f8fafc;
+                        opacity: 0.5;
+                        pointer-events: none;
+                    }
+
+                    .cal-cell.is-sunday {
+                        background: #fff;
+                    }
+
+                    .cal-cell.today {
+                        background: #eff6ff;
+                    }
+
+                    .cal-status-pill {
+                        font-size: 0.7rem;
+                        padding: 2px 6px;
+                        border-radius: 10px;
+                        background: #f1f5f9;
+                        color: #64748b;
+                        align-self: flex-start;
+                        margin-top: 4px;
+                    }
+
+                    .cal-status-pill.draft {
+                        background: #ffedd5;
+                        color: #c2410c;
+                    }
+
+                    .cal-status-pill.completed {
+                        background: #dcfce7;
+                        color: #15803d;
+                    }
+                </style>
+
+                <header class="roster-header">
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <button class="btn btn-secondary" style="width:auto;" onclick="window.changeMonth(-1)">
+                            <i class="ph ph-caret-left"></i>
+                        </button>
+                        <h1 id="calendar-title" style="min-width:220px; text-align:center;">---</h1>
+                        <button class="btn btn-secondary" style="width:auto;" onclick="window.changeMonth(1)">
+                            <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary"
+                            onclick="window.editPlan(new Date().toISOString().split('T')[0])">
+                            <i class="ph ph-plus"></i> Plano Rápido
+                        </button>
+                    </div>
+                </header>
+
+                <div class="calendar-container">
+                    <div class="calendar-header-row">
+                        <div>Dom</div>
+                        <div>Seg</div>
+                        <div>Ter</div>
+                        <div>Qua</div>
+                        <div>Qui</div>
+                        <div>Sex</div>
+                        <div>Sáb</div>
+                    </div>
+                    <div id="calendar-grid" class="calendar-grid">
                         <!-- Dynamic -->
-                    </tbody>
-                </table>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <!-- VIEW 4: HISTORY -->
+            <div id="view-history" class="view-container history-view">
+                <header class="roster-header">
+                    <h1>Histórico de Reuniões</h1>
+                </header>
+                <div class="roster-grid">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Preside / Dirige</th>
+                                <th>Hinos</th>
+                                <th>Presença</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 5: ADMIN -->
+            <div id="view-admin" class="view-container roster-view">
+                <header class="roster-header">
+                    <h1>Administração da Ala</h1>
+                    <p style="color: var(--text-light);">Gerir permissões e utilizadores</p>
+                </header>
+
+                <div class="roster-grid">
+                    <table id="admin-users-table">
+                        <thead>
+                            <tr>
+                                <th>Utilizador</th>
+                                <th>Email</th>
+                                <th>Função</th>
+                                <th>Estado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-tbody">
+                            <!-- Dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
     </div>
 

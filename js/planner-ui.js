@@ -421,11 +421,11 @@ function setupFormListeners() {
 
     // Global Planning
     window.renderPlanning = renderPlanning;
-    window.addNextSunday = addNextSunday;
     window.editPlan = goToEditor;
     window.deletePlan = deletePlanUI;
 
     setupDraftSave();
+    setupEditorTabs();
 }
 
 // Editor Load Logic
@@ -1119,7 +1119,7 @@ window.exportPDF = async function () {
 
 let planningRange = 5; // Weeks to show
 
-async function renderPlanning() {
+async function renderPlanning_Legacy() {
     const container = document.getElementById('planning-list');
     if (!container) {
         console.error('planning-list container not found');
@@ -1246,7 +1246,7 @@ async function renderPlanning() {
     }
 }
 
-function addNextSunday() {
+function addNextSunday_Legacy() {
     planningRange += 1;
     renderPlanning();
 }
@@ -1315,6 +1315,158 @@ function setupDraftSave() {
     };
     footer.insertBefore(btn, footer.firstChild);
 }
+
+// === NEW Calendar Logic ===
+
+let currentCalendarDate = new Date();
+
+async function renderPlanning() {
+    const container = document.getElementById('calendar-grid');
+    const title = document.getElementById('calendar-title');
+    if (!container) return; // Guard if not on page
+
+    // 1. Determine Range
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+
+    // Set Title
+    if (title) title.textContent = currentCalendarDate.toLocaleString('pt-PT', { month: 'long', year: 'numeric' });
+
+    // Get first day of month
+    const firstDay = new Date(year, month, 1);
+    // Get last day of month
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Calculate start date (previous month padding)
+    const startDate = new Date(firstDay);
+    startDate.setDate(1 - firstDay.getDay()); // Go back to Sunday
+
+    // Calculate end date (next month padding to complete 42 cells/6 rows or just fill)
+    const endDate = new Date(lastDay);
+    if (lastDay.getDay() < 6) {
+        endDate.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+    }
+
+    container.innerHTML = '<div style="padding:1rem; color:#888;">...</div>';
+
+    // 2. Fetch Data
+    try {
+        const meetings = await DM.getMeetingsInRange(
+            startDate.toISOString().split('T')[0],
+            endDate.toISOString().split('T')[0]
+        );
+
+        container.innerHTML = '';
+
+        // 3. Render Grid
+        const loopDate = new Date(startDate);
+        // Safety break to prevent infinite loops
+        let safeguard = 0;
+
+        while (loopDate <= endDate && safeguard < 42) {
+            safeguard++;
+            const dateStr = loopDate.toISOString().split('T')[0];
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const isCurrentMonth = loopDate.getMonth() === month;
+            const isSunday = loopDate.getDay() === 0;
+
+            // Find Meeting
+            const meeting = meetings.find(m => m.dateStr === dateStr);
+
+            const cell = document.createElement('div');
+            cell.className = `cal-cell ${isToday ? 'today' : ''} ${!isCurrentMonth ? 'disabled' : ''} ${isSunday ? 'is-sunday' : ''}`;
+
+            // Only allow clicking Sundays or days with meetings
+            if (isSunday || meeting) {
+                // Use closure to capture dateStr
+                (function (dStr) {
+                    cell.onclick = () => window.editPlan(dStr);
+                })(dateStr);
+            } else {
+                cell.style.cursor = 'default';
+            }
+
+            // Content
+            let indicator = '';
+            if (meeting) {
+                if (meeting.status === 'completed') {
+                    indicator = `<div class="cal-status-pill completed">Concluída</div>`;
+                } else {
+                    // Analyze draft completeness using icons
+                    let icons = '';
+                    if (meeting.speakers?.length > 0) icons += '🎤 ';
+                    if (meeting.openingHymn) icons += '🎵 ';
+                    indicator = `<div class="cal-status-pill draft">${icons || 'Rascunho'}</div>`;
+                }
+            } else if (isSunday && isCurrentMonth) {
+                // Empty Sunday
+                indicator = `<div style="color:#e2e8f0; font-size:1.5rem; margin:auto;">+</div>`;
+            }
+
+            cell.innerHTML = `
+                <div class="cal-date">${loopDate.getDate()}</div>
+                ${indicator}
+            `;
+
+            container.appendChild(cell);
+
+            // Next day
+            loopDate.setDate(loopDate.getDate() + 1);
+        }
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = "Erro ao carregar calendário.";
+    }
+}
+
+function changeMonth(delta) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+    renderPlanning();
+}
+
+function setupEditorTabs() {
+    const editorHeader = document.querySelector('.editor-header');
+    if (!editorHeader || document.querySelector('.segmented-control')) return;
+
+    const controls = document.createElement('div');
+    controls.className = 'segmented-control';
+    controls.innerHTML = `
+        <button class="seg-btn" data-mode="talks">Oradores</button>
+        <button class="seg-btn" data-mode="hymns">Hinos</button>
+        <button class="seg-btn active" data-mode="full">Completo</button>
+    `;
+
+    // Insert after H1
+    editorHeader.parentNode.insertBefore(controls, editorHeader.nextSibling);
+
+    const pane = document.querySelector('.editor-pane');
+
+    // Basic class adding for sections
+    const sections = document.querySelectorAll('#agendaForm > section');
+    if (sections.length > 0) {
+        if (sections[0]) sections[0].classList.add('section-general');
+        if (sections[1]) sections[1].classList.add('section-music');
+        if (sections[2]) sections[2].classList.add('section-opening'); // Hymn + Prayer
+        if (sections[3]) sections[3].classList.add('section-sacrament');
+        if (sections[4]) sections[4].classList.add('section-program');
+        if (sections[5]) sections[5].classList.add('section-closing'); // Hymn + Prayer
+        if (sections[6]) sections[6].classList.add('section-stats');
+    }
+
+    // Logic
+    controls.querySelectorAll('.seg-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            controls.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            pane.dataset.mode = btn.dataset.mode;
+        });
+    });
+}
+
+// Global Exports
+window.changeMonth = changeMonth;
+window.renderPlanning = renderPlanning;
 
 // === Legacy Future Planning Logic (Table View) ===
 
