@@ -16,6 +16,9 @@ const state = {
     charts: {} // Store chart instances
 };
 
+// Expose state to window for testing and debugging
+window.state = state;
+
 // === Initialization ===
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
@@ -267,6 +270,7 @@ function resetOnboarding(overlay) {
 
 // === Navigation ===
 function setupNavigation() {
+    setupRosterFilters(); // Initialize filters
     const navItems = document.querySelectorAll('.nav-item[data-target]');
     navItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -280,6 +284,7 @@ function setupNavigation() {
             if (targetId === 'view-roster') renderRoster();
             if (targetId === 'view-history') renderHistoryTab();
             if (targetId === 'view-admin') renderAdminTab();
+            if (targetId === 'view-planning') renderPlanning();
             if (targetId === 'view-dashboard') renderDashboard();
         });
     });
@@ -391,7 +396,11 @@ function setupFormListeners() {
     const form = document.getElementById('agendaForm');
     const simpleInputs = form.querySelectorAll('input:not(.member-search):not(.hymn-search), select');
     simpleInputs.forEach(input => {
-        input.addEventListener('input', (e) => updatePreview(e.target.name, e.target.value));
+        input.addEventListener('input', (e) => {
+            updatePreview(e.target.name, e.target.value);
+            // If Date changes, try to load existing plan
+            if (e.target.name === 'date') handleDateChange(e.target.value);
+        });
     });
 
     // 2. Member Search (Invocation, Benediction, Speakers)
@@ -409,6 +418,67 @@ function setupFormListeners() {
     window.addProgramHymnUI = addProgramHymnUI;
     window.removeSpeakerUI = removeSpeakerUI;
     window.addMemberUI = showMemberModal; // Mapped to new modal
+
+    // Global Planning
+    window.renderPlanning = renderPlanning;
+    window.addNextSunday = addNextSunday;
+    window.editPlan = goToEditor;
+    window.deletePlan = deletePlanUI;
+
+    setupDraftSave();
+}
+
+// Editor Load Logic
+let currentPlanId = null; // Track if we are editing an existing plan document
+
+async function handleDateChange(dateStr) {
+    if (!dateStr) return;
+
+    // 1. Reset Form ID
+    currentPlanId = null;
+
+    // 2. Check for Plan
+    try {
+        const plan = await DM.getPlanByDate(dateStr);
+        if (plan) {
+            loadPlanIntoForm(plan);
+            showToast("Plano encontrado e carregado.");
+            return;
+        }
+
+        // 3. Optional: Check History (if users want to view past meetings in editor)
+        // For now, we just clear if new
+        // clearForm(false); // Keep date
+
+        // Ensure "Presiding" defaults are kept or smart-filled?
+        // fillDefaults();
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function loadPlanIntoForm(plan) {
+    currentPlanId = plan.id;
+    const form = document.getElementById('agendaForm');
+
+    // Simple Fields
+    ['presiding', 'conducting', 'organist', 'chorister', 'openingHymn', 'sacramentHymn', 'closingHymn', 'invocation', 'benediction'].forEach(field => {
+        if (form[field]) {
+            form[field].value = plan[field] || '';
+            updatePreview(field, plan[field] || '');
+        }
+    });
+
+    // Speakers
+    state.speakers = plan.speakers || [];
+    renderSpeakersInput();
+    renderSpeakersOutput();
+
+    // Stats
+    ['att_start', 'att_sacrament', 'att_end', 'att_visitors'].forEach(f => {
+        if (form[f]) form[f].value = plan.attendance?.[f.replace('att_', '')] || '';
+    });
 }
 
 function updatePreview(key, value) {
@@ -447,7 +517,10 @@ function setupMemberSearch(input, onSelect) {
         }
 
         const matches = state.members.filter(m => m.name.toLowerCase().includes(q));
-        renderMemberResults(matches, resultsBox, input, onSelect);
+        // Determine context
+        const context = input.name === 'invocation' || input.name === 'benediction' ? 'prayer' : 'talk';
+
+        renderMemberResults(matches, resultsBox, input, onSelect, context);
     });
 
     // Close on click outside
@@ -456,7 +529,7 @@ function setupMemberSearch(input, onSelect) {
     });
 }
 
-function renderMemberResults(members, container, input, onSelect) {
+function renderMemberResults(members, container, input, onSelect, context = 'talk') {
     container.innerHTML = '';
     if (members.length === 0) {
         container.style.display = 'none';
@@ -467,22 +540,28 @@ function renderMemberResults(members, container, input, onSelect) {
         const div = document.createElement('div');
         div.className = 'hymn-result-item'; // Reuse style
 
-        // Smart Check: Last Spoke
-        let lastSpokeText = '';
+        // Smart Check: Last Spoke or Prayed
+        let statText = '';
         let warning = '';
-        if (m.last_talk_date) {
-            const date = m.last_talk_date.toDate();
-            lastSpokeText = ` (Último: ${date.toLocaleDateString()})`;
+        const now = new Date();
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(now.getMonth() - 6);
 
-            // Warning if < 6 months
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-            if (date > sixMonthsAgo) {
-                warning = `<span class="smart-badge badge-warning">! Recente</span>`;
+        if (context === 'prayer') {
+            if (m.last_prayer_date) {
+                const date = m.last_prayer_date.toDate();
+                statText = ` (Oração: ${date.toLocaleDateString()})`;
+                if (date > sixMonthsAgo) warning = `<span class="smart-badge badge-info">Recente</span>`;
+            }
+        } else {
+            if (m.last_talk_date) {
+                const date = m.last_talk_date.toDate();
+                statText = ` (Discurso: ${date.toLocaleDateString()})`;
+                if (date > sixMonthsAgo) warning = `<span class="smart-badge badge-warning">Recente</span>`;
             }
         }
 
-        div.innerHTML = `${m.name} <span style="font-size:0.8em; color:#666">${lastSpokeText}</span> ${warning}`;
+        div.innerHTML = `${m.name} <span style="font-size:0.8em; color:#666">${statText}</span> ${warning}`;
 
         div.onclick = () => {
             input.value = m.name;
@@ -638,41 +717,72 @@ function renderSpeakersOutput() {
     });
 }
 
+// Helper for translations
+const GROUP_TRANSLATIONS = {
+    'Adult': 'Adultos',
+    'Young Adult': 'Jovens Adultos (JA)',
+    'Youth': 'Jovens',
+    'Primary': 'Primária'
+};
+
+// Setup Listeners for Roster Filters
+function setupRosterFilters() {
+    const search = document.getElementById('roster-search');
+    const group = document.getElementById('roster-filter-group');
+    const gender = document.getElementById('roster-filter-gender');
+
+    if (search) search.addEventListener('input', renderRoster);
+    if (group) group.addEventListener('change', renderRoster);
+    if (gender) gender.addEventListener('change', renderRoster);
+}
+
 // === Roster Logic ===
 function renderRoster() {
     const tbody = document.getElementById('roster-tbody');
     tbody.innerHTML = '';
 
-    const filter = document.getElementById('roster-filter').value;
-    let list = state.members;
+    const searchTerm = document.getElementById('roster-search').value.toLowerCase();
+    const groupFilter = document.getElementById('roster-filter-group').value;
+    const genderFilter = document.getElementById('roster-filter-gender').value;
 
-    if (filter.startsWith('gender_')) {
-        const g = filter.split('_')[1];
-        list = list.filter(m => m.gender === g);
-    } else if (filter !== 'all') {
-        list = list.filter(m => m.group === filter);
+    let list = state.members.filter(m => {
+        // Name Search
+        if (searchTerm && !m.name.toLowerCase().includes(searchTerm)) return false;
+        // Group Filter
+        if (groupFilter !== 'all' && m.group !== groupFilter) return false;
+        // Gender Filter
+        if (genderFilter !== 'all' && m.gender !== genderFilter) return false;
+        return true;
+    });
+
+    // Update Title with Ward Name
+    const titleEl = document.getElementById('roster-title');
+    if (titleEl && state.wardName) {
+        titleEl.textContent = `Membros da Ala (${state.wardName})`;
     }
 
     list.slice(0, 50).forEach(m => {
         const tr = document.createElement('tr');
+        const translatedGroup = GROUP_TRANSLATIONS[m.group] || m.group;
+
         tr.innerHTML = `
             <td>
                 <div style="font-weight:600; cursor:pointer;" class="view-link" data-id="${m.id}">${m.name}</div>
                 <div style="font-size:0.8em; color:#666">${m.calling || ''}</div>
             </td>
-            <td>${m.group}</td>
+            <td>${translatedGroup}</td>
             <td>${m.last_talk_date ? m.last_talk_date.toDate().toLocaleDateString() : '-'}</td>
             <td>${m.last_prayer_date ? m.last_prayer_date.toDate().toLocaleDateString() : '-'}</td>
             <td class="action-cell">
                 <button class="btn-meatballs" onclick="toggleMenu(event, '${m.id}')">⋮</button>
                 <div id="menu-${m.id}" class="action-menu" style="display:none;">
-                    <div class="menu-item" onclick="viewMember('${m.id}')">
+                    <div class="menu-item" onclick="event.stopPropagation(); viewMember('${m.id}')">
                         <span>👁️</span> Ver
                     </div>
-                    <div class="menu-item" onclick="editMember('${m.id}')">
+                    <div class="menu-item" onclick="event.stopPropagation(); editMember('${m.id}')">
                         <span>✏️</span> Editar
                     </div>
-                    <div class="menu-item danger" onclick="deleteMember('${m.id}')">
+                    <div class="menu-item danger" onclick="event.stopPropagation(); deleteMember('${m.id}')">
                          <span>🗑️</span> Apagar
                     </div>
                 </div>
@@ -701,7 +811,12 @@ window.toggleMenu = function (e, id) {
 
 window.editMember = function (id) {
     const member = state.members.find(m => m.id === id);
-    if (member) showMemberModal(member);
+    if (member) {
+        // Ensure View modal is closed
+        const viewModal = document.getElementById('member-view-modal');
+        if (viewModal) viewModal.style.display = 'none';
+        showMemberModal(member);
+    }
 };
 
 let pendingDeleteId = null;
@@ -709,20 +824,38 @@ let pendingDeleteId = null;
 window.deleteMember = function (id) {
     pendingDeleteId = id;
     const modal = document.getElementById('delete-confirm-modal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        // Ensure other modals are closed
+        if (document.getElementById('member-view-modal')) document.getElementById('member-view-modal').style.display = 'none';
+        if (document.getElementById('member-modal')) document.getElementById('member-modal').style.display = 'none';
+        modal.style.display = 'flex';
+    }
 };
 
 window.viewMember = async function (id) {
+    console.log("viewMember called for", id);
     const member = state.members.find(m => m.id === id);
-    if (!member) return;
+    if (!member) {
+        console.error("Member not found for view:", id);
+        return;
+    }
+
+    // Close duplicated modals just in case
+    const editModal = document.getElementById('member-modal');
+    if (editModal) editModal.style.display = 'none';
 
     // Populate Modal
+    const translatedGroup = (GROUP_TRANSLATIONS && GROUP_TRANSLATIONS[member.group]) ? GROUP_TRANSLATIONS[member.group] : member.group;
     document.getElementById('view-mem-name').textContent = member.name;
-    document.getElementById('view-mem-details').textContent = `${member.calling || 'Sem chamado'} • ${member.group} • ${member.gender === 'M' ? 'Masculino' : 'Feminino'}`;
+    document.getElementById('view-mem-details').textContent = `${member.calling || 'Sem chamado'} • ${translatedGroup} • ${member.gender === 'M' ? 'Masculino' : 'Feminino'}`;
 
     // Setup Edit Button
     const btnEdit = document.getElementById('btn-edit-from-view');
-    btnEdit.onclick = () => {
+    // REMOVE OLD LISTENERS to prevent stacking
+    const newBtn = btnEdit.cloneNode(true);
+    btnEdit.parentNode.replaceChild(newBtn, btnEdit);
+
+    newBtn.onclick = () => {
         document.getElementById('member-view-modal').style.display = 'none';
         showMemberModal(member);
     };
@@ -733,7 +866,8 @@ window.viewMember = async function (id) {
     listTalks.innerHTML = '<li>Carregando...</li>';
     listPrayers.innerHTML = '<li>Carregando...</li>';
 
-    document.getElementById('member-view-modal').style.display = 'flex';
+    const viewModal = document.getElementById('member-view-modal');
+    viewModal.style.display = 'flex';
 
     try {
         const history = await DM.getMemberHistory(member.id);
@@ -751,7 +885,10 @@ window.viewMember = async function (id) {
         });
 
     } catch (e) {
-        listTalks.innerHTML = `<li>Erro: ${e.message}</li>`;
+        console.error("Error fetching history:", e);
+        const msg = `<li style="color:#ef4444; font-size: 0.8em;">Erro: ${e.message}</li>`;
+        listTalks.innerHTML = msg;
+        listPrayers.innerHTML = msg;
     }
 }
 
@@ -808,7 +945,10 @@ if (memberModal) {
         if (!name) return alert("Nome é obrigatório");
 
         try {
-            await DM.saveMember({ id, name, calling, group, gender });
+            const memberPayload = { name, calling, group, gender };
+            if (id) memberPayload.id = id;
+
+            await DM.saveMember(memberPayload);
             memberModal.style.display = 'none';
             showToast("Membro guardado!");
 
@@ -975,7 +1115,208 @@ window.exportPDF = async function () {
     html2pdf(element, opt);
 };
 
-// === Future Planning Logic ===
+// === Future Planning View Logic ===
+
+let planningRange = 5; // Weeks to show
+
+async function renderPlanning() {
+    const container = document.getElementById('planning-list');
+    if (!container) {
+        console.error('planning-list container not found');
+        return;
+    }
+    const isSimple = document.getElementById('toggle-simple-planning')?.checked || false;
+
+    container.innerHTML = '<div style="padding:2rem;color:#888;">Carregando...</div>';
+
+    try {
+        const plans = await DM.getFuturePlans();
+
+        container.innerHTML = '';
+
+        // Generate next X Sundays
+        const today = new Date();
+        const days = [];
+        // Find next Sunday
+        let next = new Date(today);
+        const dayOfWeek = today.getDay();
+        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+        next.setDate(today.getDate() + daysUntilSunday);
+
+        for (let i = 0; i < planningRange; i++) {
+            const d = new Date(next);
+            d.setDate(next.getDate() + (i * 7));
+            const dateStr = d.toISOString().split('T')[0];
+
+            // Find existing plan
+            const plan = plans.find(p => p.dateStr === dateStr);
+            days.push({ date: d, dateStr, plan: plan || null });
+        }
+
+        days.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'plan-card';
+
+            const monthShort = item.date.toLocaleString('pt-PT', { month: 'short' });
+
+            let contentHtml = '';
+
+            if (item.plan) {
+                // Render Plan
+                const speakersList = (item.plan.speakers || [])
+                    .map(s => s.type === 'hymn'
+                        ? `<div class="plan-list-item"><i class="ph ph-music-note"></i> ${s.name}</div>`
+                        : `<div class="plan-list-item"><i class="ph ph-microphone-stage"></i> ${s.name}</div>`
+                    ).join('');
+
+                const hymnsList = [item.plan.openingHymn, item.plan.sacramentHymn, item.plan.closingHymn]
+                    .filter(Boolean)
+                    .map(h => `<div class="plan-list-item"><i class="ph ph-music-notes"></i> ${h}</div>`)
+                    .join('');
+
+                if (isSimple) {
+                    contentHtml = `
+                        <div class="plan-content" style="grid-template-columns: 1fr;">
+                            <div class="plan-section">
+                                <h4>Oradores & Orações</h4>
+                                ${speakersList || '<p style="color:#ccc; font-style:italic">Sem oradores definidos</p>'}
+                                <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px dashed #eee;">
+                                     <div class="plan-list-item"><i class="ph ph-hands-praying"></i> ${item.plan.invocation || 'Oração Inic.'}</div>
+                                     <div class="plan-list-item"><i class="ph ph-hands-praying"></i> ${item.plan.benediction || 'Oração Final'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    contentHtml = `
+                        <div class="plan-content">
+                            <div class="plan-section">
+                                <h4>Liderança & Música</h4>
+                                <div class="plan-list-item"><span style="color:#94a3b8">Preside:</span> ${item.plan.presiding || '-'}</div>
+                                <div class="plan-list-item"><span style="color:#94a3b8">Dirige:</span> ${item.plan.conducting || '-'}</div>
+                                <div class="plan-list-item"><span style="color:#94a3b8">Pianista:</span> ${item.plan.organist || '-'}</div>
+                                <div class="plan-list-item"><span style="color:#94a3b8">Regente:</span> ${item.plan.chorister || '-'}</div>
+                            </div>
+                            <div class="plan-section">
+                                <h4>Ordem do Serviço</h4>
+                                ${hymnsList || '<p style="color:#ccc">-</p>'}
+                                <div style="margin: 0.5rem 0; border-bottom:1px solid #eee"></div>
+                                ${speakersList || '<p style="color:#ccc">-</p>'}
+                            </div>
+                        </div>
+                    `;
+                }
+
+            } else {
+                // Empty State
+                contentHtml = `
+                    <div class="plan-content" style="display:flex; justify-content:center; align-items:center; padding: 3rem;">
+                        <button class="btn btn-secondary" onclick="window.editPlan('${item.dateStr}')">
+                            <i class="ph ph-plus-circle"></i> Planear Reunião
+                        </button>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="plan-header">
+                    <div class="plan-date-box">
+                        <div style="text-align:center">
+                            <div class="plan-day">${item.date.getDate()}</div>
+                            <div class="plan-month">${monthShort}</div>
+                        </div>
+                        <div style="font-weight:600; color:#334155;">
+                             Domingo
+                             <div style="font-size:0.8rem; font-weight:400; color:#64748b;">Sacramental</div>
+                        </div>
+                    </div>
+                    <div class="plan-actions">
+                         <div class="btn-icon-small" title="Editar" onclick="window.editPlan('${item.dateStr}')"><i class="ph ph-pencil-simple"></i></div>
+                         ${item.plan ? `<div class="btn-icon-small" title="Limpar" onclick="window.deletePlan('${item.plan.id}')"><i class="ph ph-trash"></i></div>` : ''}
+                    </div>
+                </div>
+                ${contentHtml}
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div style="padding:2rem;color:#dc2626;">Erro ao carregar planeamento.</div>';
+    }
+}
+
+function addNextSunday() {
+    planningRange += 1;
+    renderPlanning();
+}
+
+function goToEditor(dateStr) {
+    // 1. Switch Tab
+    const plannerNav = document.querySelector('.nav-item[data-target="view-planner"]');
+    if (plannerNav) plannerNav.click();
+
+    // 2. Set Date
+    const input = document.getElementById('input-date');
+    if (input) {
+        input.value = dateStr;
+        // Trigger generic input listener to update preview
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        // Also manually call load logic
+        handleDateChange(dateStr);
+    }
+}
+
+async function deletePlanUI(id) {
+    if (confirm("Tem a certeza que deseja apagar este planeamento?")) {
+        await DM.deletePlan(id);
+        renderPlanning();
+    }
+}
+
+function setupDraftSave() {
+    const footer = document.querySelector('.actions-footer');
+    if (!footer || document.getElementById('btn-save-draft')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'btn-save-draft';
+    btn.className = 'btn btn-secondary';
+    btn.style.marginBottom = '0.5rem';
+    btn.innerHTML = '<i class="ph ph-floppy-disk-back"></i> Guardar Rascunho';
+    btn.onclick = async () => {
+        const form = document.getElementById('agendaForm');
+        const formData = new FormData(form);
+
+        // Gather data
+        const draftData = {
+            id: currentPlanId, // Update if exists
+            dateStr: formData.get('date'),
+            presiding: formData.get('presiding'),
+            conducting: formData.get('conducting'),
+            organist: formData.get('organist'),
+            chorister: formData.get('chorister'),
+            openingHymn: formData.get('openingHymn'),
+            sacramentHymn: formData.get('sacramentHymn'),
+            closingHymn: formData.get('closingHymn'),
+            invocation: formData.get('invocation'),
+            benediction: formData.get('benediction'),
+            speakers: state.speakers,
+        };
+
+        if (!draftData.dateStr) return alert("Escolha uma data");
+
+        try {
+            const id = await DM.saveFuturePlan(draftData);
+            currentPlanId = id;
+            showToast("Rascunho guardado!");
+        } catch (e) {
+            alert(e.message);
+        }
+    };
+    footer.insertBefore(btn, footer.firstChild);
+}
+
+// === Legacy Future Planning Logic (Table View) ===
 
 async function renderPlanningTab() {
     const container = document.getElementById('view-planning');
@@ -1107,3 +1448,178 @@ function applyRoleRestrictions() {
 document.querySelector('.nav-item[data-target="view-planner"]').addEventListener('click', () => {
     applyRoleRestrictions();
 });
+
+
+// Global Key Listener for ESC to close modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        // Priority order: Delete -> View -> Edit -> Auth
+        const modals = ['delete-confirm-modal', 'member-view-modal', 'member-modal', 'auth-modal'];
+        for (const id of modals) {
+            const el = document.getElementById(id);
+            if (el && el.style.display !== 'none' && el.style.display !== '') {
+                el.style.display = 'none';
+                e.stopPropagation(); // prevent closing multiple levels at once if that's desired behavior? 
+                // Actually usually we want one by one.
+                return;
+            }
+        }
+    }
+});
+
+
+// === Bulk Import Logic ===
+window.openImportModal = function () {
+    document.getElementById('import-modal').style.display = 'flex';
+}
+
+window.downloadTemplate = function () {
+    const csvContent = "\uFEFFNome,Chamado,Grupo,Genero\nJoão Silva,Bispo,Adult,M\nMaria Santos,Primária,Primary,F";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "modelo_membros.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Paste Handler
+document.getElementById('btn-process-paste').addEventListener('click', async () => {
+    const text = document.getElementById('paste-area').value.trim();
+    if (!text) return alert("Cole os dados primeiro.");
+
+    // Improved Parser: Handles Comma (CSV) and Tab (Excel)
+    const rows = text.split('\n');
+    const members = [];
+
+    // Detect delimiter
+    const firstLine = rows[0];
+    const isTab = firstLine.includes('\t');
+    const delimiter = isTab ? '\t' : ',';
+
+    // Auto-skip header if common keywords found
+    let startIdx = 0;
+    const headerKeywords = ['nome', 'name', 'chamado', 'calling', 'grupo', 'gender'];
+    if (headerKeywords.some(k => firstLine.toLowerCase().includes(k))) {
+        startIdx = 1;
+    }
+
+    for (let i = startIdx; i < rows.length; i++) {
+        const row = rows[i].trim();
+        if (!row) continue; // skip empty
+
+        let cols = row.split(delimiter);
+
+        // Clean quotes from CSV
+        if (!isTab) {
+            cols = cols.map(c => c.trim().replace(/^"|"$/g, ''));
+        } else {
+            cols = cols.map(c => c.trim());
+        }
+
+        if (cols.length >= 1) {
+            members.push({
+                name: cols[0],
+                calling: cols[1] || '',
+                group: cols[2] || 'Adult', // Default
+                gender: cols[3] || 'M'
+            });
+        }
+    }
+
+    if (members.length === 0) return alert("Nenhum dado válido encontrado.");
+    confirmImport(members);
+});
+
+// File Upload Handler (Drop & Select)
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('csv-import-file');
+
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
+dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = '#cbd5e1'; });
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#cbd5e1';
+    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+function processFile(file) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const text = e.target.result;
+        const rows = text.split('\n').filter(r => r.trim());
+        // Simple check if first row has "Nome"
+        if (rows[0].toLowerCase().includes('nome')) rows.shift(); // Remove header
+
+        const members = rows.map(r => {
+            const cols = r.split(',');
+            return {
+                name: cols[0]?.trim(),
+                calling: cols[1]?.trim() || '',
+                group: cols[2]?.trim() || 'Adult',
+                gender: cols[3]?.trim() || 'M'
+            };
+        });
+        confirmImport(members);
+    };
+    reader.readAsText(file);
+}
+
+// Temporary storage for confirmation
+let pendingImportMembers = [];
+
+function confirmImport(members) {
+    pendingImportMembers = members;
+    const modal = document.getElementById('import-confirm-modal');
+    document.getElementById('import-confirm-text').textContent =
+        `Encontrados ${members.length} membros para importar. Deseja prosseguir?`;
+    modal.style.display = 'flex';
+}
+
+// Wire up the confirm button (one-time listener setup is better, but here we can just replace onclick or add listener if careful)
+// We'll leave the button id in HTML and add listener here:
+document.getElementById('btn-final-import').onclick = async () => {
+    document.getElementById('import-confirm-modal').style.display = 'none';
+    await executeImport(pendingImportMembers);
+    pendingImportMembers = [];
+};
+
+async function executeImport(newMembers) {
+    try {
+        let count = 0;
+        for (const m of newMembers) {
+            if (!m.name) continue;
+            // Map Groups
+            const gMap = { 'Adultos': 'Adult', 'Jovens': 'Youth', 'Primária': 'Primary', 'Jovens Adultos': 'Young Adult' };
+            const grp = gMap[m.group] || m.group;
+
+            // Map Gender
+            const gen = (m.gender && (m.gender.toUpperCase().startsWith('F') || m.gender.toUpperCase().startsWith('M'))) ? m.gender.toUpperCase() : 'M';
+
+            await DM.addMember({
+                name: m.name,
+                calling: m.calling,
+                group: grp,
+                gender: gen
+            });
+            count++;
+        }
+        showToast(`${count} membros importados com sucesso!`);
+        document.getElementById('import-modal').style.display = 'none';
+        document.getElementById('paste-area').value = '';
+
+        // FORCE REFRESH
+        await loadData(false);
+        // Ensure UI updates if loadData doesn't trigger it (loadData usually calls renderRoster)
+        renderRoster();
+
+    } catch (e) {
+        alert("Erro na importação: " + e.message);
+    }
+}

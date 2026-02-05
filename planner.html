@@ -142,7 +142,8 @@
             background: white;
             border-radius: 8px;
             box-shadow: var(--shadow);
-            overflow: hidden;
+            overflow: visible;
+            /* Changed from hidden to allow action menu to show */
         }
 
         table {
@@ -224,6 +225,99 @@
                 transform: translateY(0);
                 opacity: 1;
             }
+        }
+
+        /* Planning View Cards */
+        .plan-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid var(--border);
+        }
+
+        .plan-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .plan-header {
+            padding: 1rem 1.5rem;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .plan-date-box {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .plan-day {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .plan-month {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--text-light);
+            letter-spacing: 0.5px;
+        }
+
+        .plan-content {
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .plan-section h4 {
+            margin: 0 0 0.8rem 0;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .plan-list-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .plan-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon-small:hover {
+            background: #f1f5f9;
+            color: var(--primary);
         }
     </style>
 </head>
@@ -612,14 +706,14 @@
         <div id="view-roster" class="view-container roster-view">
             <header class="roster-header">
                 <div>
-                    <h1>Membros da Ala</h1>
-                    <p style="color: var(--text-light);">Gerir lista para sugestões inteligentes</p>
+                    <h1 id="roster-title">Membros da Ala</h1>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
+                    <!-- Hidden input repurposed for the new modal -->
                     <input type="file" id="csv-upload" accept=".csv" style="display:none">
-                    <button class="btn btn-secondary" style="width: auto;"
-                        onclick="document.getElementById('csv-upload').click()">
-                        <i class="ph ph-upload"></i> Importar CSV
+
+                    <button class="btn btn-secondary" style="width: auto;" onclick="window.openImportModal()">
+                        <i class="ph ph-users-three"></i> Adicionar Lista de Membros
                     </button>
                     <button class="btn btn-primary" style="width: auto;" onclick="window.addMemberUI()">
                         <i class="ph ph-plus"></i> Novo Membro
@@ -630,14 +724,17 @@
             <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
                 <input type="text" id="roster-search" placeholder="Filtrar por nome..." class="input-wrapper"
                     style="padding: 0.5rem; max-width: 300px;">
-                <select id="roster-filter" class="input-wrapper" style="padding: 0.5rem;">
-                    <option value="all">Todos</option>
+                <select id="roster-filter-group" class="input-wrapper" style="padding: 0.5rem;">
+                    <option value="all">Todos os Grupos</option>
                     <option value="Adult">Adultos</option>
                     <option value="Young Adult">Jovens Adultos (JA)</option>
                     <option value="Youth">Jovens</option>
                     <option value="Primary">Primária</option>
-                    <option value="gender_M">Homens</option>
-                    <option value="gender_F">Mulheres</option>
+                </select>
+                <select id="roster-filter-gender" class="input-wrapper" style="padding: 0.5rem;">
+                    <option value="all">Todos os Géneros</option>
+                    <option value="M">Homens</option>
+                    <option value="F">Mulheres</option>
                 </select>
             </div>
 
@@ -662,64 +759,77 @@
             </div>
         </div>
 
-    </div>
+        <!-- VIEW 3: FUTURE PLANNING -->
+        <div id="view-planning" class="view-container history-view">
+            <header class="roster-header">
+                <div>
+                    <h1>Planeamento Futuro</h1>
+                    <p style="color: var(--text-light);">Organize as próximas reuniões e oradores</p>
+                </div>
+                <div style="display:flex; gap: 1rem; align-items:center;">
+                    <label class="toggle-switch" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                        <input type="checkbox" id="toggle-simple-planning" onchange="window.renderPlanning()"
+                            style="accent-color: var(--primary);">
+                        <span style="font-size:0.9rem; color:#666;">Apenas Oradores</span>
+                    </label>
+                    <button class="btn btn-primary" onclick="window.addNextSunday()">
+                        <i class="ph ph-plus"></i> Adicionar Domingo
+                    </button>
+                </div>
+            </header>
 
-    <!-- VIEW 3: FUTURE PLANNING -->
-    <div id="view-planning" class="view-container history-view">
-        <header class="roster-header">
-            <h1>Planeamento Futuro</h1>
-            <p style="color: var(--text-light);">Esboço de reuniões para os próximos meses</p>
-        </header>
-        <div style="text-align:center; padding: 2rem; color: #888;">
-            <i class="ph ph-cone" style="font-size:3rem; margin-bottom:1rem; display:block;"></i>
-            <p>Funcionalidade em desenvolvimento...</p>
+            <div id="planning-container" class="roster-grid" style="background:transparent; box-shadow:none;">
+                <!-- Dynamic Content -->
+                <div id="planning-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Cards will go here -->
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- VIEW 4: HISTORY -->
-    <div id="view-history" class="view-container history-view">
-        <header class="roster-header">
-            <h1>Histórico de Reuniões</h1>
-        </header>
-        <div class="roster-grid">
-            <table id="history-table">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Preside / Dirige</th>
-                        <th>Hinos</th>
-                        <th>Presença</th>
-                    </tr>
-                </thead>
-                <tbody id="history-tbody"></tbody>
-            </table>
+        <!-- VIEW 4: HISTORY -->
+        <div id="view-history" class="view-container history-view">
+            <header class="roster-header">
+                <h1>Histórico de Reuniões</h1>
+            </header>
+            <div class="roster-grid">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Preside / Dirige</th>
+                            <th>Hinos</th>
+                            <th>Presença</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody"></tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <!-- VIEW 5: ADMIN -->
-    <div id="view-admin" class="view-container roster-view">
-        <header class="roster-header">
-            <h1>Administração da Ala</h1>
-            <p style="color: var(--text-light);">Gerir permissões e utilizadores</p>
-        </header>
+        <!-- VIEW 5: ADMIN -->
+        <div id="view-admin" class="view-container roster-view">
+            <header class="roster-header">
+                <h1>Administração da Ala</h1>
+                <p style="color: var(--text-light);">Gerir permissões e utilizadores</p>
+            </header>
 
-        <div class="roster-grid">
-            <table id="admin-users-table">
-                <thead>
-                    <tr>
-                        <th>Utilizador</th>
-                        <th>Email</th>
-                        <th>Função</th>
-                        <th>Estado</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="admin-users-tbody">
-                    <!-- Dynamic -->
-                </tbody>
-            </table>
+            <div class="roster-grid">
+                <table id="admin-users-table">
+                    <thead>
+                        <tr>
+                            <th>Utilizador</th>
+                            <th>Email</th>
+                            <th>Função</th>
+                            <th>Estado</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-tbody">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
     </div>
 
@@ -778,64 +888,154 @@
                     style="background:var(--primary); color:white;">Guardar</button>
             </div>
         </div>
-        <!-- View Member Modal -->
-        <div id="member-view-modal"
-            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
-            <div class="glass-panel"
-                style="background:#fff; padding:2rem; width:90%; max-width:600px; max-height: 80vh; overflow-y: auto; border-radius:16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-                <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                    <div>
-                        <h2 id="view-mem-name" style="font-family: var(--font-body); font-weight: 700; margin:0;">Nome
-                        </h2>
-                        <p id="view-mem-details" style="color:var(--text-light); font-size: 0.9rem; margin:0;">
-                            Detalhes...</p>
-                    </div>
-                    <button onclick="document.getElementById('member-view-modal').style.display='none'"
-                        class="btn-remove" style="font-size:1.5rem;">&times;</button>
-                </header>
+    </div>
 
-                <div style="margin-bottom: 2rem;">
-                    <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
-                        de Discursos</h3>
-                    <ul id="view-mem-talks" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
-                        <!-- Dynamic -->
-                    </ul>
-                </div>
-
+    <!-- View Member Modal -->
+    <div id="member-view-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
+        <div class="glass-panel"
+            style="background:#fff; padding:2rem; width:90%; max-width:600px; max-height: 80vh; overflow-y: auto; border-radius:16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                 <div>
-                    <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
-                        de Orações</h3>
-                    <ul id="view-mem-prayers" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
-                        <!-- Dynamic -->
-                    </ul>
+                    <h2 id="view-mem-name" style="font-family: var(--font-body); font-weight: 700; margin:0;">Nome
+                    </h2>
+                    <p id="view-mem-details" style="color:var(--text-light); font-size: 0.9rem; margin:0;">
+                        Detalhes...</p>
+                </div>
+                <button onclick="document.getElementById('member-view-modal').style.display='none'" class="btn-remove"
+                    style="font-size:1.5rem;">&times;</button>
+            </header>
+
+            <div style="margin-bottom: 2rem;">
+                <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
+                    de Discursos</h3>
+                <ul id="view-mem-talks" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
+                    <!-- Dynamic -->
+                </ul>
+            </div>
+
+            <div>
+                <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
+                    de Orações</h3>
+                <ul id="view-mem-prayers" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
+                    <!-- Dynamic -->
+                </ul>
+            </div>
+
+            <div style="margin-top:2rem; text-align:right;">
+                <button id="btn-edit-from-view" class="btn btn-primary">Editar Membro</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3001; align-items:center; justify-content:center;">
+        <div class="glass-panel"
+            style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
+            <h3 style="font-family:var(--font-heading); margin-bottom:1rem; color: #ef4444;">Confirmar Remoção</h3>
+            <p style="color:var(--text-light); margin-bottom:2rem;">Tem a certeza que deseja remover este membro?
+                Esta ação não pode ser desfeita.</p>
+            <div style="display:flex; gap:1rem; justify-content:center;">
+                <button id="btn-cancel-delete" class="btn" style="background:#e5e7eb; color:#374151;">Cancelar</button>
+                <button id="btn-confirm-delete" class="btn" style="background:#ef4444; color:white;">Remover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div id="import-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:4000; align-items:center; justify-content:center;">
+        <div class="glass-panel"
+            style="background:#fff; padding:2rem; width:90%; max-width:800px; max-height:90vh; overflow-y:auto; border-radius:16px; position:relative;">
+
+            <button onclick="document.getElementById('import-modal').style.display='none'" class="btn-remove"
+                style="position:absolute; top:1rem; right:1rem; font-size:1.5rem;">&times;</button>
+
+            <h2 style="margin-bottom:0.5rem; font-family: var(--font-body); font-weight: 700;">Importar Membros em Massa
+            </h2>
+            <p style="color:var(--text-light); margin-bottom:2rem;">Siga os passos abaixo para adicionar vários membros
+                de uma só vez.</p>
+
+            <!-- Step 1: Template -->
+            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #e2e8f0;">
+                <h3 style="font-size:1.1rem; margin-bottom:0.5rem; color:var(--text-main);">1. Obter Modelo
+                    (Recomendado)</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <p style="font-size:0.9rem; color:#666; max-width:60%;">
+                        Descarregue o modelo CSV/Excel para garantir que os seus dados estão formatados corretamente
+                        antes de importar.
+                    </p>
+                    <button class="btn btn-secondary" onclick="window.downloadTemplate()">
+                        <i class="ph ph-download-simple"></i> Descarregar Modelo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Import Method -->
+            <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-main);">2. Importar Dados (Escolha um
+                método)</h3>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+                <!-- Method A: Paste -->
+                <div class="card"
+                    style="padding:1.5rem; border:1px solid #e2e8f0; border-radius:12px; display:flex; flex-direction:column;">
+                    <h4 style="font-size:1rem; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                        <i class="ph ph-clipboard-text" style="color:var(--primary);"></i> Opção A: Copiar & Colar
+                    </h4>
+                    <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">
+                        Copie as linhas do seu Excel ou CSV e cole na caixa abaixo.
+                    </p>
+                    <textarea id="paste-area"
+                        placeholder="Exemplo:&#10;João Silva, Bispo, Adultos, M&#10;Maria Santos, Primária, Primária, F"
+                        style="flex:1; width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:1rem; font-family:monospace; resize:none; min-height:150px; margin-bottom:1rem; font-size: 0.85rem;"></textarea>
+
+                    <button id="btn-process-paste" class="btn btn-primary" style="width:100%;">
+                        Importar Dados Colados
+                    </button>
                 </div>
 
-                <div style="margin-top:2rem; text-align:right;">
-                    <button id="btn-edit-from-view" class="btn btn-primary">Editar Membro</button>
+                <!-- Method B: Upload -->
+                <div class="card"
+                    style="padding:1.5rem; border:1px dashed #cbd5e1; border-radius:12px; text-align:center; background:#f8fafc; cursor:pointer; display:flex; flex-direction:column; justify-content:center; align-items:center;"
+                    id="drop-zone" onclick="document.getElementById('csv-import-file').click()">
+                    <input type="file" id="csv-import-file" accept=".csv" style="display:none;">
+                    <h4
+                        style="font-size:1rem; margin-bottom:0.5rem; color:#475569; width:100%; text-align:left; display:flex; align-items:center; gap:0.5rem; align-self:flex-start;">
+                        <i class="ph ph-upload-simple" style="color:var(--primary);"></i> Opção B: Carregar Ficheiro
+                    </h4>
+                    <div
+                        style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:150px;">
+                        <i class="ph ph-file-csv" style="font-size:3rem; color:#94a3b8; margin-bottom:0.5rem;"></i>
+                        <p style="font-size:0.9rem; color:#64748b;">Arraste um ficheiro .csv aqui</p>
+                        <p style="font-size:0.8rem; color:#94a3b8;">ou clique para selecionar</p>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Delete Confirmation Modal -->
-        <div id="delete-confirm-modal"
-            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3001; align-items:center; justify-content:center;">
-            <div class="glass-panel"
-                style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
-                <h3 style="font-family:var(--font-heading); margin-bottom:1rem; color: #ef4444;">Confirmar Remoção</h3>
-                <p style="color:var(--text-light); margin-bottom:2rem;">Tem a certeza que deseja remover este membro?
-                    Esta ação não pode ser desfeita.</p>
-                <div style="display:flex; gap:1rem; justify-content:center;">
-                    <button id="btn-cancel-delete" class="btn"
-                        style="background:#e5e7eb; color:#374151;">Cancelar</button>
-                    <button id="btn-confirm-delete" class="btn"
-                        style="background:#ef4444; color:white;">Remover</button>
-                </div>
+    <!-- Import Confirmation Modal -->
+    <div id="import-confirm-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:4100; align-items:center; justify-content:center;">
+        <div class="glass-panel"
+            style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
+            <h3 style="font-family:var(--font-heading); margin-bottom:1rem; color:var(--primary);">Confirmar Importação
+            </h3>
+            <p id="import-confirm-text" style="color:var(--text-light); margin-bottom:2rem;">
+                <!-- Dynamic text -->
+            </p>
+            <div style="display:flex; gap:1rem; justify-content:center;">
+                <button onclick="document.getElementById('import-confirm-modal').style.display='none'" class="btn"
+                    style="background:#e5e7eb; color:#374151;">Cancelar</button>
+                <button id="btn-final-import" class="btn btn-primary">Importar</button>
             </div>
         </div>
+    </div>
 
-        <!-- Data & Scripts -->
-        <script src="hymns.js"></script>
-        <script type="module" src="js/planner-ui.js"></script>
+    <!-- Data & Scripts -->
+    <script src="hymns.js"></script>
+    <script type="module" src="js/planner-ui.js"></script>
 
 </body>
 

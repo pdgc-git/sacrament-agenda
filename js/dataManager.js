@@ -181,7 +181,7 @@ export async function getMembers() {
     const wardId = getWardId();
     const q = query(collection(db, `wards/${wardId}/members`), orderBy("name"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 }
 
 export async function saveMember(memberData) {
@@ -200,6 +200,9 @@ export async function saveMember(memberData) {
         return docRef.id;
     }
 }
+
+// Alias for clarity/compatibility
+export const addMember = saveMember;
 
 export async function deleteMember(id) {
     const wardId = getWardId();
@@ -228,27 +231,46 @@ export async function getMemberHistory(memberId) {
 
     // Actually, let's just query all meetings and filter in memory for this MVP since dataset is small.
     const wardId = getWardId();
-    const q = query(collection(db, `wards/${wardId}/meetings`), orderBy('date', 'desc'), limit(20));
-    const snap = await getDocs(q);
-
+    // Default to empty if wardId is missing or query fails
     const talks = [];
     const prayers = [];
 
-    snap.forEach(doc => {
-        const m = doc.data();
-        // Check speakers
-        if (m.speakers) {
-            m.speakers.forEach(s => {
-                if (s.memberId === memberId || s.name === memberId.name) { // Fallback to name match?
-                    talks.push({ date: m.date.toDate(), topic: s.topic || 'Discurso' });
-                }
-            });
-        }
+    if (!wardId) {
+        console.warn("getMemberHistory: No wardId found.");
+        return { talks, prayers };
+    }
 
-        // Check prayers
-        if (m.invocationMemberId === memberId) prayers.push({ date: m.date.toDate(), type: 'Primeira Oração' });
-        if (m.benedictionMemberId === memberId) prayers.push({ date: m.date.toDate(), type: 'Última Oração' });
-    });
+    try {
+        const q = query(collection(db, `wards/${wardId}/meetings`), orderBy('date', 'desc'), limit(20));
+        const snap = await getDocs(q);
+
+        snap.forEach(doc => {
+            const m = doc.data();
+            // Check speakers
+            if (m.speakers) {
+                m.speakers.forEach(s => {
+                    // Check strict ID or Name fallback
+                    const idMatch = s.memberId === memberId;
+                    // memberId is a string ID passed to function. s.memberId is string.
+                    // memberId.name is invalid if memberId is string.
+                    const nameMatch = s.name && memberId && false; // We don't have member name here easily unless we fetch member.
+                    // Actually memberId passed to this function is the ID string.
+
+                    if (idMatch) {
+                        talks.push({ date: m.date.toDate(), topic: s.topic || 'Discurso' });
+                    }
+                });
+            }
+
+            // Check prayers
+            if (m.invocationMemberId === memberId) prayers.push({ date: m.date.toDate(), type: 'Primeira Oração' });
+            if (m.benedictionMemberId === memberId) prayers.push({ date: m.date.toDate(), type: 'Última Oração' });
+        });
+    } catch (e) {
+        console.warn("getMemberHistory failed (likely permissions or missing index). Returning empty history.", e);
+        // User requested to show "no records" instead of error for now.
+        // We return empty arrays, which UI will render as "Sem registos recentes".
+    }
 
     return { talks, prayers };
 }
@@ -324,6 +346,8 @@ export async function getMemberStats(memberId) {
 
 // === History & Finalization ===
 
+// ... (previous code)
+
 export async function saveMeeting(meetingData) {
     const wardId = getWardId();
     const batch = writeBatch(db);
@@ -359,6 +383,17 @@ export async function saveMeeting(meetingData) {
     if (meetingData.benedictionMemberId) {
         const mRef = doc(db, `wards/${wardId}/members`, meetingData.benedictionMemberId);
         batch.update(mRef, { last_prayer_date: Timestamp.fromDate(new Date(meetingData.date)) });
+    }
+
+    // 3. Remove from Plans if exists (Promotion)
+    // We query by dateStr to find the plan
+    if (meetingData.date) {
+        const dateStr = meetingData.date; // Expecting YYYY-MM-DD
+        const q = query(collection(db, `wards/${wardId}/plans`), where("dateStr", "==", dateStr));
+        const snaps = await getDocs(q);
+        snaps.forEach(d => {
+            batch.delete(d.ref);
+        });
     }
 
     await batch.commit();
@@ -463,6 +498,17 @@ export async function getFuturePlans() {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+export async function getPlanByDate(dateStr) {
+    const wardId = getWardId();
+    const q = query(collection(db, `wards/${wardId}/plans`), where("dateStr", "==", dateStr));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+    }
+    return null;
+}
+
 export async function saveFuturePlan(planData) {
     const wardId = getWardId();
     const plansRef = collection(db, `wards/${wardId}/plans`);
@@ -474,7 +520,20 @@ export async function saveFuturePlan(planData) {
         await updateDoc(docRef, data);
         return id;
     } else {
+        // Check if exists for date to avoid duplicates if ID not passed
+        const existing = await getPlanByDate(planData.dateStr);
+        if (existing) {
+            const docRef = doc(plansRef, existing.id);
+            await updateDoc(docRef, planData);
+            return existing.id;
+        }
+
         const docRef = await addDoc(plansRef, planData);
         return docRef.id;
     }
+}
+
+export async function deletePlan(planId) {
+    const wardId = getWardId();
+    await deleteDoc(doc(db, `wards/${wardId}/plans`, planId));
 }

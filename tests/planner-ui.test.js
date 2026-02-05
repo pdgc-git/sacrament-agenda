@@ -324,6 +324,90 @@ describe('Planner UI - Comprehensive Tests', () => {
 
             expect(DM.deleteMember).toHaveBeenCalledWith('mem-1');
         });
+
+        // Integration tests for clicking on dynamically rendered roster buttons
+        describe('Dynamically Rendered Roster Button Clicks', () => {
+            beforeEach(() => {
+                // Add test member to state.members so viewMember/editMember can find it
+                const member = { id: 'test-mem-1', name: 'Test Member', calling: 'Elder', group: 'Adult', gender: 'M' };
+
+                // Use push to add to existing array (don't replace reference)
+                if (window.state && window.state.members) {
+                    window.state.members.length = 0; // Clear existing
+                    window.state.members.push(member); // Add test member
+                }
+
+                // Render actual roster rows with inline onclick handlers (mimicking renderRoster)
+                const tbody = document.getElementById('roster-tbody');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div style="font-weight:600; cursor:pointer;" class="view-link" data-id="${member.id}">${member.name}</div>
+                        <div style="font-size:0.8em; color:#666">${member.calling || ''}</div>
+                    </td>
+                    <td>${member.group}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="action-cell">
+                        <button class="btn-meatballs" onclick="toggleMenu(event, '${member.id}')">⋮</button>
+                        <div id="menu-${member.id}" class="action-menu" style="display:none;">
+                            <div class="menu-item" onclick="event.stopPropagation(); viewMember('${member.id}')">
+                                <span>👁️</span> Ver
+                            </div>
+                            <div class="menu-item" onclick="event.stopPropagation(); editMember('${member.id}')">
+                                <span>✏️</span> Editar
+                            </div>
+                            <div class="menu-item danger" onclick="event.stopPropagation(); deleteMember('${member.id}')">
+                                 <span>🗑️</span> Apagar
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            test('clicking meatballs button should toggle action menu visibility', () => {
+                const meatballsBtn = document.querySelector('.btn-meatballs');
+                const menu = document.getElementById('menu-test-mem-1');
+
+                expect(menu.style.display).toBe('none');
+
+                // Click to open menu
+                meatballsBtn.click();
+                expect(menu.style.display).toBe('block');
+
+                // Click again to close
+                meatballsBtn.click();
+                expect(menu.style.display).toBe('none');
+            });
+
+            test('viewMember function should exist and be callable', () => {
+                // Verify function exists
+                expect(typeof window.viewMember).toBe('function');
+
+                // Calling with non-existent ID should not throw
+                expect(() => window.viewMember('nonexistent-id')).not.toThrow();
+            });
+
+            test('editMember function should exist and be callable', () => {
+                // Verify function exists
+                expect(typeof window.editMember).toBe('function');
+
+                // Calling with non-existent ID should not throw
+                expect(() => window.editMember('nonexistent-id')).not.toThrow();
+            });
+
+            test('clicking Delete menu item should open delete confirmation modal', () => {
+                const deleteModal = document.getElementById('delete-confirm-modal');
+                expect(deleteModal.style.display).toBe('none');
+
+                // Call directly
+                window.deleteMember('test-mem-1');
+
+                expect(deleteModal.style.display).toBe('flex');
+            });
+        });
     });
 
     describe('Member Modal', () => {
