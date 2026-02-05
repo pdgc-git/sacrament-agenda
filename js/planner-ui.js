@@ -1416,7 +1416,7 @@ async function renderPlanning() {
 
     } catch (e) {
         console.error(e);
-        container.innerHTML = "Erro ao carregar calendário.";
+        container.innerHTML = `<div style="padding:2rem;color:#dc2626;">Erro: ${e.message}</div>`;
     }
 }
 
