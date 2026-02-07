@@ -26,25 +26,18 @@ export async function initUser(user) {
                 currentWardId = data.wardId;
                 // Fetch role from ward user list for Single Source of Truth
                 // SMART FIX: Wrap in try-catch to handle permission errors (orphaned profiles)
-                try {
-                    const membershipRef = doc(db, `wards/${currentWardId}/users`, user.uid);
-                    const memSnap = await getDoc(membershipRef);
+                // Fetch role from ward user list for Single Source of Truth
+                const membershipRef = doc(db, `wards/${currentWardId}/users`, user.uid);
+                const memSnap = await getDoc(membershipRef);
 
-                    if (!memSnap.exists()) {
-                        throw new Error("Membership not found"); // Trigger reset
-                    }
-
-                    const role = memSnap.data().role;
-                    const status = memSnap.data().status;
-                    return { hasWard: true, wardId: data.wardId, role, status };
-
-                } catch (error) {
-                    console.warn("Smart Fix: Detected inconsistent state. Resetting profile.", error);
-                    // Reset profile to remove invalid wardId
-                    await setDoc(userRef, { wardId: null }, { merge: true });
-                    currentWardId = null;
-                    return { hasWard: false };
+                if (!memSnap.exists()) {
+                    console.warn("Membership check failed: Document does not exist.");
+                    return { hasWard: false, error: "Membership check failed" };
                 }
+
+                const role = memSnap.data().role;
+                const status = memSnap.data().status;
+                return { hasWard: true, wardId: data.wardId, role, status };
             }
         }
 

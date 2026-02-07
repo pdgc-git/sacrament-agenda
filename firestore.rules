@@ -7,8 +7,8 @@ service cloud.firestore {
     // Get the user's role in a specific ward
     function getRole(wardId) {
       // Check the 'users' subcollection within the ward
-      let role = get(/databases/$(database)/documents/wards/$(wardId)/users/$(request.auth.uid)).data.role;
-      return role;
+      let userPath = /databases/$(database)/documents/wards/$(wardId)/users/$(request.auth.uid);
+      return exists(userPath) ? get(userPath).data.role : 'none';
     }
 
     function isMember(wardId) {
@@ -78,13 +78,15 @@ service cloud.firestore {
       match /plans/{planId} {
         allow read: if request.auth != null && isMember(wardId);
         // Music Coord SHOULD be able to edit future plans (to add hymns)
-        allow write: if request.auth != null && (isEditor(wardId) || isRole(wardId, 'music'));
+        allow create, delete: if isEditor(wardId);
+        allow update: if isEditor(wardId) || isRole(wardId, 'music');
       }
 
       // 5. Meetings (Unified)
       match /meetings/{meetingId} {
         allow read: if request.auth != null && isMember(wardId);
-        allow write: if request.auth != null && (isEditor(wardId) || isRole(wardId, 'music'));
+        allow create, delete: if isEditor(wardId);
+        allow update: if isEditor(wardId) || isRole(wardId, 'music');
       }
     }
   }
