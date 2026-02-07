@@ -250,11 +250,25 @@ function initAuth() {
     const logoutBtn = document.getElementById('logout-btn');
 
     if (googleBtn) {
+        // VISIBLE DEBUGGING
+        console.log("Auth Button Found. Attaching listener...");
+
         googleBtn.addEventListener('click', async () => {
+            // 1. Prove the button works
+            alert("Botão clicado! A tentar abrir popup...");
+            console.log("Attempting Google Auth...");
+
             const provider = new GoogleAuthProvider();
-            try { await signInWithPopup(auth, provider); }
-            catch (error) { errorMsg.textContent = "Erro: " + error.message; }
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                alert("Erro Firebase: " + error.message);
+                console.error("Firebase Error:", error);
+                if (errorMsg) errorMsg.textContent = "Erro: " + error.message;
+            }
         });
+    } else {
+        console.error("CRITICAL: Login button not found in DOM.");
     }
 
     if (emailGroup) setupEmailAuthListeners(errorMsg);
