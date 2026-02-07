@@ -116,6 +116,26 @@ function setupEventListeners() {
         }
     });
 
+    // Close Modals on ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modals = ['member-modal', 'member-view-modal', 'delete-confirm-modal', 'bulk-import-modal', 'auth-overlay'];
+            modals.forEach(id => {
+                const el = document.getElementById(id);
+                // Only hide if currently displayed (optional check but good for logic)
+                if (el && el.style.display !== 'none') {
+                    el.style.display = 'none';
+                    if (id === 'delete-confirm-modal') {
+                        // Reset pending delete safety
+                        try { pendingDeleteId = null; } catch (e) { }
+                    }
+                }
+            });
+            // Also close menus
+            document.querySelectorAll('.action-menu').forEach(el => el.style.display = 'none');
+        }
+    });
+
     // Centralized Event Delegation for Dynamic Elements
     const formContainer = document.getElementById('agendaForm');
     if (formContainer) {
