@@ -1,4 +1,4 @@
-import { auth } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import {
     GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
     createUserWithEmailAndPassword, signInWithEmailAndPassword
@@ -1249,10 +1249,7 @@ document.getElementById('roster-search')?.addEventListener('input', renderRoster
 document.getElementById('roster-filter')?.addEventListener('change', renderRoster);
 
 
-function formatDate(ts) {
-    if (!ts) return '-';
-    return ts.toDate().toLocaleDateString();
-}
+// formatDate removed (duplicate)
 
 // === Bulk Import Logic ===
 function openBulkImport() {
@@ -1342,17 +1339,17 @@ async function parseAndImport(rawData) {
 }
 
 
-function formatDate(dateInput) {
-    if (!dateInput) return '...';
-
-    // Safety check: Ensure input is a string
-    const s = String(dateInput);
-
-    // Handle YYYY-MM-DD (Standard HTML Date Input)
-    if (s.includes('-') && s.length === 10) {
-        const [year, month, day] = s.split('-');
+function formatDate(input) {
+    if (!input) return '-';
+    // Handle Firestore Timestamp
+    if (typeof input.toDate === 'function') {
+        return input.toDate().toLocaleDateString('pt-PT');
+    }
+    // Handle YYYY-MM-DD String
+    if (typeof input === 'string' && input.includes('-') && input.length === 10) {
+        const [year, month, day] = input.split('-');
         return `${day}-${month}-${year}`;
     }
-
-    return s; // Fallback
+    // Fallback
+    return String(input);
 }
