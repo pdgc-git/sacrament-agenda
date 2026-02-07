@@ -2,6 +2,13 @@
 <html lang="pt-PT">
 
 <head>
+    <script>
+        window.addEventListener('error', function (e) {
+            // Filter out minor resizing errors
+            if (e.message === 'ResizeObserver loop limit exceeded') return;
+            alert("ERRO CRÍTICO JS: " + e.message);
+        });
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sacrament Workbench</title>
