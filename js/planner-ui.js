@@ -403,14 +403,30 @@ function setupNavigation() {
     const toggleBtn = document.querySelector('.nav-toggle');
     const savedState = localStorage.getItem('sidebarExpanded');
 
+    // Helper to update UI based on state
+    const updateToggleState = (isExpanded) => {
+        if (!toggleBtn) return;
+        const icon = toggleBtn.querySelector('i');
+        if (isExpanded) {
+            icon.className = 'ph ph-caret-double-left';
+            toggleBtn.title = "Recolher Menu";
+        } else {
+            icon.className = 'ph ph-caret-double-right';
+            toggleBtn.title = "Expandir Menu";
+        }
+    };
+
     if (savedState === 'true') {
         nav.classList.add('expanded');
+        updateToggleState(true);
     }
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
             nav.classList.toggle('expanded');
-            localStorage.setItem('sidebarExpanded', nav.classList.contains('expanded'));
+            const isExpanded = nav.classList.contains('expanded');
+            localStorage.setItem('sidebarExpanded', isExpanded);
+            updateToggleState(isExpanded);
         });
     }
 
