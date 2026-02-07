@@ -28,8 +28,13 @@
         <!-- Sidebar / Form Section -->
         <aside class="editor-pane">
             <header class="editor-header">
-                <h1>Criar Agenda</h1>
-                <p>Preencha os detalhes da reunião</p>
+                <a href="index.html" class="btn-icon-back" title="Voltar ao Início">
+                    <i class="ph ph-arrow-left"></i>
+                </a>
+                <div>
+                    <h1>Criar Agenda</h1>
+                    <p>Preencha os detalhes da reunião</p>
+                </div>
             </header>
 
             <form id="agendaForm" onsubmit="return false;">
@@ -84,14 +89,14 @@
                     <div id="recognitions-input-container" class="dynamic-list-input">
                         <!-- Dynamic inputs will be added here via JS -->
                     </div>
-                    <button class="btn-add" onclick="addListItem('recognitions')">+ Adicionar Pessoa</button>
+                    <button id="btn-add-recognition" class="btn-add">+ Adicionar Pessoa</button>
                 </section>
 
                 <!-- Announcements (Standalone) -->
                 <section class="form-group">
                     <h2>Anúncios</h2>
                     <div id="announcements-input-container" class="dynamic-list-input"></div>
-                    <button class="btn-add" onclick="addListItem('announcements')">+ Adicionar Anúncio</button>
+                    <button id="btn-add-announcement" class="btn-add">+ Adicionar Anúncio</button>
                 </section>
 
                 <!-- Opening Hymn & Prayer -->
@@ -118,14 +123,14 @@
                         <label>Desobrigações</label>
                         <p class="helper-text">Pessoas a serem desobrigadas.</p>
                         <div id="releases-input-container" class="dynamic-list-input"></div>
-                        <button class="btn-add" onclick="addListItem('releases')">+ Adicionar Desobrigação</button>
+                        <button id="btn-add-release" class="btn-add">+ Adicionar Desobrigação</button>
                     </div>
 
                     <div class="input-wrapper" style="margin-top: 1rem;">
                         <label>Chamados (Apoios)</label>
                         <p class="helper-text">Novos chamados para serem apoiados.</p>
                         <div id="callings-input-container" class="dynamic-list-input"></div>
-                        <button class="btn-add" onclick="addListItem('callings')">+ Adicionar Chamado</button>
+                        <button id="btn-add-calling" class="btn-add">+ Adicionar Chamado</button>
                     </div>
                 </section>
 
@@ -146,7 +151,7 @@
                     <div id="speakers-input-container" class="dynamic-list-input">
                         <!-- Speakers added here -->
                     </div>
-                    <button class="btn-add" onclick="addSpeaker()">+ Adicionar Orador</button>
+                    <button id="btn-add-speaker" class="btn-add">+ Adicionar Orador</button>
 
                     <!-- Intermediate Hymn (Hidden if Fast Meeting) -->
                     <div id="intermediate-hymn-wrapper" class="hymn-input-wrapper"
@@ -177,7 +182,7 @@
             </form>
 
             <div class="actions-footer">
-                <button class="btn btn-primary" onclick="exportPDF()">
+                <button id="btn-export-pdf" class="btn btn-primary">
                     <i class="ph ph-file-pdf"></i> Gerar / Partilhar PDF
                 </button>
             </div>
@@ -185,9 +190,7 @@
 
         <!-- Preview Section -->
         <main class="preview-pane">
-            <a href="index.html" class="btn-fullscreen-toggle" style="right: auto; left: 2rem; width: auto;">
-                <i class="ph ph-arrow-left"></i> Voltar
-            </a>
+
             <button id="fullscreen-toggle" class="btn-fullscreen-toggle" onclick="toggleFullScreen()">
                 <i class="ph ph-arrows-out-simple"></i>
                 <span class="btn-text">Ecrã Inteiro</span>
@@ -310,7 +313,7 @@
     </div>
 
     <script src="hymns.js"></script>
-    <script src="js/simple-ui.js"></script>
+    <script type="module" src="js/simple-ui.js"></script>
 </body>
 
 </html>
