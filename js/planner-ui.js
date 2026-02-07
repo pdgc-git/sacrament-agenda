@@ -30,7 +30,190 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     setupNavigation();
     setupFormListeners();
+    setupEventListeners();
 });
+
+function setupEventListeners() {
+    // Dashboard
+    const btnHeroEdit = document.getElementById('btn-hero-edit-plan');
+    if (btnHeroEdit) btnHeroEdit.addEventListener('click', () => {
+        const dateStr = state.currentEditorDate || new Date().toISOString().split('T')[0]; // Fallback if not set via render
+        window.editPlan(dateStr); // Keeping window.editPlan for now as it's used elsewhere, will refactor later if possible
+    });
+
+    // Timeline
+    document.getElementById('btn-refresh-timeline')?.addEventListener('click', () => renderTimeline());
+
+    // Editor Tabs
+    document.querySelectorAll('.segment-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            if (tab) window.switchEditorTab(tab);
+        });
+    });
+
+    // Editor Actions
+    document.getElementById('btn-export-pdf')?.addEventListener('click', exportPDF);
+    document.getElementById('btn-add-speaker')?.addEventListener('click', () => window.addSpeakerUI());
+    document.getElementById('btn-add-hymn-program')?.addEventListener('click', () => window.addProgramHymnUI());
+
+    // Extras
+    document.getElementById('btn-add-recognition')?.addEventListener('click', () => window.addListItem('recognitions'));
+    document.getElementById('btn-add-announcement')?.addEventListener('click', () => window.addListItem('announcements'));
+    document.getElementById('btn-add-release')?.addEventListener('click', () => window.addListItem('releases'));
+    document.getElementById('btn-add-calling')?.addEventListener('click', () => window.addListItem('callings'));
+
+    // Fast Meeting
+    document.getElementById('chk-fast-meeting')?.addEventListener('change', (e) => toggleFastMeeting(e.target.checked));
+
+    // Roster
+    document.getElementById('filter-chip-m')?.addEventListener('click', () => window.togglePoolFilter('M'));
+    document.getElementById('filter-chip-f')?.addEventListener('click', () => window.togglePoolFilter('F'));
+    document.getElementById('filter-chip-youth')?.addEventListener('click', () => window.togglePoolFilter('Youth'));
+
+    document.getElementById('btn-open-import')?.addEventListener('click', () => window.openBulkImport());
+    document.getElementById('btn-new-member')?.addEventListener('click', () => window.addMemberUI());
+
+    // Modals
+    document.getElementById('btn-close-view-modal')?.addEventListener('click', () => document.getElementById('member-view-modal').style.display = 'none');
+    document.getElementById('btn-close-import-modal')?.addEventListener('click', () => document.getElementById('bulk-import-modal').style.display = 'none');
+
+    // Import Modal Actions
+    document.getElementById('btn-download-template')?.addEventListener('click', () => window.downloadTemplate());
+    document.getElementById('btn-process-paste')?.addEventListener('click', () => window.processPasteImport());
+    document.getElementById('btn-select-file')?.addEventListener('click', () => document.getElementById('bulk-csv-upload').click());
+
+    // Roster Event Delegation
+    document.getElementById('roster-tbody')?.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action], .view-link');
+        if (!target) return;
+
+        // Handle View Link
+        if (target.classList.contains('view-link')) {
+            viewMember(target.dataset.id);
+            return;
+        }
+
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+
+        if (action === 'toggle-menu') {
+            e.stopPropagation();
+            toggleMenu(id);
+        } else if (action === 'view') {
+            viewMember(id);
+        } else if (action === 'edit') {
+            editMember(id);
+        } else if (action === 'delete') {
+            deleteMember(id);
+        }
+    });
+
+    // Close menus on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-menu') && !e.target.closest('.btn-meatballs')) {
+            document.querySelectorAll('.action-menu').forEach(el => el.style.display = 'none');
+        }
+    });
+}
+
+// === Ported Features ===
+
+function toggleFastMeeting(isFast) {
+    const interHymnWrapper = document.getElementById('intermediate-hymn-wrapper');
+    const fastNote = document.getElementById('fast-meeting-note');
+    const btnAddSpeaker = document.getElementById('btn-add-speaker');
+    const speakersContainer = document.getElementById('speakers-input-container');
+
+    if (isFast) {
+        if (interHymnWrapper) interHymnWrapper.style.display = 'none';
+        if (btnAddSpeaker) btnAddSpeaker.style.display = 'none';
+        if (speakersContainer) speakersContainer.style.display = 'none';
+        if (fastNote) fastNote.style.display = 'block';
+    } else {
+        if (interHymnWrapper) interHymnWrapper.style.display = 'block';
+        if (btnAddSpeaker) btnAddSpeaker.style.display = 'block'; // Or whatever default display was
+        if (speakersContainer) speakersContainer.style.display = 'block';
+        if (fastNote) fastNote.style.display = 'none';
+    }
+}
+
+async function exportPDF() {
+    // Ensure we have the library
+    if (typeof html2pdf === 'undefined') {
+        alert("Biblioteca PDF não carregada. Verifique a internet.");
+        return;
+    }
+
+    const element = document.getElementById('agenda-paper');
+    // We need to POPULATE the agenda-paper first! 
+    // The previous logic in app.js assumed it was populated or populate it?
+    // app.js didn't show population logic in the snippet.
+    // Wait, the PDF generation usually requires rendering the "print view".
+    // I should probably render the print view into 'agenda-paper' before calling html2pdf.
+    // For now, I will just port the trigger, but I might need a 'renderPrintView' function.
+    // Assuming 'agenda-paper' is populated or I need to populate it.
+    // Let's check if there is a render function. Failing that, I will just alert for now or try to clone the editor?
+    // Actually, let's implement a basic render to 'agenda-paper' here to ensure it works.
+
+    renderPrintView(element);
+
+    const dateInput = document.querySelector('input[name="date"]');
+    const dateValue = dateInput ? dateInput.value : '';
+    const filename = dateValue ? `agenda_sacramental_${dateValue}.pdf` : 'agenda_sacramental.pdf';
+
+    const opt = {
+        margin: 0,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+}
+
+function renderPrintView(container) {
+    // Simple render of current state to the print container
+    // This is a simplified version of what the PDF needs
+    const d = new Date(state.currentEditorDate || new Date());
+    const dateStr = d.toLocaleDateString('pt-PT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    container.innerHTML = `
+        <div style="font-family: 'Playfair Display', serif; text-align: center; margin-bottom: 2rem;">
+            <h1>Agenda Sacramental</h1>
+            <h3>${state.wardName || 'Ala'}</h3>
+            <p>${dateStr}</p>
+        </div>
+        <div style="font-family: 'Inter', sans-serif;">
+            <div style="margin-bottom: 1rem;"><strong>Preside:</strong> ${document.querySelector('input[name="presiding"]')?.value || ''}</div>
+            <div style="margin-bottom: 1rem;"><strong>Dirige:</strong> ${document.querySelector('input[name="conducting"]')?.value || ''}</div>
+            <hr>
+            <!-- Hymns -->
+            <div style="margin: 1rem 0;">
+                <div><strong>Hino de Abertura:</strong> ${document.querySelector('input[name="openingHymn"]')?.value || ''}</div>
+                <div><strong>Hino Sacramental:</strong> ${document.querySelector('input[name="sacramentHymn"]')?.value || ''}</div>
+                <div><strong>Hino de Encerramento:</strong> ${document.querySelector('input[name="closingHymn"]')?.value || ''}</div>
+            </div>
+            <hr>
+            <!-- Speakers -->
+            <div style="margin: 1rem 0;">
+                <h4>Programa</h4>
+                ${state.speakers.map(s => `
+                    <div style="margin-bottom:0.5rem;">
+                        <strong>${s.type === 'hymn' ? 'Hino Especial' : 'Orador'}:</strong> ${s.name || s.text || ''}
+                    </div>
+                `).join('')}
+            </div>
+             <hr>
+            <!-- Prayers -->
+            <div style="margin: 1rem 0;">
+                <div><strong>Primeira Oração:</strong> ${document.querySelector('input[name="invocation"]')?.value || ''}</div>
+                <div><strong>Última Oração:</strong> ${document.querySelector('input[name="benediction"]')?.value || ''}</div>
+            </div>
+        </div>
+    `;
+}
 
 // === Auth Logic (Preserved) ===
 function initAuth() {
@@ -825,26 +1008,21 @@ async function renderRoster() {
             <td>${m.last_talk_date ? formatDateShort(m.last_talk_date) : '-'}</td>
             <td>${m.last_prayer_date ? formatDateShort(m.last_prayer_date) : '-'}</td>
             <td class="action-cell" style="position:relative;">
-                <button class="btn-meatballs" onclick="window.toggleMenu(event, '${m.id}')">•••</button>
+                <button class="btn-meatballs" data-action="toggle-menu" data-id="${m.id}">•••</button>
                 <div id="menu-${m.id}" class="action-menu" style="display:none; position:absolute; right:0; top:100%; z-index:10; box-shadow:0 4px 6px rgba(0,0,0,0.1); background:white; border-radius:4px; border:1px solid #e5e7eb; width:120px;">
-                    <div class="menu-item" onclick="window.viewMember('${m.id}')" style="padding:8px; cursor:pointer; hover:bg-gray-100;">
+                    <div class="menu-item" data-action="view" data-id="${m.id}" style="padding:8px; cursor:pointer; hover:bg-gray-100;">
                         <span>👁️</span> Ver
                     </div>
-                    <div class="menu-item" onclick="window.editMember('${m.id}')" style="padding:8px; cursor:pointer;">
+                    <div class="menu-item" data-action="edit" data-id="${m.id}" style="padding:8px; cursor:pointer;">
                         <span>✏️</span> Editar
                     </div>
-                    <div class="menu-item danger" onclick="window.deleteMember('${m.id}')" style="padding:8px; cursor:pointer; color:red;">
+                    <div class="menu-item danger" data-action="delete" data-id="${m.id}" style="padding:8px; cursor:pointer; color:red;">
                          <span>🗑️</span> Apagar
                     </div>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
-    });
-
-    // Bind click on name to view also
-    tbody.querySelectorAll('.view-link').forEach(el => {
-        el.addEventListener('click', () => window.viewMember(el.dataset.id));
     });
 }
 
@@ -855,9 +1033,8 @@ function formatDateShort(ts) {
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-// === Window-scoped functions for inline onclick handlers ===
-window.toggleMenu = function (e, id) {
-    e.stopPropagation();
+// === Local functions for event delegation ===
+function toggleMenu(id) {
     // Close all other menus
     document.querySelectorAll('.action-menu').forEach(el => {
         if (el.id !== `menu-${id}`) el.style.display = 'none';
@@ -865,22 +1042,22 @@ window.toggleMenu = function (e, id) {
     // Toggle this menu
     const menu = document.getElementById(`menu-${id}`);
     if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-};
+}
 
-window.editMember = function (id) {
+function editMember(id) {
     const member = state.members.find(m => m.id === id);
-    if (member) window.showMemberModal(member);
-};
+    if (member) showMemberModal(member);
+}
 
 let pendingDeleteId = null;
 
-window.deleteMember = function (id) {
+function deleteMember(id) {
     pendingDeleteId = id;
     const modal = document.getElementById('delete-confirm-modal');
     if (modal) modal.style.display = 'flex';
-};
+}
 
-window.viewMember = async function (id) {
+async function viewMember(id) {
     const member = state.members.find(m => m.id === id);
     if (!member) return;
 
@@ -892,7 +1069,7 @@ window.viewMember = async function (id) {
     const btnEdit = document.getElementById('btn-edit-from-view');
     btnEdit.onclick = () => {
         document.getElementById('member-view-modal').style.display = 'none';
-        window.showMemberModal(member);
+        showMemberModal(member);
     };
 
     // Load History
@@ -1088,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-window.showMemberModal = function (member = null) {
+function showMemberModal(member = null) {
     const modal = document.getElementById('member-modal');
     const title = document.getElementById('modal-title');
     const btnSave = document.getElementById('btn-save-member');
@@ -1118,7 +1295,7 @@ window.showMemberModal = function (member = null) {
     modal.style.display = 'flex';
 }
 
-window.addMemberUI = () => window.showMemberModal();
+function addMemberUI() { showMemberModal(); }
 
 // Listeners
 document.getElementById('roster-search')?.addEventListener('input', renderRoster);
@@ -1130,17 +1307,37 @@ function formatDate(ts) {
     return ts.toDate().toLocaleDateString();
 }
 
-// Global UI Exposures
-window.renderPlanning = renderTimeline; // Map Refresh button
-window.openImportModal = () => alert("Implement import logic here or reuse old Modal");
-window.addMemberUI = () => {
-    const name = prompt("Nome do Membro:");
-    if (name) DM.addMember({ name, group: 'Adult' }).then(() => { loadData().then(renderRoster); });
-};
-window.deleteMemberUI = async (id) => {
-    if (confirm("Apagar?")) {
-        await DM.deleteMember(id);
-        loadData().then(renderRoster);
-    }
-};
+// === Bulk Import Logic ===
+function openBulkImport() {
+    document.getElementById('bulk-import-modal').style.display = 'flex';
+    document.getElementById('import-paste-area').value = '';
+}
+
+function downloadTemplate() {
+    const headers = ['Name', 'Calling', 'Group', 'Gender'];
+    const rows = [
+        ['Exemplo Nome', 'Bispo', 'Adult', 'M'],
+        ['Maria Silva', 'Presidente Primaria', 'Adult', 'F'],
+        ['Joao Santos', 'Sacerdote', 'Youth', 'M']
+    ];
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+        + headers.join(",") + "\n"
+        + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "modelo_membros.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+async function processPasteImport() {
+    const text = document.getElementById('import-paste-area').value;
+    if (!text.trim()) return alert("Por favor cole alguns dados primeiro.");
+
+    await parseAndImport(text);
+}
 

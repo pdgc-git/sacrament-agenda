@@ -95,7 +95,7 @@
                         <h1 id="hero-date">-- de --</h1>
                         <p id="hero-theme">Carregando...</p>
                         <div style="margin-top: 1.5rem;">
-                            <button class="btn btn-primary" onclick="window.editPlan(null)">
+                            <button class="btn btn-primary" id="btn-hero-edit-plan">
                                 <i class="ph ph-pencil-simple"></i> Continuar Planeamento
                             </button>
                         </div>
@@ -118,7 +118,7 @@
                     <h2>Cronologia</h2>
                     <p>Todos os domingos futuros</p>
                 </div>
-                <button class="btn btn-secondary" onclick="window.renderPlanning()">
+                <button class="btn btn-secondary" id="btn-refresh-timeline">
                     <i class="ph ph-arrow-clockwise"></i> Atualizar
                 </button>
             </div>
@@ -136,13 +136,13 @@
                 </div>
                 <!-- Segmented Control -->
                 <div class="segmented-control">
-                    <button class="segment-btn active" onclick="window.switchEditorTab('speakers')">Oradores</button>
-                    <button class="segment-btn" onclick="window.switchEditorTab('hymns')">Hinos</button>
-                    <button class="segment-btn" onclick="window.switchEditorTab('prayers')">Orações</button>
-                    <button class="segment-btn" onclick="window.switchEditorTab('full')">Completo</button>
+                    <button class="segment-btn active" data-tab="speakers" id="tab-btn-speakers">Oradores</button>
+                    <button class="segment-btn" data-tab="hymns" id="tab-btn-hymns">Hinos</button>
+                    <button class="segment-btn" data-tab="prayers" id="tab-btn-prayers">Orações</button>
+                    <button class="segment-btn" data-tab="full" id="tab-btn-full">Completo</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-secondary" onclick="exportPDF()"><i class="ph ph-file-pdf"></i> PDF</button>
+                    <button class="btn btn-secondary" id="btn-export-pdf"><i class="ph ph-file-pdf"></i> PDF</button>
                     <button class="btn btn-primary" id="btn-finalize"><i class="ph ph-floppy-disk"></i> Gravar</button>
                 </div>
             </div>
@@ -170,6 +170,16 @@
                                     <input type="text" name="conducting" placeholder="Irmão...">
                                 </div>
                             </div>
+                            <!-- Fast Meeting Toggle -->
+                            <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="chk-fast-meeting" name="fastMeeting">
+                                <label for="chk-fast-meeting"
+                                    style="cursor: pointer; font-size: 0.9rem; margin:0;">Domingo de Jejum</label>
+                            </div>
+                            <div id="fast-meeting-note"
+                                style="display:none; color: var(--primary); font-size: 0.85rem; margin-top: 0.5rem; font-style: italic;">
+                                Modo Jejum: Hino Intermédio e Oradores ocultos.
+                            </div>
                         </div>
 
                         <!-- Speakers Tab Content -->
@@ -179,11 +189,13 @@
                                 <div id="speakers-input-container">
                                     <!-- Dynamic Rows -->
                                 </div>
-                                <button class="btn btn-secondary" onclick="window.addSpeakerUI()"
+                                <button class="btn btn-secondary" id="btn-add-speaker"
                                     style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
-                                <button class="btn btn-secondary" onclick="window.addProgramHymnUI()"
-                                    style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+
-                                    Adicionar Hino Interm.</button>
+                                <div id="intermediate-hymn-wrapper">
+                                    <button class="btn btn-secondary" id="btn-add-hymn-program"
+                                        style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+
+                                        Adicionar Hino Interm.</button>
+                                </div>
                             </div>
                         </div>
 
@@ -225,16 +237,16 @@
                             <div class="form-section">
                                 <h3>Reconhecimentos</h3>
                                 <div id="recognitions-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;"
-                                    onclick="window.addListItem('recognitions')">+ Adicionar Pessoa</button>
+                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-recognition">+
+                                    Adicionar Pessoa</button>
                             </div>
 
                             <!-- Announcements -->
                             <div class="form-section">
                                 <h3>Anúncios</h3>
                                 <div id="announcements-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;"
-                                    onclick="window.addListItem('announcements')">+ Adicionar Anúncio</button>
+                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-announcement">+
+                                    Adicionar Anúncio</button>
                             </div>
 
                             <!-- Ward Business -->
@@ -243,13 +255,13 @@
 
                                 <label style="margin-top:1rem; display:block">Desobrigações</label>
                                 <div id="releases-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;"
-                                    onclick="window.addListItem('releases')">+ Desobrigação</button>
+                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-release">+
+                                    Desobrigação</button>
 
                                 <label style="margin-top:1rem; display:block">Chamados (Apoios)</label>
                                 <div id="callings-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;"
-                                    onclick="window.addListItem('callings')">+ Chamado</button>
+                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-calling">+
+                                    Chamado</button>
                             </div>
                         </div>
 
@@ -293,9 +305,9 @@
                             <input type="text" id="pool-search" class="premium-input" placeholder="Filtrar nome..."
                                 style="font-size: 0.85rem; padding: 0.5rem;">
                             <div class="pool-filters">
-                                <span class="filter-chip" onclick="togglePoolFilter('M')">Homens</span>
-                                <span class="filter-chip" onclick="togglePoolFilter('F')">Mulheres</span>
-                                <span class="filter-chip" onclick="togglePoolFilter('Youth')">Jovens</span>
+                                <span class="filter-chip" data-filter="M" id="filter-chip-m">Homens</span>
+                                <span class="filter-chip" data-filter="F" id="filter-chip-f">Mulheres</span>
+                                <span class="filter-chip" data-filter="Youth" id="filter-chip-youth">Jovens</span>
                             </div>
                         </div>
                         <div class="member-list" id="member-pool-list">
@@ -332,10 +344,10 @@
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <!-- Updated Button -->
-                    <button class="btn btn-secondary" style="width: auto;" onclick="window.openBulkImport()">
+                    <button class="btn btn-secondary" style="width: auto;" id="btn-open-import">
                         <i class="ph ph-users-three"></i> Adicionar Importar
                     </button>
-                    <button class="btn btn-primary" style="width: auto;" onclick="window.addMemberUI()">
+                    <button class="btn btn-primary" style="width: auto;" id="btn-new-member">
                         <i class="ph ph-plus"></i> Novo Membro
                     </button>
                 </div>
@@ -471,7 +483,7 @@
                     <p id="view-mem-details" style="color:var(--text-light); font-size: 0.9rem; margin:0;">
                         Detalhes...</p>
                 </div>
-                <button onclick="document.getElementById('member-view-modal').style.display='none'" class="btn-remove"
+                <button id="btn-close-view-modal" class="btn-remove"
                     style="font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
             </header>
 
@@ -523,7 +535,7 @@
                     </h2>
                     <p style="color:var(--text-light); margin:0;">Adicione vários membros de uma vez</p>
                 </div>
-                <button onclick="document.getElementById('bulk-import-modal').style.display='none'" class="btn-remove"
+                <button id="btn-close-import-modal" class="btn-remove"
                     style="font-size:2rem; background:none; border:none; cursor:pointer;">&times;</button>
             </header>
 
@@ -538,7 +550,7 @@
                     <h3 style="margin-bottom:0.5rem; font-weight:600;">1. Modelo</h3>
                     <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Descarregue o ficheiro modelo para
                         garantir que a formatação está correta.</p>
-                    <button class="btn btn-secondary" onclick="window.downloadTemplate()" style="width:100%;">
+                    <button class="btn btn-secondary" id="btn-download-template" style="width:100%;">
                         <i class="ph ph-download"></i> Descarregar CSV
                     </button>
                     <div
@@ -558,8 +570,7 @@
                         cabeçalho) e cole abaixo.</p>
                     <textarea id="import-paste-area" placeholder="Cole aqui os dados..."
                         style="flex:1; width:100%; padding:1rem; border:1px solid #e2e8f0; border-radius:8px; font-family:monospace; resize:none; font-size:0.85rem;"></textarea>
-                    <button class="btn btn-primary" onclick="window.processPasteImport()"
-                        style="margin-top:1rem; width:100%;">
+                    <button class="btn btn-primary" id="btn-process-paste" style="margin-top:1rem; width:100%;">
                         Processar Texto
                     </button>
                 </div>
@@ -572,7 +583,7 @@
                     <h3 style="margin-bottom:0.5rem; font-weight:600;">3. Carregar Ficheiro</h3>
                     <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Arraste um ficheiro .csv ou clique
                         para selecionar.</p>
-                    <button class="btn btn-secondary" onclick="document.getElementById('bulk-csv-upload').click()">
+                    <button class="btn btn-secondary" id="btn-select-file">
                         Selecionar Ficheiro
                     </button>
                 </div>
