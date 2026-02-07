@@ -10,7 +10,7 @@
     --text-main: #1f2937;
     --text-light: #6b7280;
     --border: #e5e7eb;
-    --font-heading: 'Playfair Display', serif;
+    --font-heading: 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
@@ -634,4 +634,37 @@ body {
 
 .menu-item.danger:hover {
     background: #fef2f2;
+}
+
+/* Full Screen Toggle */
+.app-layout.full-screen .editor-pane {
+    display: none;
+}
+
+.btn-fullscreen-toggle {
+    position: absolute;
+    top: 1rem;
+    right: 2rem;
+    /* Avoid scrollbar overlap */
+    background: white;
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-fullscreen-toggle:hover {
+    color: var(--primary);
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }

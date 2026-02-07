@@ -39,6 +39,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === Core Logic ===
 
+    window.toggleFullScreen = () => {
+        const layout = document.querySelector('.app-layout');
+        const btn = document.getElementById('fullscreen-toggle');
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('.btn-text');
+
+        layout.classList.toggle('full-screen');
+        const isFull = layout.classList.contains('full-screen');
+
+        if (isFull) {
+            icon.classList.replace('ph-arrows-out-simple', 'ph-arrows-in-simple');
+            text.textContent = 'Sair';
+        } else {
+            icon.classList.replace('ph-arrows-in-simple', 'ph-arrows-out-simple');
+            text.textContent = 'Ecrã Inteiro';
+        }
+    };
+
     function toggleFastMeeting(isFast) {
         state.fastMeeting = isFast;
 
@@ -77,7 +95,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (value) {
                     const dateObj = new Date(value);
                     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                    el.textContent = dateObj.toLocaleDateString('pt-PT', options);
+                    let formatted = dateObj.toLocaleDateString('pt-PT', options);
+
+                    // Capitalize first letter of words (simple title case for dates)
+                    formatted = formatted.split(' ').map(w => {
+                        if (w === 'de') return w;
+                        return w.charAt(0).toUpperCase() + w.slice(1);
+                    }).join(' ');
+
+                    el.textContent = formatted;
                 } else {
                     el.textContent = '--/--/----';
                 }

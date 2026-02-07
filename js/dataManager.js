@@ -316,8 +316,9 @@ export async function checkHymnHistory(hymnNumber) {
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
     const q = query(
-        collection(db, `wards/${wardId}/history`),
+        collection(db, `wards/${wardId}/meetings`),
         where("date", ">=", Timestamp.fromDate(threeMonthsAgo)),
+        where("status", "==", "completed"), // Only check completed meetings
         orderBy("date", "desc")
     );
 
@@ -327,8 +328,28 @@ export async function checkHymnHistory(hymnNumber) {
     snapshot.forEach(doc => {
         const data = doc.data();
         const hymnStrs = data.hymns || [];
-        const match = hymnStrs.find(h => h.startsWith(hymnNumber + ' ') || h === hymnNumber);
-        if (match) {
+        // Check standard hymn fields (opening, sacrament, etc) AND speakers list (program hymns)
+        let found = false;
+
+        // 1. Standard Fields
+        ['openingHymn', 'sacramentHymn', 'closingHymn'].forEach(field => {
+            if (data[field] && (data[field].startsWith(hymnNumber + ' ') || data[field] === hymnNumber)) found = true;
+        });
+
+        // 2. Program Hymns
+        if (data.speakers) {
+            data.speakers.forEach(s => {
+                if (s.type === 'hymn' && s.name && (s.name.startsWith(hymnNumber + ' ') || s.name === hymnNumber)) found = true;
+            });
+        }
+
+        // Legacy 'hymns' array support if migrated
+        if (data.hymns && Array.isArray(data.hymns)) {
+            const match = data.hymns.find(h => h.startsWith(hymnNumber + ' ') || h === hymnNumber);
+            if (match) found = true;
+        }
+
+        if (found) {
             recentUses.push({ date: data.date.toDate(), meeting: data });
         }
     });

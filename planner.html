@@ -4,716 +4,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planeador da Ala - Agenda Sacramental</title>
+    <title>Sacrament Workbench</title>
 
-    <!-- Fonts & Icons -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <!-- PDF Lib -->
+    <!-- Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
-
-    <!-- Planner specific styles override/augment -->
-    <style>
-        /* Auth Overlay - Premium Glass */
-        #auth-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(243, 244, 246, 0.4);
-            /* Very light tint */
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(8px);
-        }
-
-        .auth-box {
-            /* Glassmorphism handled by .glass-panel class, here we handle layout */
-            max-width: 440px;
-            width: 90%;
-            padding: 3rem 2.5rem;
-            border-radius: 24px;
-            text-align: center;
-            animation: floatUp 0.5s ease-out;
-        }
-
-        @keyframes floatUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Navigation */
-        .app-nav {
-            width: 80px;
-            background: var(--primary-dark);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 1rem;
-            z-index: 20;
-            flex-shrink: 0;
-        }
-
-        .nav-item {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .nav-item.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
-        }
-
-        /* Layout Adjustments */
-        .planner-layout {
-            display: flex;
-            height: 100vh;
-            width: 100%;
-        }
-
-        .view-container {
-            flex: 1;
-            display: none;
-            /* Default hidden */
-            height: 100%;
-            overflow: hidden;
-            flex-direction: column;
-            /* Ensure stack layout for Roster/History */
-        }
-
-        .view-container.active {
-            display: flex;
-        }
-
-        /* Roster View Styling */
-        .roster-view,
-        .history-view {
-            width: 100%;
-            padding: 2rem;
-            overflow-y: auto;
-            background: var(--bg-app);
-            /* display: block; -- REMOVED */
-        }
-
-        .roster-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .roster-grid {
-            background: white;
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            overflow: visible;
-            /* Changed from hidden to allow action menu to show */
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            text-align: left;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        th {
-            background: #f8fafc;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        tr:hover {
-            background: #f8fafc;
-        }
-
-        /* Planner View Override */
-        #view-planner {
-            display: none;
-            /* Will be managed by JS */
-        }
-
-        #view-planner.active {
-            display: flex;
-            width: 100%;
-        }
-
-        /* Smart Badges */
-        .smart-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 8px;
-            font-weight: 600;
-        }
-
-        .badge-warning {
-            background: #fee2e2;
-            color: #ef4444;
-        }
-
-        .badge-info {
-            background: #e0f2fe;
-            color: #0ea5e9;
-        }
-
-        /* Toast notifications */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #333;
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            z-index: 2000;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        /* Planning View Cards */
-        .plan-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid var(--border);
-        }
-
-        .plan-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-
-        .plan-header {
-            padding: 1rem 1.5rem;
-            background: #f8fafc;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .plan-date-box {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .plan-day {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            line-height: 1;
-        }
-
-        .plan-month {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            font-weight: 600;
-            color: var(--text-light);
-            letter-spacing: 0.5px;
-        }
-
-        .plan-content {
-            padding: 1.5rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        .plan-section h4 {
-            margin: 0 0 0.8rem 0;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: #94a3b8;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .plan-list-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        .plan-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .btn-icon-small {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-icon-small:hover {
-            background: #f1f5f9;
-            color: var(--primary);
-        }
-    </style>
+    <!-- Style -->
+    <link rel="stylesheet" href="workbench.css">
 </head>
 
 <body>
 
     <!-- Auth Overlay -->
     <div id="auth-overlay">
-        <div class="auth-box glass-panel">
-            <div style="margin-bottom: 2rem;">
-                <h2 id="auth-title"
-                    style="font-family: var(--font-body); font-weight: 700; font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">
-                    Bem-vindo</h2>
-                <p style="color: var(--text-light); font-size: 0.95rem;">Planeador da Agenda Sacramental</p>
-            </div>
+        <div class="auth-box">
+            <h2 style="font-weight: 800; color: var(--primary); margin-bottom: 0.5rem;">Agenda Sacramental</h2>
+            <p style="color: var(--text-light); margin-bottom: 2rem;">Entre para gerir a sua ala</p>
 
-            <button id="login-btn" class="btn premium-btn"
-                style="width:100%; margin-bottom: 1.5rem; justify-content: center;">
-                <i class="ph ph-google-logo" style="font-size: 1.2rem;"></i> <span
-                    style="font-weight:600; margin-left:8px;">Continuar com Google</span>
+            <button id="login-btn" class="btn btn-secondary"
+                style="width: 100%; justify-content: center; padding: 0.8rem;">
+                <i class="ph ph-google-logo"></i> Entrar com Google
             </button>
 
-            <div style="display: flex; align-items: center; margin: 1.5rem 0; color: #cbd5e1;">
-                <div style="flex:1; height:1px; background:#e2e8f0;"></div>
-                <span
-                    style="padding: 0 12px; font-size: 0.75rem; font-weight:600; letter-spacing:1px; color:#94a3b8;">EMAIL</span>
-                <div style="flex:1; height:1px; background:#e2e8f0;"></div>
-            </div>
+            <div style="margin: 1.5rem 0; font-size: 0.8rem; color: #94a3b8;">OU COM EMAIL</div>
 
-            <div id="email-auth-group" style="text-align: left;">
-                <div class="input-wrapper">
-                    <input type="email" id="email-input" class="premium-input" placeholder="seu.email@exemplo.com"
-                        style="width:100%; padding: 0.9rem; border-radius: 8px;">
+            <div id="email-auth-group">
+                <div class="input-wrapper" style="margin-bottom: 1rem;">
+                    <input type="email" id="email-input" placeholder="Email">
                 </div>
-                <div class="input-wrapper">
-                    <input type="password" id="password-input" class="premium-input" placeholder="Palavra-passe"
-                        style="width:100%; padding: 0.9rem; border-radius: 8px;">
+                <div class="input-wrapper" style="margin-bottom: 1rem;">
+                    <input type="password" id="password-input" placeholder="Palavra-passe">
                 </div>
                 <button id="btn-email-login" class="btn btn-primary"
-                    style="width:100%; padding:0.9rem; background: var(--primary-dark);">Entrar com Email</button>
-
-                <div style="text-align:center; margin-top: 1.5rem;">
-                    <a href="#" id="btn-signup-toggle"
-                        style="font-size: 0.85rem; color: var(--primary); font-weight:500; text-decoration:none; border-bottom:1px dashed var(--primary);">Criar
-                        nova conta</a>
+                    style="width: 100%; justify-content: center;">Entrar</button>
+                <div style="margin-top: 1rem;">
+                    <a href="#" id="btn-signup-toggle" style="font-size: 0.85rem; color: var(--action);">Criar conta</a>
                 </div>
             </div>
-
-            <p id="auth-error" style="color: #ef4444; margin-top: 1.5rem; font-size: 0.85rem; min-height: 1.2rem;"></p>
+            <p id="auth-error" style="color: var(--danger); font-size: 0.85rem; margin-top: 1rem;"></p>
         </div>
     </div>
 
+    <!-- Layout -->
     <div class="planner-layout">
+
         <!-- Sidebar Navigation -->
         <nav class="app-nav">
-            <div class="nav-item active" data-target="view-dashboard" title="Início">
-                <i class="ph ph-house"></i>
+            <div class="nav-item active" data-target="view-dashboard" title="Foco">
+                <i class="ph ph-house-line"></i>
             </div>
-            <div class="nav-item" data-target="view-planner" title="Planeador">
-                <i class="ph ph-calendar-plus"></i>
+            <div class="nav-item" data-target="view-timeline" title="Cronologia">
+                <i class="ph ph-calendar-blank"></i>
             </div>
-            <div class="nav-item" data-target="view-roster" title="Membros (Roster)">
+            <div class="nav-item" data-target="view-planner" title="Workbench (Editor)">
+                <i class="ph ph-pencil-simple"></i>
+            </div>
+            <div class="nav-item" data-target="view-roster" title="Membros">
                 <i class="ph ph-users"></i>
             </div>
-            <div class="nav-item" data-target="view-planning" title="Planeamento Futuro">
-                <i class="ph ph-calendar"></i>
-            </div>
-            <div class="nav-item" data-target="view-history" title="Histórico">
-                <i class="ph ph-clock-counter-clockwise"></i>
-            </div>
-            <div class="nav-item" data-target="view-admin" id="nav-admin" title="Administração" style="display:none">
+            <div class="nav-item" data-target="view-admin" id="nav-admin" title="Admin" style="display:none">
                 <i class="ph ph-gear"></i>
             </div>
-            <div style="flex:1"></div>
             <div class="nav-item" id="logout-btn" title="Sair">
                 <i class="ph ph-sign-out"></i>
             </div>
         </nav>
 
-        <!-- DASHBOARD VIEW -->
+        <!-- VIEW 1: FOCUS DASHBOARD -->
         <div id="view-dashboard" class="view-container active">
-            <header style="margin-bottom: 2rem;">
-                <h1 id="dashboard-greeting"
-                    style="font-family: var(--font-body); font-weight: 700; color: var(--primary);">Olá, ...
-                </h1>
-                <p id="dashboard-subtitle" style="color: var(--text-light);">Bem-vindo à Ala ...</p>
-            </header>
-
-            <!-- Stats Row -->
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
-                <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center;">
-                    <div
-                        style="background: rgba(30, 58, 138, 0.1); padding: 1rem; border-radius: 12px; margin-right: 1rem;">
-                        <i class="ph ph-users-three" style="font-size: 1.5rem; color: var(--primary);"></i>
-                    </div>
-                    <div style="flex:1;">
-                        <h3 style="margin:0; font-size: 0.9rem; color: var(--text-light);">Assistência Média (<span
-                                id="lbl-month">Mês</span>)</h3>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                            <span id="stat-mtd"
-                                style="font-size: 1.8rem; font-weight: 700; color: var(--primary);">0</span>
-                            <div style="height:50px; width:120px; position:relative;"><canvas id="chart-mtd"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center;">
-                    <div
-                        style="background: rgba(217, 119, 6, 0.1); padding: 1rem; border-radius: 12px; margin-right: 1rem;">
-                        <i class="ph ph-chart-line-up" style="font-size: 1.5rem; color: var(--accent);"></i>
-                    </div>
-                    <div style="flex:1;">
-                        <h3 style="margin:0; font-size: 0.9rem; color: var(--text-light);">Assistência Média (<span
-                                id="lbl-year">Ano</span>)</h3>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                            <span id="stat-ytd"
-                                style="font-size: 1.8rem; font-weight: 700; color: var(--primary);">0</span>
-                            <div style="height:50px; width:120px; position:relative;"><canvas id="chart-ytd"></canvas>
-                            </div>
-                        </div>
-                    </div>
+            <div class="workbench-toolbar">
+                <div class="wb-title">
+                    <h2 id="dashboard-ward-name">Ala ...</h2>
+                    <p>Visão Geral</p>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <h2 style="font-family: var(--font-body); font-weight:700; margin-bottom: 1.5rem;">Acesso Rápido</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-
-                <div class="glass-panel"
-                    style="padding: 2rem; text-align: center; cursor: pointer; transition: transform 0.2s;"
-                    onclick="document.querySelector('[data-target=\'view-planning\']').click()">
-                    <i class="ph ph-calendar-plus"
-                        style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
-                    <h3 style="margin-bottom: 0.5rem;">Planear Domingo</h3>
-                    <p style="font-size: 0.9rem; color: var(--text-light);">Gerir oradores e tópicos futuros</p>
+            <div class="focus-dashboard">
+                <!-- Next Sunday Hero -->
+                <div class="hero-card" id="focus-hero">
+                    <div class="hero-content">
+                        <div class="hero-status"><span class="status-dot planned"></span> Próximo Domingo</div>
+                        <h1 id="hero-date">-- de --</h1>
+                        <p id="hero-theme">Carregando...</p>
+                        <div style="margin-top: 1.5rem;">
+                            <button class="btn btn-primary" onclick="window.editPlan(null)">
+                                <i class="ph ph-pencil-simple"></i> Continuar Planeamento
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="glass-panel"
-                    style="padding: 2rem; text-align: center; cursor: pointer; transition: transform 0.2s;"
-                    onclick="document.querySelector('[data-target=\'view-roster\']').click()">
-                    <i class="ph ph-users-three"
-                        style="font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem; display: block;"></i>
-                    <h3 style="margin-bottom: 0.5rem;">Diretório</h3>
-                    <p style="font-size: 0.9rem; color: var(--text-light);">Gerir membros e chamados</p>
+                <!-- Short Upcoming List (Preview) -->
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem;">Próximas
+                    Semanas</h3>
+                <div id="dashboard-upcoming-list" class="timeline-list">
+                    <!-- Injected via JS -->
                 </div>
-
-                <div class="glass-panel"
-                    style="padding: 2rem; text-align: center; cursor: pointer; transition: transform 0.2s;"
-                    onclick="document.querySelector('[data-target=\'view-history\']').click()">
-                    <i class="ph ph-music-notes"
-                        style="font-size: 2.5rem; color: #10b981; margin-bottom: 1rem; display: block;"></i>
-                    <h3 style="margin-bottom: 0.5rem;">Histórico & Hinos</h3>
-                    <p style="font-size: 0.9rem; color: var(--text-light);">Consultar reuniões passadas</p>
-                </div>
-
             </div>
         </div>
 
-        <!-- VIEW 1: PLANNER (Re-using standard editor layout) -->
+        <!-- VIEW 2: TIMELINE (Calendar) -->
+        <div id="view-timeline" class="view-container">
+            <div class="workbench-toolbar">
+                <div class="wb-title">
+                    <h2>Cronologia</h2>
+                    <p>Todos os domingos futuros</p>
+                </div>
+                <button class="btn btn-secondary" onclick="window.renderPlanning()">
+                    <i class="ph ph-arrow-clockwise"></i> Atualizar
+                </button>
+            </div>
+            <div class="vertical-timeline" id="timeline-container">
+                <!-- Injected Steps via JS -->
+            </div>
+        </div>
+
+        <!-- VIEW 3: WORKBENCH EDITOR -->
         <div id="view-planner" class="view-container">
-            <!-- Sidebar / Form Section -->
-            <aside class="editor-pane">
-                <header class="editor-header">
-                    <h1>Planer da Ala</h1>
-                    <p id="ward-name-display">Carregando...</p>
-                </header>
-
-                <form id="agendaForm" onsubmit="return false;">
-                    <!-- General Info -->
-                    <section class="form-group">
-                        <h2>Informações Gerais</h2>
-                        <div class="input-grid">
-                            <div class="input-wrapper">
-                                <label>Data</label>
-                                <input type="date" name="date" id="input-date">
-                            </div>
-                            <div class="checkbox-wrapper" style="margin-top: 0;">
-                                <input type="checkbox" id="fastMeeting" name="fastMeeting">
-                                <label for="fastMeeting">Jejum e Testemunhos</label>
-                            </div>
-                        </div>
-                        <div class="input-grid">
-                            <div class="input-wrapper">
-                                <label>Preside</label>
-                                <input type="text" name="presiding" placeholder="Bispo...">
-                            </div>
-                            <div class="input-wrapper">
-                                <label>Dirige</label>
-                                <input type="text" name="conducting" placeholder="Irmão...">
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Music -->
-                    <section class="form-group">
-                        <h2>Música</h2>
-                        <!-- Smart Suggestion needed here? Maybe just text for now as per prompt focusing on Speakers/Hymns -->
-                        <div class="input-wrapper">
-                            <label>Pianista</label>
-                            <input type="text" name="organist">
-                        </div>
-                        <div class="input-wrapper">
-                            <label>Regente</label>
-                            <input type="text" name="chorister">
-                        </div>
-                    </section>
-
-                    <!-- Opening -->
-                    <section class="form-group">
-                        <h2>Abertura</h2>
-                        <div class="hymn-input-wrapper">
-                            <label>Hino de Abertura</label>
-                            <input type="text" class="hymn-search" name="openingHymn" placeholder="Buscar hino...">
-                            <div class="hymn-results"></div>
-                        </div>
-                        <div class="input-wrapper">
-                            <label>Primeira Oração</label>
-                            <!-- Smart Member Search -->
-                            <div class="member-search-wrapper">
-                                <input type="text" class="member-search" name="invocation"
-                                    placeholder="Buscar membro..." autocomplete="off">
-                                <div class="member-results"></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Sacrament -->
-                    <section class="form-group">
-                        <h2>Sacramento</h2>
-                        <div class="hymn-input-wrapper">
-                            <label>Hino Sacramental</label>
-                            <input type="text" class="hymn-search" name="sacramentHymn" placeholder="Buscar hino...">
-                            <div class="hymn-results"></div>
-                        </div>
-                    </section>
-
-                    <!-- Program -->
-                    <section class="form-group" id="program-section">
-                        <h2>Programa Espiritual</h2>
-                        <div id="speakers-input-container" class="dynamic-list-input"></div>
-
-                        <div class="input-row" style="margin-bottom: 1rem;">
-                            <button class="btn-add" onclick="window.addSpeakerUI()">+ Adicionar Orador</button>
-                            <button class="btn-add" onclick="window.addProgramHymnUI()"
-                                style="margin-left: 0.5rem; border-color: var(--text-light); color: var(--text-light);">+
-                                Hino Interm.</button>
-                        </div>
-                    </section>
-
-                    <!-- Closing -->
-                    <section class="form-group">
-                        <h2>Encerramento</h2>
-                        <div class="hymn-input-wrapper">
-                            <label>Hino de Encerramento</label>
-                            <input type="text" class="hymn-search" name="closingHymn" placeholder="Buscar hino...">
-                            <div class="hymn-results"></div>
-                        </div>
-                        <div class="input-wrapper">
-                            <label>Última Oração</label>
-                            <div class="member-search-wrapper">
-                                <input type="text" class="member-search" name="benediction"
-                                    placeholder="Buscar membro..." autocomplete="off">
-                                <div class="member-results"></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Smart Stats / Attendance -->
-                    <section class="form-group" style="padding-top: 1rem; border-top: 1px solid #eee;">
-                        <h2>Estatísticas & Presença</h2>
-                        <div class="input-grid">
-                            <div class="input-wrapper">
-                                <label>Início</label>
-                                <input type="number" name="att_start" placeholder="0">
-                            </div>
-                            <div class="input-wrapper">
-                                <label>Sacramento</label>
-                                <input type="number" name="att_sacrament" placeholder="0">
-                            </div>
-                        </div>
-                        <div class="input-grid">
-                            <div class="input-wrapper">
-                                <label>Final</label>
-                                <input type="number" name="att_end" placeholder="0">
-                            </div>
-                            <div class="input-wrapper">
-                                <label>Visitantes</label>
-                                <input type="number" name="att_visitors" placeholder="0">
-                            </div>
-                        </div>
-                    </section>
-
-                </form>
-
-                <div class="actions-footer" style="flex-direction: column;">
-                    <button id="btn-finalize" class="btn btn-primary" style="background-color: var(--accent);">
-                        <i class="ph ph-floppy-disk"></i> Gravar & Finalizar Reunião
-                    </button>
-                    <button class="btn btn-primary" onclick="exportPDF()"
-                        style="margin-top: 0.5rem; background-color: #fff; color: var(--primary); border: 1px solid var(--border);">
-                        <i class="ph ph-file-pdf"></i> Apenas PDF
-                    </button>
+            <div class="workbench-toolbar">
+                <div class="wb-title">
+                    <h2>Editor de Reunião</h2>
+                    <p id="editor-date-display">Selecione uma data...</p>
                 </div>
-            </aside>
-
-            <!-- Preview Section (Reused from simple.html mostly) -->
-            <main class="preview-pane">
-                <div class="paper-wrapper">
-                    <div id="agenda-paper" class="agenda-paper">
-                        <!-- Same Header -->
-                        <div class="agenda-header">
-                            <div class="header-line"></div>
-                            <h1>Agenda da Reunião Sacramental</h1>
-                            <h2 id="preview-ward-name">Ala...</h2>
-                            <p class="agenda-date" data-bind="date">--/--/----</p>
-                        </div>
-
-                        <div class="agenda-body">
-                            <div class="meta-grid">
-                                <div class="meta-item"><span class="meta-label">Preside:</span><span class="meta-value"
-                                        data-bind="presiding">...</span></div>
-                                <div class="meta-item"><span class="meta-label">Dirige:</span><span class="meta-value"
-                                        data-bind="conducting">...</span></div>
-                                <div class="meta-item"><span class="meta-label">Pianista:</span><span class="meta-value"
-                                        data-bind="organist">...</span></div>
-                                <div class="meta-item"><span class="meta-label">Regente:</span><span class="meta-value"
-                                        data-bind="chorister">...</span></div>
-                            </div>
-                            <hr class="divider">
-
-                            <!-- Program -->
-                            <div class="program-item">
-                                <span class="program-label">Hino de Abertura</span>
-                                <span class="program-value hymn" data-bind="openingHymn">...</span>
-                            </div>
-                            <div class="program-item">
-                                <span class="program-label">Primeira Oração</span>
-                                <span class="program-value" data-bind="invocation">...</span>
-                            </div>
-
-                            <!-- Business (Simplified for Planner Mode to focus on Core) -->
-                            <!-- User prompted only for core "Planner Features", so assuming Business is less priority or optional. 
-                                 I will leave placeholders or omitted for brevity if not requested, but better to keep standard structure.
-                                 I'll skip dynamic business inputs in Planner Form to save complexity unless requested, 
-                                 or just assume user will type them in a generic "Announcements" field if provided. 
-                                 Prompt says "Refactor Agenda Form... Speaker Selection... Hymn Selection... Stats". 
-                                 It doesn't explicitly ask for Business Logic refactor. I'll omit Business dynamic inputs for now to focus on the requested "Smart" features.
-                            -->
-
-                            <div class="program-item highlight-box">
-                                <span class="program-label">Hino Sacramental</span>
-                                <span class="program-value hymn" data-bind="sacramentHymn">...</span>
-                            </div>
-
-                            <div class="sacrament-note">
-                                <p>Administração do Sacramento</p>
-                            </div>
-
-                            <div class="program-section speakers-section">
-                                <h3>Programa</h3>
-                                <div id="fast-meeting-note"
-                                    style="display:none; text-align: center; margin: 1rem 0; font-style: italic;">
-                                    Testemunhos da Congregação</div>
-                                <div id="speakers-list" class="speakers-list"></div>
-                            </div>
-
-                            <hr class="divider">
-
-                            <div class="program-item">
-                                <span class="program-label">Hino de Encerramento</span>
-                                <span class="program-value hymn" data-bind="closingHymn">...</span>
-                            </div>
-                            <div class="program-item">
-                                <span class="program-label">Última Oração</span>
-                                <span class="program-value" data-bind="benediction">...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-
-        <!-- VIEW 2: ROSTER -->
-        <div id="view-roster" class="view-container roster-view">
-            <header class="roster-header">
-                <div>
-                    <h1 id="roster-title">Membros da Ala</h1>
+                <!-- Segmented Control -->
+                <div class="segmented-control">
+                    <button class="segment-btn active" onclick="window.switchEditorTab('speakers')">Oradores</button>
+                    <button class="segment-btn" onclick="window.switchEditorTab('hymns')">Hinos</button>
+                    <button class="segment-btn" onclick="window.switchEditorTab('prayers')">Orações</button>
+                    <button class="segment-btn" onclick="window.switchEditorTab('full')">Completo</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <!-- Hidden input repurposed for the new modal -->
-                    <input type="file" id="csv-upload" accept=".csv" style="display:none">
+                    <button class="btn btn-secondary" onclick="exportPDF()"><i class="ph ph-file-pdf"></i> PDF</button>
+                    <button class="btn btn-primary" id="btn-finalize"><i class="ph ph-floppy-disk"></i> Gravar</button>
+                </div>
+            </div>
 
-                    <button class="btn btn-secondary" style="width: auto;" onclick="window.openImportModal()">
-                        <i class="ph ph-users-three"></i> Adicionar Lista de Membros
+            <!-- Editor Content Area -->
+            <div class="workbench-container">
+                <form id="agendaForm" class="editor-grid-layout" onsubmit="return false;">
+
+                    <!-- Left/Main Column -->
+                    <div class="editor-main-col" id="editor-main-panel">
+
+                        <!-- Common Header (Date & Presiding) - Always visible or top of 'full' -->
+                        <div class="form-section">
+                            <div class="input-row">
+                                <div class="input-wrapper">
+                                    <label>Data</label>
+                                    <input type="date" name="date" id="input-date">
+                                </div>
+                                <div class="input-wrapper">
+                                    <label>Preside</label>
+                                    <input type="text" name="presiding" placeholder="Bispo...">
+                                </div>
+                                <div class="input-wrapper">
+                                    <label>Dirige</label>
+                                    <input type="text" name="conducting" placeholder="Irmão...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Speakers Tab Content -->
+                        <div id="tab-speakers" class="tab-content" style="display:block;">
+                            <div class="form-section">
+                                <h3>Programa Espiritual</h3>
+                                <div id="speakers-input-container">
+                                    <!-- Dynamic Rows -->
+                                </div>
+                                <button class="btn btn-secondary" onclick="window.addSpeakerUI()"
+                                    style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
+                                <button class="btn btn-secondary" onclick="window.addProgramHymnUI()"
+                                    style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+
+                                    Adicionar Hino Interm.</button>
+                            </div>
+                        </div>
+
+                        <!-- Hymns Tab Content -->
+                        <div id="tab-hymns" class="tab-content" style="display:none;">
+                            <div class="form-section">
+                                <h3>Música</h3>
+                                <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                                    <div class="input-wrapper">
+                                        <label>Regente</label><input type="text" name="chorister">
+                                    </div>
+                                    <div class="input-wrapper">
+                                        <label>Pianista</label><input type="text" name="organist">
+                                    </div>
+                                </div>
+                                <div class="form-section" style="margin-top:1.5rem;">
+                                    <div class="hymn-input-wrapper">
+                                        <label>Hino de Abertura</label>
+                                        <input type="text" class="hymn-search" name="openingHymn">
+                                        <div class="hymn-results"></div>
+                                    </div>
+                                    <div class="hymn-input-wrapper">
+                                        <label>Hino Sacramental</label>
+                                        <input type="text" class="hymn-search" name="sacramentHymn">
+                                        <div class="hymn-results"></div>
+                                    </div>
+                                    <div class="hymn-input-wrapper">
+                                        <label>Hino de Encerramento</label>
+                                        <input type="text" class="hymn-search" name="closingHymn">
+                                        <div class="hymn-results"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Sections (Visible in Full Mode) -->
+                        <div id="tab-extras" class="tab-content" style="display:none;">
+                            <!-- Recognitions -->
+                            <div class="form-section">
+                                <h3>Reconhecimentos</h3>
+                                <div id="recognitions-input-container" class="dynamic-list-input"></div>
+                                <button class="btn btn-secondary" style="width:100%;"
+                                    onclick="window.addListItem('recognitions')">+ Adicionar Pessoa</button>
+                            </div>
+
+                            <!-- Announcements -->
+                            <div class="form-section">
+                                <h3>Anúncios</h3>
+                                <div id="announcements-input-container" class="dynamic-list-input"></div>
+                                <button class="btn btn-secondary" style="width:100%;"
+                                    onclick="window.addListItem('announcements')">+ Adicionar Anúncio</button>
+                            </div>
+
+                            <!-- Ward Business -->
+                            <div class="form-section">
+                                <h3>Assuntos da Ala</h3>
+
+                                <label style="margin-top:1rem; display:block">Desobrigações</label>
+                                <div id="releases-input-container" class="dynamic-list-input"></div>
+                                <button class="btn btn-secondary" style="width:100%;"
+                                    onclick="window.addListItem('releases')">+ Desobrigação</button>
+
+                                <label style="margin-top:1rem; display:block">Chamados (Apoios)</label>
+                                <div id="callings-input-container" class="dynamic-list-input"></div>
+                                <button class="btn btn-secondary" style="width:100%;"
+                                    onclick="window.addListItem('callings')">+ Chamado</button>
+                            </div>
+                        </div>
+
+                        <!-- Prayers Tab Content -->
+                        <div id="tab-prayers" class="tab-content" style="display:none;">
+                            <div class="form-section">
+                                <h3>Orações</h3>
+                                <div class="input-wrapper">
+                                    <label>Primeira Oração</label>
+                                    <div class="member-search-wrapper">
+                                        <input type="text" class="member-search" name="invocation">
+                                        <div class="member-results"></div>
+                                    </div>
+                                </div>
+                                <div class="input-wrapper">
+                                    <label>Última Oração</label>
+                                    <div class="member-search-wrapper">
+                                        <input type="text" class="member-search" name="benediction">
+                                        <div class="member-results"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats (Only visible in Full or Stats tab? Keeping minimal) -->
+                        <div id="tab-stats" class="tab-content"
+                            style="display:none; border-top: 1px solid var(--border); padding-top:1rem; margin-top:2rem;">
+                            <h3>Estatísticas</h3>
+                            <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                                <div class="input-wrapper"><label>Sacramento</label><input type="number"
+                                        name="att_sacrament"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column (Member Pool) -->
+                    <div class="editor-side-col" id="member-pool-panel">
+                        <div class="member-pool-header">
+                            <div class="member-pool-title">Sugestões de Membros</div>
+                            <input type="text" id="pool-search" class="premium-input" placeholder="Filtrar nome..."
+                                style="font-size: 0.85rem; padding: 0.5rem;">
+                            <div class="pool-filters">
+                                <span class="filter-chip" onclick="togglePoolFilter('M')">Homens</span>
+                                <span class="filter-chip" onclick="togglePoolFilter('F')">Mulheres</span>
+                                <span class="filter-chip" onclick="togglePoolFilter('Youth')">Jovens</span>
+                            </div>
+                        </div>
+                        <div class="member-list" id="member-pool-list">
+                            <!-- Injected JS -->
+                            <div
+                                style="text-align:center; padding: 2rem; color: var(--text-light); font-size: 0.85rem;">
+                                Carregando membros...
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Hidden Preview for PDF Generation -->
+            <div id="pdf-preview-hidden" style="display:none;">
+                <!-- Re-using existing print layout logic via JS clone if needed, or just keeping the HTML structure in memory -->
+                <!-- For robust PDF export, we might need the structure present in DOM. Let's keep a hidden rendering container -->
+                <div id="agenda-paper" class="agenda-paper"
+                    style="width: 210mm; min-height: 297mm; padding: 20mm; background:white; color:black;">
+                    <!-- Logic will populate this before print -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- VIEW 4: ROSTER (Restored) -->
+        <div id="view-roster" class="view-container roster-view">
+            <header class="roster-header"
+                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                <div>
+                    <h1>Membros da Ala</h1>
+                    <p style="color: var(--text-light);">Gerir lista para sugestões inteligentes</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <!-- Updated Button -->
+                    <button class="btn btn-secondary" style="width: auto;" onclick="window.openBulkImport()">
+                        <i class="ph ph-users-three"></i> Adicionar Importar
                     </button>
                     <button class="btn btn-primary" style="width: auto;" onclick="window.addMemberUI()">
                         <i class="ph ph-plus"></i> Novo Membro
@@ -724,24 +344,18 @@
             <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
                 <input type="text" id="roster-search" placeholder="Filtrar por nome..." class="input-wrapper"
                     style="padding: 0.5rem; max-width: 300px;">
-                <select id="roster-filter-group" class="input-wrapper" style="padding: 0.5rem;">
-                    <option value="all">Todos os Grupos</option>
+                <select id="roster-filter" class="input-wrapper" style="padding: 0.5rem;">
+                    <option value="all">Todos</option>
                     <option value="Adult">Adultos</option>
                     <option value="Young Adult">Jovens Adultos (JA)</option>
                     <option value="Youth">Jovens</option>
                     <option value="Primary">Primária</option>
-                </select>
-                <select id="roster-filter-gender" class="input-wrapper" style="padding: 0.5rem;">
-                    <option value="all">Todos os Géneros</option>
-                    <option value="M">Homens</option>
-                    <option value="F">Mulheres</option>
+                    <option value="gender_M">Homens</option>
+                    <option value="gender_F">Mulheres</option>
                 </select>
             </div>
 
-            <div class="roster-grid">
-                <thead>
-                    <!-- Rendered via Grid JS or standard Table -->
-                </thead>
+            <div class="roster-grid" style="overflow: visible;">
                 <table id="roster-table">
                     <thead>
                         <tr>
@@ -752,340 +366,46 @@
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody id="roster-tbody">
+                    <tbody id="roster-tbody" style="position:relative; min-height: 200px;">
                         <!-- Dynamic -->
                     </tbody>
                 </table>
             </div>
+            <!-- Hidden container for old cards script if it runs by accident, but we will replace script too -->
+            <div id="roster-cards-container" style="display:none;"></div>
         </div>
 
-        <style>
-            /* Calendar UI */
-            .calendar-container {
-                background: white;
-                border-radius: 12px;
-                box-shadow: var(--shadow);
-                padding: 1.5rem;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .calendar-header-row {
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                text-align: center;
-                font-weight: 600;
-                color: #94a3b8;
-                padding-bottom: 1rem;
-                border-bottom: 1px solid var(--border);
-                margin-bottom: 1rem;
-            }
-
-            .calendar-grid {
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                grid-auto-rows: 1fr;
-                gap: 1px;
-                background: var(--border);
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                overflow: hidden;
-                flex: 1;
-            }
-
-            .cal-cell {
-                background: white;
-                min-height: 100px;
-                padding: 0.5rem;
-                position: relative;
-                cursor: pointer;
-                transition: background 0.2s;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .cal-cell:hover {
-                background: #f8fafc;
-            }
-
-            .cal-cell.empty {
-                background: #fdfdfd;
-            }
-
-            .cal-cell.today {
-                background: #eff6ff;
-            }
-
-            .cal-cell.disabled {
-                background: #f1f5f9;
-                color: #ccc;
-                pointer-events: none;
-            }
-
-            .cal-date {
-                font-weight: 600;
-                font-size: 0.9rem;
-                margin-bottom: 0.5rem;
-                color: #334155;
-            }
-
-            .cal-indicator {
-                margin-top: auto;
-                display: flex;
-                background: #f1f5f9;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 0.75rem;
-                align-items: center;
-                gap: 4px;
-                color: #64748b;
-            }
-
-            .cal-indicator.status-completed {
-                background: #dcfce7;
-                color: #166534;
-                border: 1px solid #bbf7d0;
-            }
-
-            .cal-indicator.status-draft {
-                background: #ffedd5;
-                color: #9a3412;
-                border: 1px solid #fed7aa;
-            }
-
-            /* Segmented Control */
-            .segmented-control {
-                display: flex;
-                background: #f1f5f9;
-                padding: 4px;
-                border-radius: 8px;
-                margin-bottom: 1.5rem;
-            }
-
-            .seg-btn {
-                flex: 1;
-                border: none;
-                background: transparent;
-                padding: 0.5rem;
-                font-size: 0.85rem;
-                font-weight: 500;
-                color: #64748b;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .seg-btn.active {
-                background: white;
-                color: var(--primary);
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-                font-weight: 600;
-            }
-
-            /* Focus Modes */
-            .editor-pane[data-mode="talks"] .section-music,
-            .editor-pane[data-mode="talks"] .section-prayers,
-            .editor-pane[data-mode="talks"] .section-sacrament,
-            .editor-pane[data-mode="talks"] .section-stats {
-                display: none;
-            }
-
-            .editor-pane[data-mode="hymns"] .section-general .input-grid,
-            /* Hide presiding/conducting */
-            .editor-pane[data-mode="hymns"] .section-program,
-            /* Hide speakers */
-            .editor-pane[data-mode="hymns"] .section-stats {
-                display: none;
-            }
-
-            .editor-pane[data-mode="prayers"] .section-music,
-            .editor-pane[data-mode="prayers"] .section-program,
-            .editor-pane[data-mode="prayers"] .section-stats {
-                display: none;
-            }
-        </style>
-        </head>
-
-        <body> <!-- Force restart of body to ensure style is in head or handled ok -->
-
-            <!-- ... (Rest of file wrapper logic assumed handled by tool, replacing only detailed section) -->
-            <!-- Wait, I cannot inject into Head easily with one replace if targets are far apart.
-     I will inject CSS inside view-planning for now or overwrite Style block if I can find it specific enough.
-     Actually, style block is at top. Let's just put this style block IN view-planning for simplicity 
-     or just prepend it to the div. Browsers handle body-level styles fine. -->
-
-            <!-- VIEW 3: FUTURE PLANNING (CALENDAR) -->
-            <div id="view-planning" class="view-container history-view">
-                <style>
-                    /* Scoped styles for Calendar */
-                    .calendar-container {
-                        background: white;
-                        border-radius: 12px;
-                        box-shadow: var(--shadow);
-                        padding: 1.5rem;
-                        height: 100%;
-                        display: flex;
-                        flex-direction: column;
-                    }
-
-                    .calendar-header-row {
-                        display: grid;
-                        grid-template-columns: repeat(7, 1fr);
-                        text-align: center;
-                        font-weight: 600;
-                        color: #94a3b8;
-                        padding-bottom: 0.5rem;
-                        border-bottom: 1px solid var(--border);
-                        margin-bottom: 0.5rem;
-                    }
-
-                    .calendar-grid {
-                        display: grid;
-                        grid-template-columns: repeat(7, 1fr);
-                        grid-auto-rows: 1fr;
-                        /* Equal height rows */
-                        gap: 1px;
-                        background: #e2e8f0;
-                        border: 1px solid #e2e8f0;
-                        flex: 1;
-                        /* Fill remaining space */
-                    }
-
-                    .cal-cell {
-                        background: white;
-                        min-height: 80px;
-                        padding: 0.5rem;
-                        cursor: pointer;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: space-between;
-                    }
-
-                    .cal-cell:hover {
-                        background: #f8fafc;
-                    }
-
-                    .cal-cell.disabled {
-                        background: #f8fafc;
-                        opacity: 0.5;
-                        pointer-events: none;
-                    }
-
-                    .cal-cell.is-sunday {
-                        background: #fff;
-                    }
-
-                    .cal-cell.today {
-                        background: #eff6ff;
-                    }
-
-                    .cal-status-pill {
-                        font-size: 0.7rem;
-                        padding: 2px 6px;
-                        border-radius: 10px;
-                        background: #f1f5f9;
-                        color: #64748b;
-                        align-self: flex-start;
-                        margin-top: 4px;
-                    }
-
-                    .cal-status-pill.draft {
-                        background: #ffedd5;
-                        color: #c2410c;
-                    }
-
-                    .cal-status-pill.completed {
-                        background: #dcfce7;
-                        color: #15803d;
-                    }
-                </style>
-
-                <header class="roster-header">
-                    <div style="display:flex; align-items:center; gap:1rem;">
-                        <button class="btn btn-secondary" style="width:auto;" onclick="window.changeMonth(-1)">
-                            <i class="ph ph-caret-left"></i>
-                        </button>
-                        <h1 id="calendar-title" style="min-width:220px; text-align:center;">---</h1>
-                        <button class="btn btn-secondary" style="width:auto;" onclick="window.changeMonth(1)">
-                            <i class="ph ph-caret-right"></i>
-                        </button>
-                    </div>
-                    <div>
-                        <button class="btn btn-primary"
-                            onclick="window.editPlan(new Date().toISOString().split('T')[0])">
-                            <i class="ph ph-plus"></i> Plano Rápido
-                        </button>
-                    </div>
-                </header>
-
-                <div class="calendar-container">
-                    <div class="calendar-header-row">
-                        <div>Dom</div>
-                        <div>Seg</div>
-                        <div>Ter</div>
-                        <div>Qua</div>
-                        <div>Qui</div>
-                        <div>Sex</div>
-                        <div>Sáb</div>
-                    </div>
-                    <div id="calendar-grid" class="calendar-grid">
-                        <!-- Dynamic -->
-                    </div>
+        <!-- VIEW 5: ADMIN (Minimal) -->
+        <div id="view-admin" class="view-container">
+            <div class="workbench-toolbar">
+                <div class="wb-title">
+                    <h2>Admin</h2>
                 </div>
             </div>
-
-            <!-- VIEW 4: HISTORY -->
-            <div id="view-history" class="view-container history-view">
-                <header class="roster-header">
-                    <h1>Histórico de Reuniões</h1>
-                </header>
+            <div style="padding: 2rem; overflow-y:auto;">
                 <div class="roster-grid">
-                    <table id="history-table">
+                    <table>
                         <thead>
                             <tr>
-                                <th>Data</th>
-                                <th>Preside / Dirige</th>
-                                <th>Hinos</th>
-                                <th>Presença</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- VIEW 5: ADMIN -->
-            <div id="view-admin" class="view-container roster-view">
-                <header class="roster-header">
-                    <h1>Administração da Ala</h1>
-                    <p style="color: var(--text-light);">Gerir permissões e utilizadores</p>
-                </header>
-
-                <div class="roster-grid">
-                    <table id="admin-users-table">
-                        <thead>
-                            <tr>
-                                <th>Utilizador</th>
+                                <th>Nome</th>
                                 <th>Email</th>
                                 <th>Função</th>
                                 <th>Estado</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
-                        <tbody id="admin-users-tbody">
-                            <!-- Dynamic -->
-                        </tbody>
+                        <tbody id="admin-users-tbody"></tbody>
                     </table>
                 </div>
             </div>
+        </div>
 
     </div>
 
     <!-- Member Modal -->
     <div id="member-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
-        <div class="glass-panel"
+        <div
             style="background:#fff; padding:2rem; width:90%; max-width:500px; border-radius:16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
             <h2 id="modal-title" style="margin-bottom:1.5rem; font-family: var(--font-body); font-weight: 700;">Novo
                 Membro</h2>
@@ -1142,7 +462,7 @@
     <!-- View Member Modal -->
     <div id="member-view-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
-        <div class="glass-panel"
+        <div
             style="background:#fff; padding:2rem; width:90%; max-width:600px; max-height: 80vh; overflow-y: auto; border-radius:16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
             <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                 <div>
@@ -1152,13 +472,13 @@
                         Detalhes...</p>
                 </div>
                 <button onclick="document.getElementById('member-view-modal').style.display='none'" class="btn-remove"
-                    style="font-size:1.5rem;">&times;</button>
+                    style="font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
             </header>
 
             <div style="margin-bottom: 2rem;">
                 <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
                     de Discursos</h3>
-                <ul id="view-mem-talks" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
+                <ul id="view-mem-talks" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text-main);">
                     <!-- Dynamic -->
                 </ul>
             </div>
@@ -1166,7 +486,7 @@
             <div>
                 <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.5rem; color:var(--primary);">Histórico
                     de Orações</h3>
-                <ul id="view-mem-prayers" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text);">
+                <ul id="view-mem-prayers" style="list-style:none; padding:0; font-size:0.9rem; color:var(--text-main);">
                     <!-- Dynamic -->
                 </ul>
             </div>
@@ -1180,8 +500,7 @@
     <!-- Delete Confirmation Modal -->
     <div id="delete-confirm-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3001; align-items:center; justify-content:center;">
-        <div class="glass-panel"
-            style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
+        <div style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
             <h3 style="font-family:var(--font-heading); margin-bottom:1rem; color: #ef4444;">Confirmar Remoção</h3>
             <p style="color:var(--text-light); margin-bottom:2rem;">Tem a certeza que deseja remover este membro?
                 Esta ação não pode ser desfeita.</p>
@@ -1193,99 +512,80 @@
     </div>
 
     <!-- Bulk Import Modal -->
-    <div id="import-modal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:4000; align-items:center; justify-content:center;">
+    <div id="bulk-import-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3500; align-items:center; justify-content:center;">
         <div class="glass-panel"
-            style="background:#fff; padding:2rem; width:90%; max-width:800px; max-height:90vh; overflow-y:auto; border-radius:16px; position:relative;">
+            style="background:#fff; padding:2rem; width:95%; max-width:900px; height: 80vh; border-radius:16px; display:flex; flex-direction:column;">
 
-            <button onclick="document.getElementById('import-modal').style.display='none'" class="btn-remove"
-                style="position:absolute; top:1rem; right:1rem; font-size:1.5rem;">&times;</button>
-
-            <h2 style="margin-bottom:0.5rem; font-family: var(--font-body); font-weight: 700;">Importar Membros em Massa
-            </h2>
-            <p style="color:var(--text-light); margin-bottom:2rem;">Siga os passos abaixo para adicionar vários membros
-                de uma só vez.</p>
-
-            <!-- Step 1: Template -->
-            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #e2e8f0;">
-                <h3 style="font-size:1.1rem; margin-bottom:0.5rem; color:var(--text-main);">1. Obter Modelo
-                    (Recomendado)</h3>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <p style="font-size:0.9rem; color:#666; max-width:60%;">
-                        Descarregue o modelo CSV/Excel para garantir que os seus dados estão formatados corretamente
-                        antes de importar.
-                    </p>
-                    <button class="btn btn-secondary" onclick="window.downloadTemplate()">
-                        <i class="ph ph-download-simple"></i> Descarregar Modelo
-                    </button>
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <div>
+                    <h2 style="font-family: var(--font-body); font-weight: 700; margin:0;">Importar Membros em Massa
+                    </h2>
+                    <p style="color:var(--text-light); margin:0;">Adicione vários membros de uma vez</p>
                 </div>
-            </div>
+                <button onclick="document.getElementById('bulk-import-modal').style.display='none'" class="btn-remove"
+                    style="font-size:2rem; background:none; border:none; cursor:pointer;">&times;</button>
+            </header>
 
-            <!-- Step 2: Import Method -->
-            <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-main);">2. Importar Dados (Escolha um
-                método)</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1.5rem; flex:1; overflow:hidden;">
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
-                <!-- Method A: Paste -->
-                <div class="card"
-                    style="padding:1.5rem; border:1px solid #e2e8f0; border-radius:12px; display:flex; flex-direction:column;">
-                    <h4 style="font-size:1rem; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
-                        <i class="ph ph-clipboard-text" style="color:var(--primary);"></i> Opção A: Copiar & Colar
-                    </h4>
-                    <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">
-                        Copie as linhas do seu Excel ou CSV e cole na caixa abaixo.
-                    </p>
-                    <textarea id="paste-area"
-                        placeholder="Exemplo:&#10;João Silva, Bispo, Adultos, M&#10;Maria Santos, Primária, Primária, F"
-                        style="flex:1; width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:1rem; font-family:monospace; resize:none; min-height:150px; margin-bottom:1rem; font-size: 0.85rem;"></textarea>
-
-                    <button id="btn-process-paste" class="btn btn-primary" style="width:100%;">
-                        Importar Dados Colados
+                <!-- Col 1: Template -->
+                <div
+                    style="background:#f8fafc; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                    <div style="background:#e0f2fe; padding:1rem; border-radius:50%; margin-bottom:1rem;">
+                        <i class="ph ph-file-csv" style="font-size:2rem; color:#0ea5e9;"></i>
+                    </div>
+                    <h3 style="margin-bottom:0.5rem; font-weight:600;">1. Modelo</h3>
+                    <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Descarregue o ficheiro modelo para
+                        garantir que a formatação está correta.</p>
+                    <button class="btn btn-secondary" onclick="window.downloadTemplate()" style="width:100%;">
+                        <i class="ph ph-download"></i> Descarregar CSV
                     </button>
-                </div>
-
-                <!-- Method B: Upload -->
-                <div class="card"
-                    style="padding:1.5rem; border:1px dashed #cbd5e1; border-radius:12px; text-align:center; background:#f8fafc; cursor:pointer; display:flex; flex-direction:column; justify-content:center; align-items:center;"
-                    id="drop-zone" onclick="document.getElementById('csv-import-file').click()">
-                    <input type="file" id="csv-import-file" accept=".csv" style="display:none;">
-                    <h4
-                        style="font-size:1rem; margin-bottom:0.5rem; color:#475569; width:100%; text-align:left; display:flex; align-items:center; gap:0.5rem; align-self:flex-start;">
-                        <i class="ph ph-upload-simple" style="color:var(--primary);"></i> Opção B: Carregar Ficheiro
-                    </h4>
                     <div
-                        style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:150px;">
-                        <i class="ph ph-file-csv" style="font-size:3rem; color:#94a3b8; margin-bottom:0.5rem;"></i>
-                        <p style="font-size:0.9rem; color:#64748b;">Arraste um ficheiro .csv aqui</p>
-                        <p style="font-size:0.8rem; color:#94a3b8;">ou clique para selecionar</p>
+                        style="margin-top:2rem; text-align:left; font-size:0.8rem; color:#64748b; background:white; padding:1rem; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+                        <strong>Colunas Obrigatórias:</strong><br>
+                        - Name (Nome Completo)<br>
+                        - Calling (Chamado)<br>
+                        - Group (Adult, Youth, Primary)<br>
+                        - Gender (M, F)
                     </div>
                 </div>
+
+                <!-- Col 2: Paste -->
+                <div style="display:flex; flex-direction:column;">
+                    <h3 style="margin-bottom:0.5rem; font-weight:600;">2. Colar (Excel / CSV)</h3>
+                    <p style="font-size:0.8rem; color:#64748b; margin-bottom:0.5rem;">Copie as células do Excel (sem
+                        cabeçalho) e cole abaixo.</p>
+                    <textarea id="import-paste-area" placeholder="Cole aqui os dados..."
+                        style="flex:1; width:100%; padding:1rem; border:1px solid #e2e8f0; border-radius:8px; font-family:monospace; resize:none; font-size:0.85rem;"></textarea>
+                    <button class="btn btn-primary" onclick="window.processPasteImport()"
+                        style="margin-top:1rem; width:100%;">
+                        Processar Texto
+                    </button>
+                </div>
+
+                <!-- Col 3: Upload -->
+                <div
+                    style="background:#f8fafc; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; text-align:center; justify-content:center; border: 2px dashed #cbd5e1;">
+                    <input type="file" id="bulk-csv-upload" accept=".csv" style="display:none">
+                    <i class="ph ph-upload-simple" style="font-size:3rem; color:#94a3b8; margin-bottom:1rem;"></i>
+                    <h3 style="margin-bottom:0.5rem; font-weight:600;">3. Carregar Ficheiro</h3>
+                    <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Arraste um ficheiro .csv ou clique
+                        para selecionar.</p>
+                    <button class="btn btn-secondary" onclick="document.getElementById('bulk-csv-upload').click()">
+                        Selecionar Ficheiro
+                    </button>
+                </div>
             </div>
+
         </div>
     </div>
 
-    <!-- Import Confirmation Modal -->
-    <div id="import-confirm-modal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:4100; align-items:center; justify-content:center;">
-        <div class="glass-panel"
-            style="background:#fff; padding:2rem; width:90%; max-width:400px; border-radius:16px; text-align:center;">
-            <h3 style="font-family:var(--font-heading); margin-bottom:1rem; color:var(--primary);">Confirmar Importação
-            </h3>
-            <p id="import-confirm-text" style="color:var(--text-light); margin-bottom:2rem;">
-                <!-- Dynamic text -->
-            </p>
-            <div style="display:flex; gap:1rem; justify-content:center;">
-                <button onclick="document.getElementById('import-confirm-modal').style.display='none'" class="btn"
-                    style="background:#e5e7eb; color:#374151;">Cancelar</button>
-                <button id="btn-final-import" class="btn btn-primary">Importar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Data & Scripts -->
+    <!-- Main Logic -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="js/dataManager.js"></script>
     <script src="hymns.js"></script>
     <script type="module" src="js/planner-ui.js"></script>
-
 </body>
 
 </html>
