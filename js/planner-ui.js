@@ -780,11 +780,11 @@ function renderSpeakersInput() {
 }
 
 window.addSpeakerUI = () => {
-    state.speakers.push({ id: Date.now().toString(), type: 'speaker', name: '' });
+    state.speakers.push({ id: crypto.randomUUID(), type: 'speaker', name: '' });
     renderSpeakersInput();
 };
 window.addProgramHymnUI = () => {
-    state.speakers.push({ id: Date.now().toString(), type: 'hymn', name: '' });
+    state.speakers.push({ id: crypto.randomUUID(), type: 'hymn', name: '' });
     renderSpeakersInput();
 };
 window.removeSpeaker = (id) => {
@@ -909,7 +909,7 @@ function setupFormListeners() {
 
     // Dynamic Lists Helpers (Ported)
     window.addListItem = (type) => {
-        const id = Date.now().toString();
+        const id = crypto.randomUUID();
         if (type === 'releases' || type === 'callings') {
             state[type].push({ id, name: '', calling: '' });
         } else {
