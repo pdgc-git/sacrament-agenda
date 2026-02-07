@@ -398,6 +398,23 @@ function showOnboarding(user, overlay) {
 
 // === Navigation ===
 function setupNavigation() {
+    // 1. Sidebar Expansion Logic
+    const nav = document.querySelector('.app-nav');
+    const toggleBtn = document.querySelector('.nav-toggle');
+    const savedState = localStorage.getItem('sidebarExpanded');
+
+    if (savedState === 'true') {
+        nav.classList.add('expanded');
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            nav.classList.toggle('expanded');
+            localStorage.setItem('sidebarExpanded', nav.classList.contains('expanded'));
+        });
+    }
+
+    // 2. Navigation Items
     const navItems = document.querySelectorAll('.nav-item[data-target]');
     navItems.forEach(item => {
         item.addEventListener('click', () => {
