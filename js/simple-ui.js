@@ -52,6 +52,7 @@ function setupDataBinding() {
         input.addEventListener('input', () => {
             const target = document.querySelector(`[data-bind="${input.name}"]`);
             if (target) {
+                // Apply formatting only if it's the date field
                 if (input.type === 'date') {
                     target.textContent = formatDate(input.value);
                 } else {
@@ -180,16 +181,15 @@ function setupHymnSearch(input) {
 
 function formatDate(dateInput) {
     if (!dateInput) return '...';
-    // Handle "YYYY-MM-DD" string from inputs
-    if (typeof dateInput === 'string' && dateInput.includes('-')) {
-        const parts = dateInput.split('-');
-        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+    // Safety check: Ensure input is a string
+    const s = String(dateInput);
+
+    // Handle YYYY-MM-DD (Standard HTML Date Input)
+    if (s.includes('-') && s.length === 10) {
+        const [year, month, day] = s.split('-');
+        return `${day}-${month}-${year}`;
     }
-    // Handle Date objects
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return dateInput; // Fallback
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+
+    return s; // Fallback
 }

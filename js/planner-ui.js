@@ -203,8 +203,7 @@ async function exportPDF() {
 function renderPrintView(container) {
     // Simple render of current state to the print container
     // This is a simplified version of what the PDF needs
-    const d = new Date(state.currentEditorDate || new Date());
-    const dateStr = formatDate(d);
+    const dateStr = formatDate(state.currentEditorDate);
 
     container.innerHTML = `
         <div style="font-family: 'Playfair Display', serif; text-align: center; margin-bottom: 2rem;">
@@ -447,8 +446,7 @@ async function renderDashboard() {
     const statusDot = document.querySelector('.hero-status .status-dot');
 
     // Format Date: DD/MM/YYYY
-    const d = nextSunday;
-    const formattedDate = formatDate(d);
+    const formattedDate = formatDate(dateStr);
     heroDateEl.textContent = formattedDate;
 
     if (existingPlan) {
@@ -586,8 +584,7 @@ async function editPlan(dateStr) {
     document.querySelector('[data-target="view-planner"]').click();
 
     // Update Header
-    const d = new Date(dateStr);
-    let formatted = formatDate(d);
+    let formatted = formatDate(dateStr);
     document.getElementById('editor-date-display').textContent = formatted;
     document.getElementById('input-date').value = dateStr;
 
@@ -1333,16 +1330,15 @@ async function parseAndImport(rawData) {
 
 function formatDate(dateInput) {
     if (!dateInput) return '...';
-    // Handle "YYYY-MM-DD" string from inputs
-    if (typeof dateInput === 'string' && dateInput.includes('-')) {
-        const parts = dateInput.split('-');
-        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+    // Safety check: Ensure input is a string
+    const s = String(dateInput);
+
+    // Handle YYYY-MM-DD (Standard HTML Date Input)
+    if (s.includes('-') && s.length === 10) {
+        const [year, month, day] = s.split('-');
+        return `${day}-${month}-${year}`;
     }
-    // Handle Date objects
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return dateInput; // Fallback
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+
+    return s; // Fallback
 }
