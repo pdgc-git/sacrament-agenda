@@ -945,15 +945,21 @@ function addListItem(type) {
     }
     renderDynamicListInput(type);
 }
-// Expose for initial button clicks (which are still bound via ID in setupEventListeners, but need access to this scope)
-// Actually, setupEventListeners is in the same scope, so we can just use the function name directly if we lift them up or keep them here.
-// Wait, setupEventListeners calls `window.addListItem`. I need to update setupEventListeners to call the local function.
-// But setupEventListeners is defined ABOVE.
-// I should move these helper functions to the top level or update setupEventListeners to use them if they are in scope.
-// They are currently inside `setupFormListeners`.
+function removeListItem(type, id) {
+    state[type] = state[type].filter(item => item.id !== id);
+    renderDynamicListInput(type);
+}
 
-// Let's make them top-level functions (or module level) so setupEventListeners can see them.
-// I will replace this block with nothing/refactored block and move the logic out.
+function updateListItem(type, id, field, value) {
+    const item = state[type].find(i => i.id === id);
+    if (item) {
+        if (type === 'releases' || type === 'callings') {
+            item[field] = value;
+        } else {
+            item.text = value;
+        }
+    }
+}
 
 
 function renderAllDynamicLists() {
