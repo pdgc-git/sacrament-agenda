@@ -48,39 +48,39 @@ function setupEventListeners() {
     document.querySelectorAll('.segment-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
-            if (tab) window.switchEditorTab(tab);
+            if (tab) switchEditorTab(tab);
         });
     });
 
     // Editor Actions
     document.getElementById('btn-export-pdf')?.addEventListener('click', exportPDF);
-    document.getElementById('btn-add-speaker')?.addEventListener('click', () => window.addSpeakerUI());
-    document.getElementById('btn-add-hymn-program')?.addEventListener('click', () => window.addProgramHymnUI());
+    document.getElementById('btn-add-speaker')?.addEventListener('click', () => addSpeakerUI());
+    document.getElementById('btn-add-hymn-program')?.addEventListener('click', () => addProgramHymnUI());
 
     // Extras
-    document.getElementById('btn-add-recognition')?.addEventListener('click', () => window.addListItem('recognitions'));
-    document.getElementById('btn-add-announcement')?.addEventListener('click', () => window.addListItem('announcements'));
-    document.getElementById('btn-add-release')?.addEventListener('click', () => window.addListItem('releases'));
-    document.getElementById('btn-add-calling')?.addEventListener('click', () => window.addListItem('callings'));
+    document.getElementById('btn-add-recognition')?.addEventListener('click', () => addListItem('recognitions'));
+    document.getElementById('btn-add-announcement')?.addEventListener('click', () => addListItem('announcements'));
+    document.getElementById('btn-add-release')?.addEventListener('click', () => addListItem('releases'));
+    document.getElementById('btn-add-calling')?.addEventListener('click', () => addListItem('callings'));
 
     // Fast Meeting
     document.getElementById('chk-fast-meeting')?.addEventListener('change', (e) => toggleFastMeeting(e.target.checked));
 
     // Roster
-    document.getElementById('filter-chip-m')?.addEventListener('click', () => window.togglePoolFilter('M'));
-    document.getElementById('filter-chip-f')?.addEventListener('click', () => window.togglePoolFilter('F'));
-    document.getElementById('filter-chip-youth')?.addEventListener('click', () => window.togglePoolFilter('Youth'));
+    document.getElementById('filter-chip-m')?.addEventListener('click', () => togglePoolFilter('M'));
+    document.getElementById('filter-chip-f')?.addEventListener('click', () => togglePoolFilter('F'));
+    document.getElementById('filter-chip-youth')?.addEventListener('click', () => togglePoolFilter('Youth'));
 
-    document.getElementById('btn-open-import')?.addEventListener('click', () => window.openBulkImport());
-    document.getElementById('btn-new-member')?.addEventListener('click', () => window.addMemberUI());
+    document.getElementById('btn-open-import')?.addEventListener('click', () => openBulkImport());
+    document.getElementById('btn-new-member')?.addEventListener('click', () => addMemberUI());
 
     // Modals
     document.getElementById('btn-close-view-modal')?.addEventListener('click', () => document.getElementById('member-view-modal').style.display = 'none');
     document.getElementById('btn-close-import-modal')?.addEventListener('click', () => document.getElementById('bulk-import-modal').style.display = 'none');
 
     // Import Modal Actions
-    document.getElementById('btn-download-template')?.addEventListener('click', () => window.downloadTemplate());
-    document.getElementById('btn-process-paste')?.addEventListener('click', () => window.processPasteImport());
+    document.getElementById('btn-download-template')?.addEventListener('click', () => downloadTemplate());
+    document.getElementById('btn-process-paste')?.addEventListener('click', () => processPasteImport());
     document.getElementById('btn-select-file')?.addEventListener('click', () => document.getElementById('bulk-csv-upload').click());
 
     // Roster Event Delegation
@@ -115,6 +115,33 @@ function setupEventListeners() {
             document.querySelectorAll('.action-menu').forEach(el => el.style.display = 'none');
         }
     });
+
+    // Centralized Event Delegation for Dynamic Elements
+    const formContainer = document.getElementById('agendaForm');
+    if (formContainer) {
+        formContainer.addEventListener('click', (e) => {
+            // Remove Speaker
+            if (e.target.closest('.btn-remove-speaker')) {
+                e.preventDefault();
+                const btn = e.target.closest('.btn-remove-speaker');
+                removeSpeaker(btn.dataset.id);
+            }
+            // Remove Dynamic List Item
+            if (e.target.closest('.btn-remove-dynamic')) {
+                e.preventDefault();
+                const btn = e.target.closest('.btn-remove-dynamic');
+                removeListItem(btn.dataset.list, btn.dataset.id);
+            }
+        });
+
+        formContainer.addEventListener('input', (e) => {
+            // Update Dynamic List Item
+            if (e.target.classList.contains('dynamic-input')) {
+                const input = e.target;
+                updateListItem(input.dataset.list, input.dataset.id, input.dataset.field, input.value);
+            }
+        });
+    }
 }
 
 // === Ported Features ===
@@ -361,7 +388,7 @@ function setupNavigation() {
     });
 
     // Editor Tab Switching
-    window.switchEditorTab = (tabName) => {
+    function switchEditorTab(tabName) {
         const tabs = ['speakers', 'hymns', 'prayers', 'full', 'stats']; // stats is internal
 
         // Update Buttons
@@ -429,13 +456,13 @@ async function renderDashboard() {
         statusDot.className = 'status-dot planned';
         // Bind Edit Button
         const btn = document.querySelector('#focus-hero button');
-        btn.onclick = () => window.editPlan(dateStr);
+        btn.onclick = () => editPlan(dateStr);
         btn.innerHTML = `<i class="ph ph-pencil-simple"></i> Editar Plano`;
     } else {
         heroThemeEl.textContent = "Nada planeado ainda.";
         statusDot.className = 'status-dot draft';
         const btn = document.querySelector('#focus-hero button');
-        btn.onclick = () => window.editPlan(dateStr);
+        btn.onclick = () => editPlan(dateStr);
         btn.innerHTML = `<i class="ph ph-plus"></i> Iniciar Plano`;
     }
 
@@ -452,7 +479,7 @@ async function renderDashboard() {
 
         const div = document.createElement('div');
         div.className = 'timeline-item';
-        div.onclick = () => window.editPlan(fStr);
+        div.onclick = () => editPlan(fStr);
 
         div.innerHTML = `
             <div class="t-date">
@@ -513,7 +540,7 @@ async function renderTimeline() {
 
         const div = document.createElement('div');
         div.className = 'timeline-item';
-        div.onclick = () => window.editPlan(dateStr);
+        div.onclick = () => editPlan(dateStr);
 
         const dateObj = new Date(dateStr);
         const monthShort = dateObj.toLocaleString('pt-PT', { month: 'short' }).replace('.', '').replace(/^\w/, c => c.toUpperCase());
@@ -547,7 +574,7 @@ function renderPlanSummary(plan) {
 // === VIEW 3: WORKBENCH EDITOR ===
 
 // 1. Navigation to Editor
-window.editPlan = async (dateStr) => {
+async function editPlan(dateStr) {
     state.currentEditorDate = dateStr;
     state.speakers = [];
     state.recognitions = [];
@@ -693,7 +720,7 @@ function insertMemberIntoActiveInput(member) {
 function varCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
 
 // Filter Toggles
-window.togglePoolFilter = (type) => {
+function togglePoolFilter(type) {
     // Check if active
     const chips = document.querySelectorAll('.filter-chip');
     let activeFilter = null;
@@ -746,7 +773,7 @@ function renderSpeakersInput() {
                     <input type="text" class="speaker-name-input" data-id="${item.id}" value="${item.name || ''}" placeholder="Nome do membro...">
                 </div>
                 <!-- Remove button -->
-                <button class="btn btn-danger" onclick="window.removeSpeaker('${item.id}')" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
+                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
             `;
 
             // Bind Input focus for "Click to Insert"
@@ -767,7 +794,7 @@ function renderSpeakersInput() {
                     <input type="text" class="hymn-search" value="${item.name || ''}" placeholder="Número ou Título...">
                     <div class="hymn-results"></div>
                 </div>
-                <button class="btn btn-danger" onclick="window.removeSpeaker('${item.id}')" style="position:absolute; top:10px; right:10px;">×</button>
+                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px;">×</button>
             `;
 
             const input = div.querySelector('input');
@@ -779,18 +806,19 @@ function renderSpeakersInput() {
     });
 }
 
-window.addSpeakerUI = () => {
+// Local functions for speaker management
+function addSpeakerUI() {
     state.speakers.push({ id: crypto.randomUUID(), type: 'speaker', name: '' });
     renderSpeakersInput();
-};
-window.addProgramHymnUI = () => {
+}
+function addProgramHymnUI() {
     state.speakers.push({ id: crypto.randomUUID(), type: 'hymn', name: '' });
     renderSpeakersInput();
-};
-window.removeSpeaker = (id) => {
+}
+function removeSpeaker(id) {
     state.speakers = state.speakers.filter(s => s.id !== id);
     renderSpeakersInput();
-};
+}
 
 
 // === Hymn Search with Warning ===
@@ -906,34 +934,27 @@ function setupFormListeners() {
             loadData(); // Refresh cache
         } catch (e) { alert("Erro ao gravar: " + e.message); }
     });
-
-    // Dynamic Lists Helpers (Ported)
-    window.addListItem = (type) => {
-        const id = crypto.randomUUID();
-        if (type === 'releases' || type === 'callings') {
-            state[type].push({ id, name: '', calling: '' });
-        } else {
-            state[type].push({ id, text: '' });
-        }
-        renderDynamicListInput(type);
-    };
-
-    window.removeListItem = (type, id) => {
-        state[type] = state[type].filter(item => item.id !== id);
-        renderDynamicListInput(type);
-    };
-
-    window.updateListItem = (type, id, field, value) => {
-        const item = state[type].find(i => i.id === id);
-        if (item) {
-            if (type === 'releases' || type === 'callings') {
-                item[field] = value;
-            } else {
-                item.text = value;
-            }
-        }
-    };
 }
+
+function addListItem(type) {
+    const id = crypto.randomUUID();
+    if (type === 'releases' || type === 'callings') {
+        state[type].push({ id, name: '', calling: '' });
+    } else {
+        state[type].push({ id, text: '' });
+    }
+    renderDynamicListInput(type);
+}
+// Expose for initial button clicks (which are still bound via ID in setupEventListeners, but need access to this scope)
+// Actually, setupEventListeners is in the same scope, so we can just use the function name directly if we lift them up or keep them here.
+// Wait, setupEventListeners calls `window.addListItem`. I need to update setupEventListeners to call the local function.
+// But setupEventListeners is defined ABOVE.
+// I should move these helper functions to the top level or update setupEventListeners to use them if they are in scope.
+// They are currently inside `setupFormListeners`.
+
+// Let's make them top-level functions (or module level) so setupEventListeners can see them.
+// I will replace this block with nothing/refactored block and move the logic out.
+
 
 function renderAllDynamicLists() {
     ['recognitions', 'announcements', 'releases', 'callings'].forEach(renderDynamicListInput);
@@ -952,26 +973,26 @@ function renderDynamicListInput(type) {
         if (type === 'releases' || type === 'callings') {
             row.innerHTML = `
                 <input type="text" value="${item.name || ''}" 
-                    oninput="window.updateListItem('${type}', '${item.id}', 'name', this.value)" 
+                    class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="name"
                     placeholder="Nome..." style="flex: 1;">
                 <input type="text" value="${item.calling || ''}" 
-                    oninput="window.updateListItem('${type}', '${item.id}', 'calling', this.value)" 
+                    class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="calling"
                     placeholder="Chamado..." style="flex: 1; margin-left: 0.5rem;">
-                <button class="btn btn-danger" onclick="window.removeListItem('${type}', '${item.id}')" style="margin-left:5px; padding:0 8px;">×</button>
+                <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${item.id}" style="margin-left:5px; padding:0 8px;">×</button>
             `;
         } else {
             row.innerHTML = `
                 <input type="text" value="${item.text || ''}" 
-                    oninput="window.updateListItem('${type}', '${item.id}', 'text', this.value)" 
+                    class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="text"
                     placeholder="Item..." style="flex: 1;">
-                <button class="btn btn-danger" onclick="window.removeListItem('${type}', '${item.id}')" style="margin-left:5px; padding:0 8px;">×</button>
+                <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${item.id}" style="margin-left:5px; padding:0 8px;">×</button>
             `;
         }
         container.appendChild(row);
     });
 }
 
-window.setupFormListeners = setupFormListeners;
+
 
 
 // === Roster / Member Management ===
@@ -1159,92 +1180,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === Bulk Import Logic ===
-    window.openBulkImport = function () {
-        document.getElementById('bulk-import-modal').style.display = 'flex';
-        document.getElementById('import-paste-area').value = '';
-    }
 
-    window.downloadTemplate = function () {
-        const headers = ['Name', 'Calling', 'Group', 'Gender'];
-        const rows = [
-            ['Exemplo Nome', 'Bispo', 'Adult', 'M'],
-            ['Maria Silva', 'Presidente Primaria', 'Adult', 'F'],
-            ['Joao Santos', 'Sacerdote', 'Youth', 'M']
-        ];
 
-        let csvContent = "data:text/csv;charset=utf-8,"
-            + headers.join(",") + "\n"
-            + rows.map(e => e.join(",")).join("\n");
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "modelo_membros.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    window.processPasteImport = async function () {
-        const text = document.getElementById('import-paste-area').value;
-        if (!text.trim()) return alert("Por favor cole alguns dados primeiro.");
-
-        await parseAndImport(text);
-    }
-
-    async function parseAndImport(rawData) {
-        // Detect delimiter (Tab for Excel, Comma for CSV)
-        const delimiter = rawData.includes('\t') ? '\t' : ',';
-
-        const lines = rawData.split('\n').filter(l => l.trim().length > 0);
-        let successCount = 0;
-        let errors = 0;
-
-        // Check if first row is header
-        let startIdx = 0;
-        const firstRow = lines[0].toLowerCase();
-        if (firstRow.includes('name') || firstRow.includes('nome')) startIdx = 1;
-
-        for (let i = startIdx; i < lines.length; i++) {
-            let cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
-
-            // Basic Validation
-            if (cols.length < 1) continue;
-
-            // Map Columns: Assume Order: Name, Calling, Group, Gender
-            // If data is just one column, assume Name
-            let name = cols[0];
-            let calling = cols[1] || '';
-            let group = cols[2] || 'Adult';
-            let gender = cols[3] || 'M';
-
-            // Normalize
-            if (group.toLowerCase().includes('jovem') || group.toLowerCase().includes('youth')) group = 'Youth';
-            else if (group.toLowerCase().includes('prim') || group.toLowerCase().includes('child')) group = 'Primary';
-            else if (group.toLowerCase().includes('ja') || group.toLowerCase().includes('adulto')) group = 'Young Adult';
-            else group = 'Adult';
-
-            gender = gender.toUpperCase().startsWith('F') ? 'F' : 'M';
-
-            try {
-                await DM.saveMember({ id: null, name, calling, group, gender });
-                successCount++;
-            } catch (e) {
-                console.error("Import error line " + i, e);
-                errors++;
-            }
-        }
-
-        if (successCount > 0) {
-            alert(`Importação concluída! ${successCount} membros adicionados.`);
-            document.getElementById('bulk-import-modal').style.display = 'none';
-            await loadData();
-            renderRoster();
-        } else {
-            alert("Nenhum membro importado. Verifique o formato.");
-        }
-    }
 
     // Bind File Upload in Modal
     document.getElementById('bulk-csv-upload')?.addEventListener('change', async (e) => {
@@ -1339,5 +1277,58 @@ async function processPasteImport() {
     if (!text.trim()) return alert("Por favor cole alguns dados primeiro.");
 
     await parseAndImport(text);
+}
+
+async function parseAndImport(rawData) {
+    // Detect delimiter (Tab for Excel, Comma for CSV)
+    const delimiter = rawData.includes('\t') ? '\t' : ',';
+
+    const lines = rawData.split('\n').filter(l => l.trim().length > 0);
+    let successCount = 0;
+    let errors = 0;
+
+    // Check if first row is header
+    let startIdx = 0;
+    const firstRow = lines[0].toLowerCase();
+    if (firstRow.includes('name') || firstRow.includes('nome')) startIdx = 1;
+
+    for (let i = startIdx; i < lines.length; i++) {
+        let cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+
+        // Basic Validation
+        if (cols.length < 1) continue;
+
+        // Map Columns: Assume Order: Name, Calling, Group, Gender
+        // If data is just one column, assume Name
+        let name = cols[0];
+        let calling = cols[1] || '';
+        let group = cols[2] || 'Adult';
+        let gender = cols[3] || 'M';
+
+        // Normalize
+        if (group.toLowerCase().includes('jovem') || group.toLowerCase().includes('youth')) group = 'Youth';
+        else if (group.toLowerCase().includes('prim') || group.toLowerCase().includes('child')) group = 'Primary';
+        else if (group.toLowerCase().includes('ja') || group.toLowerCase().includes('adulto')) group = 'Young Adult';
+        else group = 'Adult';
+
+        gender = gender.toUpperCase().startsWith('F') ? 'F' : 'M';
+
+        try {
+            await DM.saveMember({ id: null, name, calling, group, gender });
+            successCount++;
+        } catch (e) {
+            console.error("Import error line " + i, e);
+            errors++;
+        }
+    }
+
+    if (successCount > 0) {
+        alert(`Importação concluída! ${successCount} membros adicionados.`);
+        document.getElementById('bulk-import-modal').style.display = 'none';
+        await loadData();
+        renderRoster();
+    } else {
+        alert("Nenhum membro importado. Verifique o formato.");
+    }
 }
 
