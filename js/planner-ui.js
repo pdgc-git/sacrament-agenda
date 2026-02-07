@@ -204,7 +204,7 @@ function renderPrintView(container) {
     // Simple render of current state to the print container
     // This is a simplified version of what the PDF needs
     const d = new Date(state.currentEditorDate || new Date());
-    const dateStr = d.toLocaleDateString('pt-PT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dateStr = formatDate(d);
 
     container.innerHTML = `
         <div style="font-family: 'Playfair Display', serif; text-align: center; margin-bottom: 2rem;">
@@ -448,7 +448,7 @@ async function renderDashboard() {
 
     // Format Date: DD/MM/YYYY
     const d = nextSunday;
-    const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const formattedDate = formatDate(d);
     heroDateEl.textContent = formattedDate;
 
     if (existingPlan) {
@@ -587,13 +587,7 @@ async function editPlan(dateStr) {
 
     // Update Header
     const d = new Date(dateStr);
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    let formatted = d.toLocaleDateString('pt-PT', options);
-    // Capitalize
-    formatted = formatted.split(' ').map(w => {
-        if (w === 'de') return w;
-        return w.charAt(0).toUpperCase() + w.slice(1);
-    }).join(' ');
+    let formatted = formatDate(d);
     document.getElementById('editor-date-display').textContent = formatted;
     document.getElementById('input-date').value = dateStr;
 
@@ -1055,9 +1049,7 @@ async function renderRoster() {
 
 function formatDateShort(ts) {
     if (!ts) return '-';
-    // Return DD/MM/YYYY
-    const d = ts.toDate();
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    return formatDate(ts.toDate());
 }
 
 // === Local functions for event delegation ===
@@ -1338,3 +1330,19 @@ async function parseAndImport(rawData) {
     }
 }
 
+
+function formatDate(dateInput) {
+    if (!dateInput) return '...';
+    // Handle "YYYY-MM-DD" string from inputs
+    if (typeof dateInput === 'string' && dateInput.includes('-')) {
+        const parts = dateInput.split('-');
+        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    // Handle Date objects
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return dateInput; // Fallback
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+}

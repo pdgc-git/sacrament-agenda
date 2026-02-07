@@ -51,7 +51,13 @@ function setupDataBinding() {
     document.querySelectorAll('input[name], textarea[name]').forEach(input => {
         input.addEventListener('input', () => {
             const target = document.querySelector(`[data-bind="${input.name}"]`);
-            if (target) target.textContent = input.value;
+            if (target) {
+                if (input.type === 'date') {
+                    target.textContent = formatDate(input.value);
+                } else {
+                    target.textContent = input.value;
+                }
+            }
         });
     });
 }
@@ -170,4 +176,20 @@ function setupHymnSearch(input) {
         }
     });
     document.addEventListener('click', e => { if (!input.parentElement.contains(e.target)) res.style.display = 'none'; });
+}
+
+function formatDate(dateInput) {
+    if (!dateInput) return '...';
+    // Handle "YYYY-MM-DD" string from inputs
+    if (typeof dateInput === 'string' && dateInput.includes('-')) {
+        const parts = dateInput.split('-');
+        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    // Handle Date objects
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return dateInput; // Fallback
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
 }
