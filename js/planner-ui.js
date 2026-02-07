@@ -255,7 +255,6 @@ function initAuth() {
 
         googleBtn.addEventListener('click', async () => {
             // 1. Prove the button works
-            alert("Botão clicado! A tentar abrir popup...");
             console.log("Attempting Google Auth...");
 
             const provider = new GoogleAuthProvider();
