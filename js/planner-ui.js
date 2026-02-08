@@ -1444,26 +1444,22 @@ async function processPdfImport() {
         const memberMap = new Map();
         membersData.forEach(m => memberMap.set(normalizeName(m.name), m));
 
-        // 2. Parse Callings (Optional) - using "Column-Aware Match"
+        // 2. Parse Callings (Structured Anchor -> Offset Strategy)
         if (fileCallings) {
             btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> Analisando Chamados...`;
             const callingLines = await extractVisualLines(fileCallings);
 
             callingLines.forEach(line => {
-                // Split by visual column breaks (3 spaces created by extractVisualLines)
-                // Filter removes empty strings if split creates them
+                // Split by visual column breaks (3 spaces)
                 const parts = line.split(/\s{3,}/).map(p => p.trim()).filter(p => p);
 
-                // Find which column index contains the member name
+                // A. Find the Anchor (Member Name)
                 let nameIndex = -1;
                 let foundMember = null;
 
                 for (let i = 0; i < parts.length; i++) {
                     const normPart = normalizeName(parts[i]);
-
-                    // Check if this specific column matches a known member
-                    // We check if the column text *contains* the key (to handle "Silva, Joao" vs "Joao Silva")
-                    // OR if the key contains the column text.
+                    // Check against our known member list
                     for (const [memNameKey, memberObj] of memberMap.entries()) {
                         if (normPart.includes(memNameKey) || memNameKey.includes(normPart)) {
                             nameIndex = i;
@@ -1474,22 +1470,41 @@ async function processPdfImport() {
                     if (foundMember) break;
                 }
 
-                // If we found a member and there are columns BEFORE the name
-                // LCR Format is typically: Organization | Calling | Name | Date...
-                // So if Name is at index 2, parts [0] and [1] are Org and Calling.
-                if (foundMember && nameIndex > 0) {
-                    // Capture everything before the name column
-                    const callingParts = parts.slice(0, nameIndex);
+                // B. Extract Organization and Calling relative to Name
+                if (foundMember && nameIndex !== -1) {
+                    // Look at columns AFTER the name
+                    const subsequentParts = parts.slice(nameIndex + 1);
 
-                    // User requested: "Organização - Chamado"
-                    // Join the pre-name parts with a hyphen
-                    let callingText = callingParts.join(' - ');
+                    // We expect: [Sex?, Age?, BirthDate?, Organization, Calling, ...]
+                    // We simply skip the demographics to get to the good stuff.
 
-                    // Cleanup common artifacts (leading dashes etc)
-                    callingText = callingText.replace(/^[–-]\s*/, '').trim();
+                    const nonDemographicParts = subsequentParts.filter(part => {
+                        // Skip Sex (M/F)
+                        if (/^[MF]$/.test(part)) return false;
+                        // Skip Age (1-3 digits)
+                        if (/^\d{1,3}$/.test(part)) return false;
+                        // Skip Dates (e.g., "17 mar 1991" or "1991")
+                        if (/\b(19|20)\d{2}\b/.test(part)) return false;
+                        // Skip empty junk
+                        if (!part.trim()) return false;
 
-                    if (callingText.length > 2) {
-                        foundMember.calling = callingText;
+                        return true;
+                    });
+
+                    // The first two remaining parts should be Organization and Calling
+                    if (nonDemographicParts.length >= 2) {
+                        const organization = nonDemographicParts[0];
+                        const callingName = nonDemographicParts[1];
+
+                        // Ignore if it looks like a header row
+                        if (normalizeName(organization) !== "organizacao" &&
+                            normalizeName(callingName) !== "chamado") {
+                            foundMember.calling = `${organization} - ${callingName}`;
+                        }
+                    }
+                    else if (nonDemographicParts.length === 1) {
+                        // Fallback: Sometimes Org is missing or merged?
+                        foundMember.calling = nonDemographicParts[0];
                     }
                 }
             });
