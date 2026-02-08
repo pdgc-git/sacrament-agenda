@@ -1483,28 +1483,59 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // === PDF Import Logic ===
+// === Smart PDF Import Logic ===
+
 async function processPdfImport() {
     const fileMembers = document.getElementById('file-members').files[0];
     const fileCallings = document.getElementById('file-callings').files[0];
 
-    if (!fileMembers || !fileCallings) {
-        return alert("Por favor selecione ambos os ficheiros (Membros e Chamados).");
+    if (!fileMembers) {
+        return alert("Por favor selecione pelo menos a Lista de Membros.");
     }
 
-    try {
-        const membersText = await extractPdfData(fileMembers);
-        const callingsText = await extractPdfData(fileCallings);
+    // Show Loading state?
+    const btn = document.getElementById('btn-process-pdf');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> A Processar...`;
+    btn.disabled = true;
 
-        const mergedData = mergePdfData(membersText, callingsText);
-        renderPreviewFromData(mergedData);
+    try {
+        // 1. Parse Member List
+        const membersText = await extractTextFromPDF(fileMembers);
+        const membersData = parseRobust(membersText, 'members');
+
+        // Map for easy lookup
+        const memberMap = new Map();
+        membersData.forEach(m => memberMap.set(m.name, m));
+
+        // 2. Parse Callings (Optional)
+        if (fileCallings) {
+            const callingsText = await extractTextFromPDF(fileCallings);
+            const callingsData = parseRobust(callingsText, 'callings');
+
+            // Merge logic: match Names
+            callingsData.forEach(c => {
+                if (memberMap.has(c.name)) {
+                    // Calling is at index + 4 in robust parser? 
+                    // The parser returns objects. checking c.calling
+                    if (c.calling) memberMap.get(c.name).calling = c.calling;
+                }
+            });
+        }
+
+        // 3. Render Preview
+        renderSmartPreview(Array.from(memberMap.values()));
 
     } catch (e) {
         console.error(e);
-        alert("Erro ao processar PDF: " + e.message);
+        alert("Erro ao processar: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 
-async function extractPdfData(file) {
+async function extractTextFromPDF(file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
@@ -1512,108 +1543,111 @@ async function extractPdfData(file) {
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
+        // Join by space to create a token stream
         const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
+        fullText += pageText + ' ';
     }
     return fullText;
 }
 
-function mergePdfData(membersText, callingsText) {
-    // Regex for CSV-like structure in PDF: "Name","Sex","Age"
-    // Adjusting regex to be flexible with whitespace
-    const memberRegex = /"([^"]+)","([MF])","(\d+)"/g;
-    const callingRegex = /"([^"]+)","([^"]+)"/g; // Assuming "Name","Calling" structure logic
-
-    const memberMap = new Map();
-
-    // 1. Parse Members
+function parseRobust(text, type) {
+    // 1. Extract all quoted content
+    const tokens = [];
+    // The user requirement: Extract all quoted content using regex: /"([^"]*)"/g
+    const regex = /"([^"]*)"/g;
     let match;
-    while ((match = memberRegex.exec(membersText)) !== null) {
-        const name = match[1].trim();
-        const sex = match[2];
-        const age = parseInt(match[3]);
 
-        // Inference
-        let group = 'Adult';
-        if (age < 12) group = 'Primary';
-        else if (age <= 17) group = 'Youth';
-        else if (age <= 30) group = 'Young Adult'; // Default to JA for 18-30, user can change
-
-        memberMap.set(name, {
-            name: name,
-            gender: sex,
-            group: group,
-            calling: ''
-        });
+    while ((match = regex.exec(text)) !== null) {
+        tokens.push(match[1]); // Content without quotes
     }
 
-    // 2. Parse Callings & Merge
-    // Note: Calling file format might be different. 
-    // If it's the Custom Report from LCR, it often looks like "Name","Calling" or similar.
-    // We will scan for names in the calling text that exist in our map.
-    // This is a naive but effective approach if exact CSV structure isn't guaranteed.
-    // However, if the user said "CSV-like", let's try to find "Name","Calling" pattern.
+    const results = [];
 
-    // Alternative strategy: Split by lines and look for known names
-    // But let's stick to the user's hint about CSV structure.
-    while ((match = callingRegex.exec(callingsText)) !== null) {
-        const col1 = match[1].trim();
-        const col2 = match[2].trim();
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
 
-        // We do not know order (Name, Calling) or (Calling, Name).
-        // Check if col1 is a known member
-        if (memberMap.has(col1)) {
-            memberMap.get(col1).calling = col2;
-        } else if (memberMap.has(col2)) {
-            // Unlikely but possible
-            memberMap.get(col2).calling = col1;
+        // Anchor Strategy: Look for Gender Token
+        if (token === 'M' || token === 'F') {
+            if (i === 0) continue;
+
+            const name = tokens[i - 1]; // Name is previous token
+            const ageStr = tokens[i + 1]; // Age is next token
+            const age = parseInt(ageStr);
+
+            // Validate Age to ensure this is a generic valid row
+            if (!isNaN(age)) {
+
+                let calling = '';
+                if (type === 'callings') {
+                    // "If type === 'callings', get Calling from token at index + 4"
+                    if (i + 4 < tokens.length) {
+                        calling = tokens[i + 4];
+                    }
+                }
+
+                // Group Inference
+                let group = 'Adult';
+                if (age <= 11) group = 'Primary';
+                else if (age >= 12 && age <= 17) group = 'Youth';
+                else if (age >= 18 && age <= 35) group = 'Young Adult';
+                else group = 'Adult';
+
+                results.push({
+                    name: name,
+                    gender: token,
+                    age: age,
+                    calling: calling,
+                    group: group
+                });
+            }
         }
     }
 
-    return Array.from(memberMap.values());
+    return results;
 }
 
-function renderPreviewFromData(data) {
+function renderSmartPreview(data) {
     const tbody = document.getElementById('import-preview-tbody');
     tbody.innerHTML = '';
-    let count = 0;
+
+    // Switch View
+    document.getElementById('import-actions').style.display = 'flex';
+    document.getElementById('import-preview-container').style.display = 'block';
+
+    // Sort by name
+    data.sort((a, b) => a.name.localeCompare(b.name));
 
     data.forEach(m => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #e2e8f0';
-        tr.innerHTML = `
-            <td style="padding:0.5rem; font-weight:500;">
-                <input type="text" value="${m.name}" class="preview-name" style="width:100%; border:none; background:transparent;">
-            </td>
-            <td style="padding:0.5rem;">
-                <input type="text" value="${m.calling}" class="preview-calling" style="width:100%; border:1px solid #e2e8f0; border-radius:4px; padding:2px 4px;">
-            </td>
-            <td style="padding:0.5rem;">
-                <select class="preview-group" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
-                    <option value="Adult" ${m.group === 'Adult' ? 'selected' : ''}>Adulto</option>
-                    <option value="Young Adult" ${m.group === 'Young Adult' ? 'selected' : ''}>JA</option>
-                    <option value="Youth" ${m.group === 'Youth' ? 'selected' : ''}>Jovem</option>
-                    <option value="Primary" ${m.group === 'Primary' ? 'selected' : ''}>Primária</option>
-                </select>
-            </td>
-            <td style="padding:0.5rem;">
-                <select class="preview-gender" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
-                    <option value="M" ${m.gender === 'M' ? 'selected' : ''}>M</option>
-                    <option value="F" ${m.gender === 'F' ? 'selected' : ''}>F</option>
-                </select>
-            </td>
-            <td style="padding:0.5rem; text-align:center;">
-                <i class="ph ph-x" style="cursor:pointer; color:red;" data-action="remove-import-row"></i>
-            </td>
-        `;
-        tbody.appendChild(tr);
-        count++;
-    });
 
-    document.getElementById('import-count').textContent = count;
-    document.getElementById('import-stage-input').style.display = 'none';
-    document.getElementById('import-stage-preview').style.display = 'flex';
+        tr.innerHTML = `
+             <td style="padding:0.5rem; font-weight:500;">
+                 <input type="text" value="${m.name}" class="preview-name" style="width:100%; border:none; background:transparent;">
+             </td>
+             <td style="padding:0.5rem; text-align:center;">
+                 ${m.age}
+             </td>
+             <td style="padding:0.5rem;">
+                 <select class="preview-group" style="padding:4px; border-radius:4px; border:1px solid #cbd5e1; width:100%;">
+                     <option value="Adult" ${m.group === 'Adult' ? 'selected' : ''}>Adulto</option>
+                     <option value="Young Adult" ${m.group === 'Young Adult' ? 'selected' : ''}>JA (18-35)</option>
+                     <option value="Youth" ${m.group === 'Youth' ? 'selected' : ''}>Jovem (12-17)</option>
+                     <option value="Primary" ${m.group === 'Primary' ? 'selected' : ''}>Primária (0-11)</option>
+                 </select>
+             </td>
+             <td style="padding:0.5rem;">
+                 <input type="text" value="${m.calling || ''}" class="preview-calling" placeholder="Chamado..." style="width:100%; border:1px solid #cbd5e1; border-radius:4px; padding:4px;">
+                 <input type="hidden" class="preview-gender" value="${m.gender}">
+             </td>
+             <td style="padding:0.5rem; text-align:center;">
+                 <i class="ph ph-x" style="cursor:pointer; color:red;" onclick="this.closest('tr').remove();"></i>
+             </td>
+         `;
+        tbody.appendChild(tr);
+    });
 }
+
 
 function formatDate(input) {
     if (!input) return '-';
@@ -1624,7 +1658,7 @@ function formatDate(input) {
     // Handle YYYY-MM-DD String
     if (typeof input === 'string' && input.includes('-') && input.length === 10) {
         const [year, month, day] = input.split('-');
-        return `${day}-${month}-${year}`;
+        return `${day} -${month} -${year} `;
     }
     // Fallback
     return String(input);
