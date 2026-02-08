@@ -1455,6 +1455,11 @@ async function processPdfImport() {
         }
 
         // 3. Render Preview
+        if (memberMap.size === 0) {
+            alert("Aviso: Nenhum membro encontrado no PDF. Verifique se o ficheiro está correto.");
+            return;
+        }
+
         renderSmartPreview(Array.from(memberMap.values()));
 
     } catch (e) {
@@ -1489,7 +1494,7 @@ function parseRobust(text, type) {
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-        tokens.push(match[1]); // Content without quotes
+        tokens.push(match[1].trim()); // Content without quotes
     }
 
     const results = [];
