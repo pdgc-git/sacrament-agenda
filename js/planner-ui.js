@@ -1,3 +1,4 @@
+import { escapeHtml } from './utils/security.js';
 import { auth, db } from './firebase-config.js';
 import {
     GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
@@ -165,6 +166,14 @@ function setupEventListeners() {
                 updateListItem(input.dataset.list, input.dataset.id, input.dataset.field, input.value);
             }
         });
+
+        // Search Listener
+        const poolSearch = document.getElementById('pool-search');
+        if (poolSearch) {
+            poolSearch.addEventListener('input', (e) => {
+                renderMemberPool(null, null, e.target.value);
+            });
+        }
     }
 }
 
@@ -456,42 +465,42 @@ function setupNavigation() {
             // view-planner (Editor) doesn't auto-render, it waits for date selection or manual interaction
         });
     });
-
-    // Editor Tab Switching
-    function switchEditorTab(tabName) {
-        const tabs = ['speakers', 'hymns', 'prayers', 'full', 'stats']; // stats is internal
-
-        // Update Buttons
-        document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.querySelector(`.segment-btn[onclick*="${tabName}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
-
-        // Show/Hide Sections
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-
-        const formContainer = document.getElementById('agendaForm');
-
-        if (tabName === 'full') {
-            document.getElementById('tab-speakers').style.display = 'block';
-            document.getElementById('tab-hymns').style.display = 'block';
-            document.getElementById('tab-prayers').style.display = 'block';
-            document.getElementById('tab-stats').style.display = 'block';
-            document.getElementById('tab-extras').style.display = 'block';
-
-            // Single Column Mode
-            formContainer.classList.add('single-column-mode');
-        } else {
-            // Individual Tabs
-            document.getElementById(`tab-${tabName}`).style.display = 'block';
-
-            if (tabName === 'speakers') {
-                formContainer.classList.remove('single-column-mode'); // Split View
-            } else {
-                formContainer.classList.add('single-column-mode'); // Single View
-            }
-        }
-    };
 }
+
+// Editor Tab Switching
+function switchEditorTab(tabName) {
+    const tabs = ['speakers', 'hymns', 'prayers', 'full', 'stats']; // stats is internal
+
+    // Update Buttons
+    document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.segment-btn[onclick*="${tabName}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Show/Hide Sections
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+
+    const formContainer = document.getElementById('agendaForm');
+
+    if (tabName === 'full') {
+        document.getElementById('tab-speakers').style.display = 'block';
+        document.getElementById('tab-hymns').style.display = 'block';
+        document.getElementById('tab-prayers').style.display = 'block';
+        document.getElementById('tab-stats').style.display = 'block';
+        document.getElementById('tab-extras').style.display = 'block';
+
+        // Single Column Mode
+        formContainer.classList.add('single-column-mode');
+    } else {
+        // Individual Tabs
+        document.getElementById(`tab-${tabName}`).style.display = 'block';
+
+        if (tabName === 'speakers') {
+            formContainer.classList.remove('single-column-mode'); // Split View
+        } else {
+            formContainer.classList.add('single-column-mode'); // Single View
+        }
+    }
+};
 
 
 // === Data Loading ===
@@ -811,12 +820,6 @@ function togglePoolFilter(type) {
     renderMemberPool(gender, group, search);
 };
 
-// Search Listener
-document.getElementById('pool-search').addEventListener('input', (e) => {
-    // Re-trigger with existing chips
-    // For MVP just pass search
-    renderMemberPool(null, null, e.target.value);
-});
 
 
 // 3. Speakers Input Logic
@@ -1097,7 +1100,15 @@ function formatDateShort(ts) {
 }
 
 // === Local functions for event delegation ===
-function toggleMenu(id) {
+
+function toggleMenu(arg1, arg2) {
+    let id = arg1;
+    // Check if first arg is an event (has stopPropagation)
+    if (arg1 && typeof arg1.stopPropagation === 'function') {
+        arg1.stopPropagation();
+        id = arg2;
+    }
+
     // Close all other menus
     document.querySelectorAll('.action-menu').forEach(el => {
         if (el.id !== `menu-${id}`) el.style.display = 'none';
@@ -1551,15 +1562,16 @@ function formatDate(input) {
     return String(input);
 }
 
-function escapeHtml(text) {
-    if (!text) return '';
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
 
 
 
+
+
+// Expose functions for legacy HTML handlers and tests
+window.addMemberUI = addMemberUI;
+window.editPlan = editPlan;
+window.switchEditorTab = switchEditorTab;
+window.toggleMenu = toggleMenu;
+window.viewMember = viewMember;
+window.editMember = editMember;
+window.deleteMember = deleteMember;
