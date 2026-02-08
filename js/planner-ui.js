@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 import * as DM from './dataManager.js';
 import { extractVisualLines, parseMemberLines, normalizeName } from './utils/pdfParser.js';
+
 import { setupHymnSearch } from './utils/uiUtils.js';
 import { showToast } from './components/Toast.js';
 
@@ -26,7 +27,7 @@ const state = {
 };
 
 // Expose state for debugging
-window.state = state;
+
 
 // === Initialization ===
 document.addEventListener('DOMContentLoaded', () => {
@@ -224,41 +225,42 @@ async function exportPDF() {
 }
 
 function renderPrintView(container) {
-    // Simple render of current state to the print container
-    // This is a simplified version of what the PDF needs
     const dateStr = formatDate(state.currentEditorDate);
+
+    // Helper to safely get input values
+    const getVal = (name) => {
+        const el = document.querySelector(`input[name="${name}"]`);
+        return el ? escapeHtml(el.value) : '';
+    };
 
     container.innerHTML = `
         <div style="font-family: 'Playfair Display', serif; text-align: center; margin-bottom: 2rem;">
             <h1>Agenda Sacramental</h1>
-            <h3>${state.wardName || 'Ala'}</h3>
-            <p>${dateStr}</p>
+            <h3>${escapeHtml(state.wardName || 'Ala')}</h3>
+            <p>${escapeHtml(dateStr)}</p>
         </div>
         <div style="font-family: 'Inter', sans-serif;">
-            <div style="margin-bottom: 1rem;"><strong>Preside:</strong> ${document.querySelector('input[name="presiding"]')?.value || ''}</div>
-            <div style="margin-bottom: 1rem;"><strong>Dirige:</strong> ${document.querySelector('input[name="conducting"]')?.value || ''}</div>
+            <div style="margin-bottom: 1rem;"><strong>Preside:</strong> ${getVal('presiding')}</div>
+            <div style="margin-bottom: 1rem;"><strong>Dirige:</strong> ${getVal('conducting')}</div>
             <hr>
-            <!-- Hymns -->
             <div style="margin: 1rem 0;">
-                <div><strong>Hino de Abertura:</strong> ${document.querySelector('input[name="openingHymn"]')?.value || ''}</div>
-                <div><strong>Hino Sacramental:</strong> ${document.querySelector('input[name="sacramentHymn"]')?.value || ''}</div>
-                <div><strong>Hino de Encerramento:</strong> ${document.querySelector('input[name="closingHymn"]')?.value || ''}</div>
+                <div><strong>Hino de Abertura:</strong> ${getVal('openingHymn')}</div>
+                <div><strong>Hino Sacramental:</strong> ${getVal('sacramentHymn')}</div>
+                <div><strong>Hino de Encerramento:</strong> ${getVal('closingHymn')}</div>
             </div>
             <hr>
-            <!-- Speakers -->
             <div style="margin: 1rem 0;">
                 <h4>Programa</h4>
                 ${state.speakers.map(s => `
                     <div style="margin-bottom:0.5rem;">
-                        <strong>${s.type === 'hymn' ? 'Hino Especial' : 'Orador'}:</strong> ${s.name || s.text || ''}
+                        <strong>${s.type === 'hymn' ? 'Hino Especial' : 'Orador'}:</strong> ${escapeHtml(s.name || s.text || '')}
                     </div>
                 `).join('')}
             </div>
              <hr>
-            <!-- Prayers -->
             <div style="margin: 1rem 0;">
-                <div><strong>Primeira Oração:</strong> ${document.querySelector('input[name="invocation"]')?.value || ''}</div>
-                <div><strong>Última Oração:</strong> ${document.querySelector('input[name="benediction"]')?.value || ''}</div>
+                <div><strong>Primeira Oração:</strong> ${getVal('invocation')}</div>
+                <div><strong>Última Oração:</strong> ${getVal('benediction')}</div>
             </div>
         </div>
     `;
@@ -1548,3 +1550,16 @@ function formatDate(input) {
     // Fallback
     return String(input);
 }
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+
