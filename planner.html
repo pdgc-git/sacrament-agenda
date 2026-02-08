@@ -23,6 +23,10 @@
 
     <!-- Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
 
     <!-- Style -->
     <link rel="stylesheet" href="workbench.css">
@@ -560,16 +564,45 @@
             </header>
 
             <!-- Stage 1: Input -->
-            <div id="import-stage-input" style="display:flex; flex-direction:column; flex:1;">
-                <textarea id="import-paste-area" placeholder="Cole aqui os dados (Nome, Chamado)..."
-                    style="flex:1; width:100%; padding:1rem; border:1px solid #e2e8f0; border-radius:8px; font-family:monospace; resize:none; font-size:0.9rem; margin-bottom:1rem;"></textarea>
+            <div id="import-stage-input" style="display:flex; flex-direction:column; flex:1; gap:1.5rem;">
+
+                <div style="background:#f0f9ff; padding:1.5rem; border:1px solid #bae6fd; border-radius:12px;">
+                    <h3 style="color:#0369a1; font-size:1rem; margin-bottom:1rem;">Importação Inteligente (PDF)</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                        <div class="input-wrapper">
+                            <label>1. Lista de Membros</label>
+                            <input type="file" id="file-members" accept=".pdf" class="premium-input">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>2. Lista de Chamados</label>
+                            <input type="file" id="file-callings" accept=".pdf" class="premium-input">
+                        </div>
+                    </div>
+                    <button id="btn-process-pdf" class="btn btn-primary" style="width:100%; margin-top:1rem;">
+                        <i class="ph ph-magic-wand"></i> Processar Ficheiros PDF
+                    </button>
+                    <p style="font-size:0.8rem; color:#64748b; margin-top:0.5rem; text-align:center;">
+                        O sistema irá cruzar os dados dos dois ficheiros e inferir o grupo pela idade.
+                    </p>
+                </div>
+
+                <div style="text-align:center; position:relative;">
+                    <hr style="border:0; border-top:1px solid #e2e8f0; margin:1.5rem 0;">
+                    <span
+                        style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:white; padding:0 1rem; color:#94a3b8; font-size:0.8rem;">OU
+                        TEXTO SIMPLES</span>
+                </div>
+
+                <textarea id="import-paste-area"
+                    placeholder="Cole aqui dados CSV/Excel (Nome, Chamado, Grupo, Género)..."
+                    style="height:100px; padding:1rem; border:1px solid #e2e8f0; border-radius:8px; font-family:monospace; resize:none; font-size:0.9rem;"></textarea>
 
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <button class="btn btn-secondary" id="btn-download-template">
                         <i class="ph ph-download"></i> Modelo CSV
                     </button>
-                    <button class="btn btn-primary" id="btn-process-paste">
-                        <i class="ph ph-magic-wand"></i> Analisar Texto
+                    <button class="btn btn-secondary" id="btn-process-paste">
+                        <i class="ph ph-code"></i> Analisar Texto
                     </button>
                 </div>
             </div>

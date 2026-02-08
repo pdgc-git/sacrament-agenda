@@ -1478,8 +1478,142 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Auto-resize on window resize if needed
+    // PDF Import Binding
+    document.getElementById('btn-process-pdf')?.addEventListener('click', processPdfImport);
 });
+
+// === PDF Import Logic ===
+async function processPdfImport() {
+    const fileMembers = document.getElementById('file-members').files[0];
+    const fileCallings = document.getElementById('file-callings').files[0];
+
+    if (!fileMembers || !fileCallings) {
+        return alert("Por favor selecione ambos os ficheiros (Membros e Chamados).");
+    }
+
+    try {
+        const membersText = await extractPdfData(fileMembers);
+        const callingsText = await extractPdfData(fileCallings);
+
+        const mergedData = mergePdfData(membersText, callingsText);
+        renderPreviewFromData(mergedData);
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao processar PDF: " + e.message);
+    }
+}
+
+async function extractPdfData(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
+    }
+    return fullText;
+}
+
+function mergePdfData(membersText, callingsText) {
+    // Regex for CSV-like structure in PDF: "Name","Sex","Age"
+    // Adjusting regex to be flexible with whitespace
+    const memberRegex = /"([^"]+)","([MF])","(\d+)"/g;
+    const callingRegex = /"([^"]+)","([^"]+)"/g; // Assuming "Name","Calling" structure logic
+
+    const memberMap = new Map();
+
+    // 1. Parse Members
+    let match;
+    while ((match = memberRegex.exec(membersText)) !== null) {
+        const name = match[1].trim();
+        const sex = match[2];
+        const age = parseInt(match[3]);
+
+        // Inference
+        let group = 'Adult';
+        if (age < 12) group = 'Primary';
+        else if (age <= 17) group = 'Youth';
+        else if (age <= 30) group = 'Young Adult'; // Default to JA for 18-30, user can change
+
+        memberMap.set(name, {
+            name: name,
+            gender: sex,
+            group: group,
+            calling: ''
+        });
+    }
+
+    // 2. Parse Callings & Merge
+    // Note: Calling file format might be different. 
+    // If it's the Custom Report from LCR, it often looks like "Name","Calling" or similar.
+    // We will scan for names in the calling text that exist in our map.
+    // This is a naive but effective approach if exact CSV structure isn't guaranteed.
+    // However, if the user said "CSV-like", let's try to find "Name","Calling" pattern.
+
+    // Alternative strategy: Split by lines and look for known names
+    // But let's stick to the user's hint about CSV structure.
+    while ((match = callingRegex.exec(callingsText)) !== null) {
+        const col1 = match[1].trim();
+        const col2 = match[2].trim();
+
+        // We do not know order (Name, Calling) or (Calling, Name).
+        // Check if col1 is a known member
+        if (memberMap.has(col1)) {
+            memberMap.get(col1).calling = col2;
+        } else if (memberMap.has(col2)) {
+            // Unlikely but possible
+            memberMap.get(col2).calling = col1;
+        }
+    }
+
+    return Array.from(memberMap.values());
+}
+
+function renderPreviewFromData(data) {
+    const tbody = document.getElementById('import-preview-tbody');
+    tbody.innerHTML = '';
+    let count = 0;
+
+    data.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #e2e8f0';
+        tr.innerHTML = `
+            <td style="padding:0.5rem; font-weight:500;">
+                <input type="text" value="${m.name}" class="preview-name" style="width:100%; border:none; background:transparent;">
+            </td>
+            <td style="padding:0.5rem;">
+                <input type="text" value="${m.calling}" class="preview-calling" style="width:100%; border:1px solid #e2e8f0; border-radius:4px; padding:2px 4px;">
+            </td>
+            <td style="padding:0.5rem;">
+                <select class="preview-group" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
+                    <option value="Adult" ${m.group === 'Adult' ? 'selected' : ''}>Adulto</option>
+                    <option value="Young Adult" ${m.group === 'Young Adult' ? 'selected' : ''}>JA</option>
+                    <option value="Youth" ${m.group === 'Youth' ? 'selected' : ''}>Jovem</option>
+                    <option value="Primary" ${m.group === 'Primary' ? 'selected' : ''}>Primária</option>
+                </select>
+            </td>
+            <td style="padding:0.5rem;">
+                <select class="preview-gender" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
+                    <option value="M" ${m.gender === 'M' ? 'selected' : ''}>M</option>
+                    <option value="F" ${m.gender === 'F' ? 'selected' : ''}>F</option>
+                </select>
+            </td>
+            <td style="padding:0.5rem; text-align:center;">
+                <i class="ph ph-x" style="cursor:pointer; color:red;" data-action="remove-import-row"></i>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        count++;
+    });
+
+    document.getElementById('import-count').textContent = count;
+    document.getElementById('import-stage-input').style.display = 'none';
+    document.getElementById('import-stage-preview').style.display = 'flex';
+}
 
 function formatDate(input) {
     if (!input) return '-';
