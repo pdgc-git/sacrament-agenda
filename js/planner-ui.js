@@ -1450,7 +1450,6 @@ async function processPdfImport() {
             const callingLines = await extractVisualLines(fileCallings);
 
             callingLines.forEach(line => {
-                // Split by visual column breaks (3 spaces)
                 const parts = line.split(/\s{3,}/).map(p => p.trim()).filter(p => p);
 
                 // A. Find the Anchor (Member Name)
@@ -1459,7 +1458,9 @@ async function processPdfImport() {
 
                 for (let i = 0; i < parts.length; i++) {
                     const normPart = normalizeName(parts[i]);
-                    // Check against our known member list
+                    // FIX 1: Prevent empty/short strings from matching names (False Positive Fix)
+                    if (normPart.length < 3) continue;
+
                     for (const [memNameKey, memberObj] of memberMap.entries()) {
                         if (normPart.includes(memNameKey) || memNameKey.includes(normPart)) {
                             nameIndex = i;
@@ -1471,29 +1472,33 @@ async function processPdfImport() {
                 }
 
                 // B. Extract Organization and Calling relative to Name
-                // We know the columns are: Name | Sex | Age | Birth Date | ORGANIZATION | CALLING
                 if (foundMember && nameIndex !== -1) {
-                    // Check if we have enough columns after the name
-                    // We need at least 3 to skip (Sex, Age, Date) + 1 to capture (Org)
                     const subsequentParts = parts.slice(nameIndex + 1);
 
-                    if (subsequentParts.length >= 4) {
-                        // Index 0: Sex (Skip)
-                        // Index 1: Age (Skip)
-                        // Index 2: Birth Date (Skip)
-                        // Index 3: Organization (Capture)
-                        // Index 4: Calling (Capture)
+                    const validParts = subsequentParts.filter(part => {
+                        if (!part.trim()) return false;
+                        // Skip Sex/Age
+                        if (/^[MF]$/.test(part)) return false;
+                        if (/^\d{1,3}$/.test(part)) return false;
 
-                        const org = subsequentParts[3];
-                        const call = subsequentParts[4]; // Might be undefined if line ends early
+                        // FIX 3: Enhanced Date Filtering
+                        if (/\b(19|20)\d{2}\b/.test(part)) return false; // 1999, 2026
+                        if (/\d{1,2}\s+[a-zç]{3}\s+\d{2,4}/i.test(part)) return false; // 6 jan 2026
+                        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(part)) return false; // 06/01/2026
 
-                        // Verify we aren't reading header rows (optional safety)
-                        if (normalizeName(org) !== 'organizacao') {
-                            if (call) {
-                                foundMember.calling = `${org} - ${call}`;
-                            } else {
-                                foundMember.calling = org;
-                            }
+                        return true;
+                    });
+
+                    if (validParts.length >= 1) {
+                        const org = validParts[0];
+                        // FIX 2: Join ALL remaining parts so we don't cut off text (e.g. "Estaca")
+                        const callingText = validParts.slice(1).join(' ');
+
+                        if (callingText) {
+                            foundMember.calling = `${org} - ${callingText}`;
+                        } else {
+                            // Fallback for merged columns
+                            foundMember.calling = org;
                         }
                     }
                 }
