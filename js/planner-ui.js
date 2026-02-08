@@ -1471,40 +1471,30 @@ async function processPdfImport() {
                 }
 
                 // B. Extract Organization and Calling relative to Name
+                // We know the columns are: Name | Sex | Age | Birth Date | ORGANIZATION | CALLING
                 if (foundMember && nameIndex !== -1) {
-                    // Look at columns AFTER the name
+                    // Check if we have enough columns after the name
+                    // We need at least 3 to skip (Sex, Age, Date) + 1 to capture (Org)
                     const subsequentParts = parts.slice(nameIndex + 1);
 
-                    // We expect: [Sex?, Age?, BirthDate?, Organization, Calling, ...]
-                    // We simply skip the demographics to get to the good stuff.
+                    if (subsequentParts.length >= 4) {
+                        // Index 0: Sex (Skip)
+                        // Index 1: Age (Skip)
+                        // Index 2: Birth Date (Skip)
+                        // Index 3: Organization (Capture)
+                        // Index 4: Calling (Capture)
 
-                    const nonDemographicParts = subsequentParts.filter(part => {
-                        // Skip Sex (M/F)
-                        if (/^[MF]$/.test(part)) return false;
-                        // Skip Age (1-3 digits)
-                        if (/^\d{1,3}$/.test(part)) return false;
-                        // Skip Dates (e.g., "17 mar 1991" or "1991")
-                        if (/\b(19|20)\d{2}\b/.test(part)) return false;
-                        // Skip empty junk
-                        if (!part.trim()) return false;
+                        const org = subsequentParts[3];
+                        const call = subsequentParts[4]; // Might be undefined if line ends early
 
-                        return true;
-                    });
-
-                    // The first two remaining parts should be Organization and Calling
-                    if (nonDemographicParts.length >= 2) {
-                        const organization = nonDemographicParts[0];
-                        const callingName = nonDemographicParts[1];
-
-                        // Ignore if it looks like a header row
-                        if (normalizeName(organization) !== "organizacao" &&
-                            normalizeName(callingName) !== "chamado") {
-                            foundMember.calling = `${organization} - ${callingName}`;
+                        // Verify we aren't reading header rows (optional safety)
+                        if (normalizeName(org) !== 'organizacao') {
+                            if (call) {
+                                foundMember.calling = `${org} - ${call}`;
+                            } else {
+                                foundMember.calling = org;
+                            }
                         }
-                    }
-                    else if (nonDemographicParts.length === 1) {
-                        // Fallback: Sometimes Org is missing or merged?
-                        foundMember.calling = nonDemographicParts[0];
                     }
                 }
             });
