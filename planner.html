@@ -373,14 +373,17 @@
             <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
                 <input type="text" id="roster-search" placeholder="Filtrar por nome..." class="input-wrapper"
                     style="padding: 0.5rem; max-width: 300px;">
-                <select id="roster-filter" class="input-wrapper" style="padding: 0.5rem;">
-                    <option value="all">Todos</option>
+                <select id="filter-group" class="input-wrapper" style="padding: 0.5rem; width:140px;">
+                    <option value="all">Todos os Grupos</option>
                     <option value="Adult">Adultos</option>
                     <option value="Young Adult">Jovens Adultos (JA)</option>
                     <option value="Youth">Jovens</option>
                     <option value="Primary">Primária</option>
-                    <option value="gender_M">Homens</option>
-                    <option value="gender_F">Mulheres</option>
+                </select>
+                <select id="filter-gender" class="input-wrapper" style="padding: 0.5rem; width:140px;">
+                    <option value="all">Todos os Géneros</option>
+                    <option value="M">Homens</option>
+                    <option value="F">Mulheres</option>
                 </select>
             </div>
 
@@ -544,64 +547,57 @@
     <div id="bulk-import-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3500; align-items:center; justify-content:center;">
         <div class="glass-panel"
-            style="background:#fff; padding:2rem; width:95%; max-width:900px; height: 80vh; border-radius:16px; display:flex; flex-direction:column;">
+            style="background:#fff; padding:2rem; width:95%; max-width:800px; height: 80vh; border-radius:16px; display:flex; flex-direction:column;">
 
             <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                 <div>
-                    <h2 style="font-family: var(--font-body); font-weight: 700; margin:0;">Importar Membros em Massa
-                    </h2>
-                    <p style="color:var(--text-light); margin:0;">Adicione vários membros de uma vez</p>
+                    <h2 style="font-family: var(--font-body); font-weight: 700; margin:0;">Importar Membros</h2>
+                    <p style="color:var(--text-light); margin:0;">Copie do Excel/Sheets e cole abaixo para
+                        pré-visualizar.</p>
                 </div>
                 <button id="btn-close-import-modal" class="btn-remove"
                     style="font-size:2rem; background:none; border:none; cursor:pointer;">&times;</button>
             </header>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1.5rem; flex:1; overflow:hidden;">
+            <!-- Stage 1: Input -->
+            <div id="import-stage-input" style="display:flex; flex-direction:column; flex:1;">
+                <textarea id="import-paste-area" placeholder="Cole aqui os dados (Nome, Chamado)..."
+                    style="flex:1; width:100%; padding:1rem; border:1px solid #e2e8f0; border-radius:8px; font-family:monospace; resize:none; font-size:0.9rem; margin-bottom:1rem;"></textarea>
 
-                <!-- Col 1: Template -->
-                <div
-                    style="background:#f8fafc; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; text-align:center;">
-                    <div style="background:#e0f2fe; padding:1rem; border-radius:50%; margin-bottom:1rem;">
-                        <i class="ph ph-file-csv" style="font-size:2rem; color:#0ea5e9;"></i>
-                    </div>
-                    <h3 style="margin-bottom:0.5rem; font-weight:600;">1. Modelo</h3>
-                    <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Descarregue o ficheiro modelo para
-                        garantir que a formatação está correta.</p>
-                    <button class="btn btn-secondary" id="btn-download-template" style="width:100%;">
-                        <i class="ph ph-download"></i> Descarregar CSV
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button class="btn btn-secondary" id="btn-download-template">
+                        <i class="ph ph-download"></i> Modelo CSV
                     </button>
-                    <div
-                        style="margin-top:2rem; text-align:left; font-size:0.8rem; color:#64748b; background:white; padding:1rem; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
-                        <strong>Colunas Obrigatórias:</strong><br>
-                        - Name (Nome Completo)<br>
-                        - Calling (Chamado)<br>
-                        - Group (Adult, Youth, Primary)<br>
-                        - Gender (M, F)
-                    </div>
-                </div>
-
-                <!-- Col 2: Paste -->
-                <div style="display:flex; flex-direction:column;">
-                    <h3 style="margin-bottom:0.5rem; font-weight:600;">2. Colar (Excel / CSV)</h3>
-                    <p style="font-size:0.8rem; color:#64748b; margin-bottom:0.5rem;">Copie as células do Excel (sem
-                        cabeçalho) e cole abaixo.</p>
-                    <textarea id="import-paste-area" placeholder="Cole aqui os dados..."
-                        style="flex:1; width:100%; padding:1rem; border:1px solid #e2e8f0; border-radius:8px; font-family:monospace; resize:none; font-size:0.85rem;"></textarea>
-                    <button class="btn btn-primary" id="btn-process-paste" style="margin-top:1rem; width:100%;">
-                        Processar Texto
+                    <button class="btn btn-primary" id="btn-process-paste">
+                        <i class="ph ph-magic-wand"></i> Analisar Texto
                     </button>
                 </div>
+            </div>
 
-                <!-- Col 3: Upload -->
+            <!-- Stage 2: Preview (Hidden) -->
+            <div id="import-stage-preview" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
                 <div
-                    style="background:#f8fafc; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; text-align:center; justify-content:center; border: 2px dashed #cbd5e1;">
-                    <input type="file" id="bulk-csv-upload" accept=".csv" style="display:none">
-                    <i class="ph ph-upload-simple" style="font-size:3rem; color:#94a3b8; margin-bottom:1rem;"></i>
-                    <h3 style="margin-bottom:0.5rem; font-weight:600;">3. Carregar Ficheiro</h3>
-                    <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Arraste um ficheiro .csv ou clique
-                        para selecionar.</p>
-                    <button class="btn btn-secondary" id="btn-select-file">
-                        Selecionar Ficheiro
+                    style="flex:1; overflow-y:auto; border:1px solid var(--border); border-radius:8px; margin-bottom:1rem;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead style="background:#f8fafc; position:sticky; top:0;">
+                            <tr>
+                                <th style="padding:0.5rem;">Nome</th>
+                                <th style="padding:0.5rem;">Chamado (Opcional)</th>
+                                <th style="padding:0.5rem;">Grupo</th>
+                                <th style="padding:0.5rem;">Género</th>
+                                <th style="padding:0.5rem; width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-preview-tbody">
+                            <!-- JS Generated -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                    <button class="btn btn-secondary" id="btn-back-import">Voltar</button>
+                    <button class="btn btn-primary" id="btn-confirm-import">
+                        <i class="ph ph-check"></i> Importar <span id="import-count">0</span> Membros
                     </button>
                 </div>
             </div>

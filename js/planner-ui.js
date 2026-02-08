@@ -1065,14 +1065,19 @@ async function renderRoster() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const filter = document.getElementById('roster-filter')?.value || 'all';
+    const groupFilter = document.getElementById('filter-group')?.value || 'all';
+    const genderFilter = document.getElementById('filter-gender')?.value || 'all';
+
     let list = state.members;
 
-    if (filter.startsWith('gender_')) {
-        const g = filter.split('_')[1];
-        list = list.filter(m => m.gender === g);
-    } else if (filter !== 'all') {
-        list = list.filter(m => m.group === filter);
+    // Apply Group Filter
+    if (groupFilter !== 'all') {
+        list = list.filter(m => m.group === groupFilter);
+    }
+
+    // Apply Gender Filter
+    if (genderFilter !== 'all') {
+        list = list.filter(m => m.gender === genderFilter);
     }
 
     // Search
@@ -1085,30 +1090,42 @@ async function renderRoster() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
-                <div style="font-weight:600; cursor:pointer;" class="view-link" data-id="${m.id}">${m.name}</div>
+                <div class="view-link" data-id="${m.id}" style="font-weight:600; cursor:pointer;">${m.name}</div>
                 <div style="font-size:0.8em; color:#666">${m.calling || ''}</div>
             </td>
             <td>${m.group}</td>
             <td>${m.last_talk_date ? formatDateShort(m.last_talk_date) : '-'}</td>
             <td>${m.last_prayer_date ? formatDateShort(m.last_prayer_date) : '-'}</td>
-            <td class="action-cell" style="position:relative;">
-                <button class="btn-meatballs" data-action="toggle-menu" data-id="${m.id}">•••</button>
-                <div id="menu-${m.id}" class="action-menu" style="display:none; position:absolute; right:0; top:100%; z-index:10; box-shadow:0 4px 6px rgba(0,0,0,0.1); background:white; border-radius:4px; border:1px solid #e5e7eb; width:120px;">
-                    <div class="menu-item" data-action="view" data-id="${m.id}" style="padding:8px; cursor:pointer; hover:bg-gray-100;">
-                        <span>👁️</span> Ver
-                    </div>
-                    <div class="menu-item" data-action="edit" data-id="${m.id}" style="padding:8px; cursor:pointer;">
-                        <span>✏️</span> Editar
-                    </div>
-                    <div class="menu-item danger" data-action="delete" data-id="${m.id}" style="padding:8px; cursor:pointer; color:red;">
-                         <span>🗑️</span> Apagar
-                    </div>
+            <td class="action-cell">
+                <div class="row-actions">
+                    <i class="ph ph-eye action-icon" data-action="view" data-id="${m.id}" title="Ver"></i>
+                    <i class="ph ph-pencil-simple action-icon edit" data-action="edit" data-id="${m.id}" title="Editar"></i>
+                    <i class="ph ph-trash action-icon delete" data-action="delete" data-id="${m.id}" title="Remover"></i>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
+
+// Event Delegation for Roster Actions
+document.getElementById('roster-tbody')?.addEventListener('click', (e) => {
+    const target = e.target;
+    // Handle Name Click
+    if (target.classList.contains('view-link')) {
+        viewMember(target.dataset.id);
+        return;
+    }
+    // Handle Icons
+    const actionIcon = target.closest('.action-icon');
+    if (actionIcon) {
+        const action = actionIcon.dataset.action;
+        const id = actionIcon.dataset.id;
+        if (action === 'view') viewMember(id);
+        if (action === 'edit') editMember(id);
+        if (action === 'delete') deleteMember(id);
+    }
+});
 
 function formatDateShort(ts) {
     if (!ts) return '-';
@@ -1305,8 +1322,14 @@ document.getElementById('roster-filter')?.addEventListener('change', renderRoste
 
 // === Bulk Import Logic ===
 function openBulkImport() {
-    document.getElementById('bulk-import-modal').style.display = 'flex';
+    const modal = document.getElementById('bulk-import-modal');
+    modal.style.display = 'flex';
+
+    // Reset Stages
+    document.getElementById('import-stage-input').style.display = 'flex';
+    document.getElementById('import-stage-preview').style.display = 'none';
     document.getElementById('import-paste-area').value = '';
+    document.getElementById('import-preview-tbody').innerHTML = '';
 }
 
 function downloadTemplate() {
@@ -1330,66 +1353,133 @@ function downloadTemplate() {
     document.body.removeChild(link);
 }
 
+// Stage 1 -> Stage 2: Parse & Preview
 async function processPasteImport() {
     const text = document.getElementById('import-paste-area').value;
     if (!text.trim()) return alert("Por favor cole alguns dados primeiro.");
 
-    await parseAndImport(text);
-}
+    // Detect delimiter
+    const delimiter = text.includes('\t') ? '\t' : ',';
+    const lines = text.split('\n').filter(l => l.trim().length > 0);
 
-async function parseAndImport(rawData) {
-    // Detect delimiter (Tab for Excel, Comma for CSV)
-    const delimiter = rawData.includes('\t') ? '\t' : ',';
+    const tbody = document.getElementById('import-preview-tbody');
+    tbody.innerHTML = '';
 
-    const lines = rawData.split('\n').filter(l => l.trim().length > 0);
-    let successCount = 0;
-    let errors = 0;
-
-    // Check if first row is header
+    let validCount = 0;
     let startIdx = 0;
-    const firstRow = lines[0].toLowerCase();
-    if (firstRow.includes('name') || firstRow.includes('nome')) startIdx = 1;
+
+    // Check header
+    if (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('nome')) startIdx = 1;
 
     for (let i = startIdx; i < lines.length; i++) {
         let cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length < 1 || !cols[0]) continue;
 
-        // Basic Validation
-        if (cols.length < 1) continue;
-
-        // Map Columns: Assume Order: Name, Calling, Group, Gender
-        // If data is just one column, assume Name
         let name = cols[0];
         let calling = cols[1] || '';
-        let group = cols[2] || 'Adult';
-        let gender = cols[3] || 'M';
+        let groupRaw = (cols[2] || 'Adult').toLowerCase();
+        let genderRaw = (cols[3] || 'M').toUpperCase();
 
-        // Normalize
-        if (group.toLowerCase().includes('jovem') || group.toLowerCase().includes('youth')) group = 'Youth';
-        else if (group.toLowerCase().includes('prim') || group.toLowerCase().includes('child')) group = 'Primary';
-        else if (group.toLowerCase().includes('ja') || group.toLowerCase().includes('adulto')) group = 'Young Adult';
-        else group = 'Adult';
+        // Normalize Defaults
+        let groupVal = 'Adult';
+        if (groupRaw.includes('jov') || groupRaw.includes('youth')) groupVal = 'Youth';
+        else if (groupRaw.includes('prim')) groupVal = 'Primary';
+        else if (groupRaw.includes('ja') || groupRaw.includes('adulto')) groupVal = 'Young Adult';
 
-        gender = gender.toUpperCase().startsWith('F') ? 'F' : 'M';
+        let genderVal = genderRaw.startsWith('F') ? 'F' : 'M';
 
-        try {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #e2e8f0';
+        tr.innerHTML = `
+            <td style="padding:0.5rem; font-weight:500;">
+                <input type="text" value="${name}" class="preview-name" style="width:100%; border:none; background:transparent;">
+            </td>
+            <td style="padding:0.5rem;">
+                <input type="text" value="${calling}" class="preview-calling" style="width:100%; border:1px solid #e2e8f0; border-radius:4px; padding:2px 4px;">
+            </td>
+            <td style="padding:0.5rem;">
+                <select class="preview-group" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
+                    <option value="Adult" ${groupVal === 'Adult' ? 'selected' : ''}>Adulto</option>
+                    <option value="Young Adult" ${groupVal === 'Young Adult' ? 'selected' : ''}>JA</option>
+                    <option value="Youth" ${groupVal === 'Youth' ? 'selected' : ''}>Jovem</option>
+                    <option value="Primary" ${groupVal === 'Primary' ? 'selected' : ''}>Primária</option>
+                </select>
+            </td>
+            <td style="padding:0.5rem;">
+                <select class="preview-gender" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
+                    <option value="M" ${genderVal === 'M' ? 'selected' : ''}>M</option>
+                    <option value="F" ${genderVal === 'F' ? 'selected' : ''}>F</option>
+                </select>
+            </td>
+            <td style="padding:0.5rem; text-align:center;">
+                <i class="ph ph-x" style="cursor:pointer; color:red;" data-action="remove-import-row"></i>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        validCount++;
+    }
+
+    document.getElementById('import-count').textContent = validCount;
+
+    // Switch View
+    document.getElementById('import-stage-input').style.display = 'none';
+    document.getElementById('import-stage-preview').style.display = 'flex';
+}
+
+function updateImportCount() {
+    const count = document.getElementById('import-preview-tbody').rows.length;
+    document.getElementById('import-count').textContent = count;
+}
+
+// Stage 2 -> Final: Save
+async function confirmImport() {
+    const rows = document.querySelectorAll('#import-preview-tbody tr');
+    if (rows.length === 0) return alert("Nada para importar.");
+
+    let imported = 0;
+    for (const tr of rows) {
+        const name = tr.querySelector('.preview-name').value;
+        const calling = tr.querySelector('.preview-calling').value;
+        const group = tr.querySelector('.preview-group').value;
+        const gender = tr.querySelector('.preview-gender').value;
+
+        if (name) {
             await DM.saveMember({ id: null, name, calling, group, gender });
-            successCount++;
-        } catch (e) {
-            console.error("Import error line " + i, e);
-            errors++;
+            imported++;
         }
     }
 
-    if (successCount > 0) {
-        alert(`Importação concluída! ${successCount} membros adicionados.`);
-        document.getElementById('bulk-import-modal').style.display = 'none';
-        await loadData();
-        renderRoster();
-    } else {
-        alert("Nenhum membro importado. Verifique o formato.");
-    }
+    alert(`${imported} membros importados com sucesso!`);
+    document.getElementById('bulk-import-modal').style.display = 'none';
+    await loadData();
+    renderRoster();
 }
 
+// === Event Bindings for Import ===
+document.addEventListener('DOMContentLoaded', () => {
+    // ... (existing bindings) ...
+    document.getElementById('btn-open-import')?.addEventListener('click', openBulkImport);
+    document.getElementById('btn-close-import-modal')?.addEventListener('click', () => {
+        document.getElementById('bulk-import-modal').style.display = 'none';
+    });
+    document.getElementById('btn-download-template')?.addEventListener('click', downloadTemplate);
+    document.getElementById('btn-process-paste')?.addEventListener('click', processPasteImport);
+    document.getElementById('btn-back-import')?.addEventListener('click', () => {
+        document.getElementById('import-stage-input').style.display = 'flex';
+        document.getElementById('import-stage-preview').style.display = 'none';
+    });
+    document.getElementById('btn-confirm-import')?.addEventListener('click', confirmImport);
+
+    // Import Table Delegation
+    document.getElementById('import-preview-tbody')?.addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'remove-import-row') {
+            e.target.closest('tr').remove();
+            updateImportCount();
+        }
+    });
+
+    // Auto-resize on window resize if needed
+});
 
 function formatDate(input) {
     if (!input) return '-';

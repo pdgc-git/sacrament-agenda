@@ -834,16 +834,37 @@ tr:hover td {
     background: #f8fafc;
 }
 
-/* Action Menu */
-.btn-meatballs {
-    color: var(--text-light);
-    border-radius: 4px;
-    padding: 4px 8px;
+/* Action Icons */
+.row-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+    justify-content: flex-end;
 }
 
-.btn-meatballs:hover {
-    background: #e2e8f0;
+tr:hover .row-actions {
+    opacity: 1;
+}
+
+.action-icon {
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: color 0.15s;
+    padding: 2px;
+}
+
+.action-icon:hover {
     color: var(--primary);
+}
+
+.action-icon.edit:hover {
+    color: var(--action);
+}
+
+.action-icon.delete:hover {
+    color: var(--danger);
 }
 
 /* Roster Cards */
