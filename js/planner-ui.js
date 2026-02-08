@@ -6,6 +6,7 @@ import {
 import * as DM from './dataManager.js';
 import { extractVisualLines, parseMemberLines, normalizeName } from './utils/pdfParser.js';
 import { setupHymnSearch } from './utils/uiUtils.js';
+import { showToast } from './components/Toast.js';
 
 // === State ===
 const state = {
@@ -190,7 +191,7 @@ function toggleFastMeeting(isFast) {
 async function exportPDF() {
     // Ensure we have the library
     if (typeof html2pdf === 'undefined') {
-        alert("Biblioteca PDF não carregada. Verifique a internet.");
+        showToast("Biblioteca PDF não carregada. Verifique a internet.");
         return;
     }
 
@@ -283,7 +284,7 @@ function initAuth() {
             try {
                 await signInWithPopup(auth, provider);
             } catch (error) {
-                alert("Erro Firebase: " + error.message);
+                showToast("Erro Firebase: " + error.message);
                 console.error("Firebase Error:", error);
                 if (errorMsg) errorMsg.textContent = "Erro: " + error.message;
             }
@@ -361,7 +362,7 @@ function setupEmailAuthListeners(errorDisplay) {
             isSignup = !isSignup;
             btnToggle.textContent = isSignup ? "Já tenho conta" : "Criar conta";
             btnLogin.textContent = isSignup ? "Registar" : "Entrar";
-            if (isSignup) alert("Nota: Para criar uma nova ala, registe-se e depois crie a ala.");
+            if (isSignup) showToast("Nota: Para criar uma nova ala, registe-se e depois crie a ala.");
         });
     }
 
@@ -773,7 +774,7 @@ function insertMemberIntoActiveInput(member) {
         state.activeMemberInput.style.borderColor = varCss('--success');
         setTimeout(() => state.activeMemberInput.style.borderColor = '', 1000);
     } else {
-        alert("Selecione um campo de orador à esquerda primeiro.");
+        showToast("Selecione um campo de orador à esquerda primeiro.");
     }
 }
 function varCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
@@ -931,7 +932,7 @@ function setupFormListeners() {
     // Save Button
     document.getElementById('btn-finalize').addEventListener('click', async () => {
         const dateStr = document.getElementById('input-date').value;
-        if (!dateStr) return alert("Selecione uma data");
+        if (!dateStr) return showToast("Selecione uma data");
 
         // Collect Data
         const form = document.getElementById('agendaForm');
@@ -948,9 +949,9 @@ function setupFormListeners() {
 
         try {
             await DM.saveFuturePlan(data); // Using dataManager generic save
-            alert("Gravado com sucesso!");
+            showToast("Gravado com sucesso!");
             loadData(); // Refresh cache
-        } catch (e) { alert("Erro ao gravar: " + e.message); }
+        } catch (e) { showToast("Erro ao gravar: " + e.message); }
     });
 }
 
@@ -1178,13 +1179,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!pendingDeleteId) return;
             try {
                 await DM.deleteMember(pendingDeleteId);
-                alert("Membro removido.");
+                showToast("Membro removido.");
                 document.getElementById('delete-confirm-modal').style.display = 'none';
                 pendingDeleteId = null;
                 await loadData();
                 renderRoster();
             } catch (e) {
-                alert("Erro: " + e.message);
+                showToast("Erro: " + e.message);
             }
         });
     }
@@ -1203,18 +1204,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const gender = document.querySelector('input[name="mem-gender"]:checked').value;
             const id = document.getElementById('btn-save-member').dataset.id || null;
 
-            if (!name) return alert("Nome é obrigatório");
+            if (!name) return showToast("Nome é obrigatório");
 
             try {
                 await DM.saveMember({ id, name, calling, group, gender });
                 memberModal.style.display = 'none';
-                alert("Membro guardado!");
+                showToast("Membro guardado!");
 
                 // FORCE REFRESH
                 await loadData();
                 renderRoster(); // Explicitly re-render roster
             } catch (e) {
-                alert("Erro ao guardar: " + e.message);
+                showToast("Erro ao guardar: " + e.message);
             }
         });
     }
@@ -1328,7 +1329,7 @@ function downloadTemplate() {
 // Stage 2 -> Final: Save
 async function confirmImport() {
     const rows = document.querySelectorAll('#import-preview-tbody tr');
-    if (rows.length === 0) return alert("Nada para importar.");
+    if (rows.length === 0) return showToast("Nada para importar.");
 
     let imported = 0;
     for (const tr of rows) {
@@ -1343,7 +1344,7 @@ async function confirmImport() {
         }
     }
 
-    alert(`${imported} membros importados com sucesso!`);
+    showToast(`${imported} membros importados com sucesso!`);
     document.getElementById('bulk-import-modal').style.display = 'none';
     await loadData();
     renderRoster();
@@ -1383,7 +1384,7 @@ async function processPdfImport() {
     const fileCallings = document.getElementById('file-callings').files[0];
 
     if (!fileMembers) {
-        return alert("Por favor selecione pelo menos o ficheiro PDF da Lista de Membros.");
+        return showToast("Por favor selecione pelo menos o ficheiro PDF da Lista de Membros.");
     }
 
     const btn = document.getElementById('btn-process-pdf');
@@ -1471,7 +1472,7 @@ async function processPdfImport() {
 
     } catch (e) {
         console.error("PDF Error:", e);
-        alert("Erro ao processar PDF: " + e.message);
+        showToast("Erro ao processar PDF: " + e.message);
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;

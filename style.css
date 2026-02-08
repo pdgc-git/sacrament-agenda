@@ -695,3 +695,71 @@ body {
     color: var(--primary);
     transform: translateX(-2px);
 }
+/* --- Toast Notifications --- */
+.toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none; /* Allow clicking through container */
+}
+
+.toast-notification {
+    background: white;
+    color: var(--text-main);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 250px;
+    max-width: 400px;
+    border-left: 4px solid var(--primary);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto; /* Allow clicking on toast */
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.toast-notification i {
+    font-size: 1.25rem;
+}
+
+/* Variants */
+.toast-success {
+    border-left-color: #10b981; /* Emerald 500 */
+}
+.toast-success i {
+    color: #10b981;
+}
+
+.toast-error {
+    border-left-color: #ef4444; /* Red 500 */
+}
+.toast-error i {
+    color: #ef4444;
+}
+
+.toast-info {
+    border-left-color: var(--primary);
+}
+.toast-info i {
+    color: var(--primary);
+}
