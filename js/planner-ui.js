@@ -1413,157 +1413,195 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-process-pdf')?.addEventListener('click', processPdfImport);
 });
 
-// === PDF Import Logic ===
-// === Smart PDF Import Logic ===
+// ==========================================
+// === ROBUST SPATIAL PDF PARSER ===
+// ==========================================
 
 async function processPdfImport() {
     const fileMembers = document.getElementById('file-members').files[0];
     const fileCallings = document.getElementById('file-callings').files[0];
 
     if (!fileMembers) {
-        return alert("Por favor selecione pelo menos a Lista de Membros.");
+        return alert("Por favor selecione pelo menos o ficheiro PDF da Lista de Membros.");
     }
 
-    // Show Loading state?
     const btn = document.getElementById('btn-process-pdf');
     const originalText = btn.innerHTML;
-    btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> A Processar...`;
+    btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> Analisando PDF...`;
     btn.disabled = true;
 
     try {
-        // 1. Parse Member List
-        const membersText = await extractTextFromPDF(fileMembers);
-        const membersData = parseRobust(membersText, 'members');
+        // 1. Parse Members (Spatial Reconstruction)
+        const memberLines = await extractVisualLines(fileMembers);
+        const membersData = parseMemberLines(memberLines);
 
-        // Map for easy lookup
+        if (membersData.length === 0) {
+            throw new Error("Não foi possível encontrar membros. O PDF pode estar num formato desconhecido.");
+        }
+
+        // Create a Map for matching callings later
+        // Key: Normalized Name -> Value: Member Object
         const memberMap = new Map();
-        membersData.forEach(m => memberMap.set(m.name, m));
+        membersData.forEach(m => memberMap.set(normalizeName(m.name), m));
 
-        // 2. Parse Callings (Optional)
+        // 2. Parse Callings (Optional) - using "Smart Match"
         if (fileCallings) {
-            const callingsText = await extractTextFromPDF(fileCallings);
-            const callingsData = parseRobust(callingsText, 'callings');
+            btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> Analisando Chamados...`;
+            const callingLines = await extractVisualLines(fileCallings);
 
-            // Merge logic: match Names
-            callingsData.forEach(c => {
-                if (memberMap.has(c.name)) {
-                    // Calling is at index + 4 in robust parser? 
-                    // The parser returns objects. checking c.calling
-                    if (c.calling) memberMap.get(c.name).calling = c.calling;
+            // For each line in callings PDF, check if it contains a known member name
+            callingLines.forEach(line => {
+                const normLine = normalizeName(line);
+
+                // Try to find a member name inside this line
+                for (const [memNameKey, memberObj] of memberMap.entries()) {
+                    if (normLine.includes(memNameKey)) {
+                        // Found a member in this line! 
+                        // The "Calling" is likely the text REMAINING after removing the name.
+                        // We use the original case-sensitive line to extract the calling
+                        const nameRegex = new RegExp(escapeRegExp(memberObj.name), 'i');
+                        let callingText = line.replace(nameRegex, '').trim();
+
+                        // Cleanup common artifacts
+                        callingText = callingText.replace(/^[–-]\s*/, ''); // Remove leading dash
+
+                        if (callingText.length > 3) { // Filter out noise
+                            memberObj.calling = callingText;
+                        }
+                        break; // Stop checking members for this line
+                    }
                 }
             });
         }
 
-        // 3. Render Preview
-        if (memberMap.size === 0) {
-            alert("Aviso: Nenhum membro encontrado no PDF. Verifique se o ficheiro está correto.");
-            return;
-        }
-
+        // 3. Render
         renderSmartPreview(Array.from(memberMap.values()));
 
     } catch (e) {
-        console.error(e);
-        alert("Erro ao processar: " + e.message);
+        console.error("PDF Error:", e);
+        alert("Erro ao processar PDF: " + e.message);
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
 }
 
-async function extractTextFromPDF(file) {
+// --- CORE PARSER FUNCTIONS ---
+
+/**
+ * Extracts text from PDF but PRESERVES table layout by 
+ * grouping items by Y-coordinate (Rows) and separating columns with gaps.
+ */
+async function extractVisualLines(file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
+    let allLines = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        // Join by space to create a token stream
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + ' ';
+        const content = await page.getTextContent();
+
+        // 1. Group items by Y position (Row Detection)
+        // We use a tolerance of 4 pixels to account for minor misalignments
+        const rowMap = new Map();
+        const Y_TOLERANCE = 4;
+
+        content.items.forEach(item => {
+            // PDF Y-coordinates start from bottom, so higher value = higher on page
+            const y = item.transform[5];
+            if (!item.str.trim()) return; // Skip empty whitespace items
+
+            let matchY = null;
+            for (const existingY of rowMap.keys()) {
+                if (Math.abs(existingY - y) < Y_TOLERANCE) {
+                    matchY = existingY;
+                    break;
+                }
+            }
+            if (matchY !== null) {
+                rowMap.get(matchY).push(item);
+            } else {
+                rowMap.set(y, [item]);
+            }
+        });
+
+        // 2. Sort Rows (Top to Bottom)
+        const sortedYs = Array.from(rowMap.keys()).sort((a, b) => b - a);
+
+        // 3. Construct Lines
+        sortedYs.forEach(y => {
+            const items = rowMap.get(y);
+            // Sort items Left to Right (X position)
+            items.sort((a, b) => a.transform[4] - b.transform[4]);
+
+            let lineStr = '';
+            for (let k = 0; k < items.length; k++) {
+                const curr = items[k];
+                lineStr += curr.str;
+
+                // Add visual gap if next item is far away
+                if (k < items.length - 1) {
+                    const next = items[k + 1];
+                    const currEnd = curr.transform[4] + curr.width;
+                    const gap = next.transform[4] - currEnd;
+
+                    if (gap > 10) {
+                        lineStr += '   '; // 3 spaces = Column Break
+                    } else {
+                        lineStr += ' ';   // 1 space = Word Break
+                    }
+                }
+            }
+            allLines.push(lineStr.trim());
+        });
     }
-    return fullText;
+    return allLines;
 }
 
-function parseRobust(rawText, type) {
-    // 1. Sanitize: Remove newlines to treat as one long stream
-    // Replace newlines with space, then collapse multiple spaces
-    const text = rawText.replace(/[\r\n]+/g, ' ').trim();
+function parseMemberLines(lines) {
     const results = [];
 
-    if (type === 'members') {
-        // Pattern: "Name", "Sex", "Age"
-        // Captures: 1=Name, 2=Sex, 3=Age
-        const regex = /"([^"]+)"\s*,\s*"([MF])"\s*,\s*"(\d+)"/g;
-        let match;
-        while ((match = regex.exec(text)) !== null) {
+    // Pattern: Name (letters/comma) ... Gap ... Sex (M/F) ... Gap ... Age (Digits)
+    // We look for M/F and Age specifically as anchors
+    const rowRegex = /^(.+?)\s{2,}([MF])\s{2,}(\d{1,3})/;
+
+    lines.forEach(line => {
+        const match = rowRegex.exec(line);
+        if (match) {
+            const rawName = match[1].trim();
+            const sex = match[2];
             const age = parseInt(match[3]);
+
+            // Determine Group based on Age
             let group = 'Adult';
             if (age <= 11) group = 'Primary';
             else if (age >= 12 && age <= 17) group = 'Youth';
             else if (age >= 18 && age <= 35) group = 'Young Adult';
-            else group = 'Adult';
+
+            // Clean Name (remove trailing comma if exists)
+            const name = rawName.replace(/,$/, '');
 
             results.push({
-                name: match[1].trim(),
-                gender: match[2].trim(),
+                name: name,
+                gender: sex,
                 age: age,
                 group: group,
-                calling: ''
+                calling: '' // Filled later
             });
         }
-    } else if (type === 'callings') {
-        // Pattern anchor: "Sex", "Age"
-        // We find this, then look around for Name and Calling
-        const anchorRegex = /"([MF])"\s*,\s*"(\d+)"/g;
-        let match;
-        let lastNameSeen = "Desconhecido"; // Fallback
+    });
 
-        while ((match = anchorRegex.exec(text)) !== null) {
-            // match[0] is like '"M", "35"'
-            // match.index is where it starts
-
-            // 1. FIND NAME (Look Behind)
-            // Grab text before the match
-            const preText = text.substring(0, match.index).trim();
-            // Check if it ends with "Name",
-            // We look for a quoted string followed immediately by a comma at the end of preText
-            const nameCheck = /"([^"]+)"\s*,\s*$/;
-            const nameMatch = nameCheck.exec(preText);
-
-            let currentName = lastNameSeen;
-            if (nameMatch) {
-                currentName = nameMatch[1].trim();
-                lastNameSeen = currentName;
-            }
-            // If no match, we assume the name was empty/implied (e.g. `,, "F"`) 
-            // so we keep using lastNameSeen.
-
-            // 2. FIND CALLING (Look Ahead)
-            // We need to skip 2 fields (DOB, Org) and get the 3rd (Calling).
-            // Fields can be "Quoted" OR Unquoted (empty ,, or just ,text,)
-            // The text after our match starts with a comma.
-            const postText = text.substring(match.index + match[0].length);
-
-            // Pattern: , Field , Field , "Calling"
-            // Field = "..." OR [^,]*
-            // This regex matches: comma, (any field), comma, (any field), comma, "Calling"
-            const callingRegex = /^\s*,\s*(?:"[^"]*"|[^,]*)\s*,\s*(?:"[^"]*"|[^,]*)\s*,\s*"([^"]*)"/;
-            const callMatch = callingRegex.exec(postText);
-
-            let calling = '';
-            if (callMatch) {
-                calling = callMatch[1].trim();
-            }
-
-            results.push({
-                name: currentName,
-                calling: calling
-            });
-        }
-    }
     return results;
+}
+
+// --- HELPERS ---
+
+function normalizeName(str) {
+    return str.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function renderSmartPreview(data) {
