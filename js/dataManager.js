@@ -178,6 +178,21 @@ export async function getMembers() {
 }
 
 export async function saveMember(memberData) {
+    // === VALIDATION ===
+    if (!memberData.name || typeof memberData.name !== 'string' || !memberData.name.trim()) {
+        throw new Error("O nome do membro é obrigatório.");
+    }
+
+    const validGroups = ['Adult', 'Youth', 'Primary', 'Young Adult'];
+    if (!validGroups.includes(memberData.group)) {
+        // Default to Adult if invalid
+        if (!memberData.group) memberData.group = 'Adult';
+        else if (!validGroups.includes(memberData.group)) {
+            throw new Error(`Grupo inválido. Deve ser um de: ${validGroups.join(', ')}`);
+        }
+    }
+    // ==================
+
     const wardId = getWardId();
     const membersRef = collection(db, `wards/${wardId}/members`);
 
@@ -429,26 +444,32 @@ export async function saveMeeting(meetingData) {
 export async function saveFuturePlan(planData) {
     const wardId = getWardId();
 
-    // planData must have dateStr
-    if (!planData.dateStr) throw new Error("Plan requires a date string");
+    // === VALIDATION ===
+    // 1. Check Date Format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!planData.dateStr || !dateRegex.test(planData.dateStr)) {
+        throw new Error("Data inválida. O formato deve ser AAAA-MM-DD.");
+    }
+
+    // 2. Ensure Speakers is an Array
+    if (!Array.isArray(planData.speakers)) {
+        planData.speakers = [];
+    }
+    // ==================
 
     const meetingRef = doc(db, `wards/${wardId}/meetings`, planData.dateStr);
 
-    // Merge: True is critical here to not overwrite existing data
     const payload = {
         id: planData.dateStr,
         dateStr: planData.dateStr,
         date: Timestamp.fromDate(new Date(planData.dateStr)),
-        status: 'draft', // Default to draft, but don't overwrite if 'completed'?
-        // We generally shouldn't degrade status unless explicitly reopening.
-        // For simple planning, we just act as 'draft' if saving from planner.
+        status: 'draft',
         ...planData
     };
 
-    // Remove undefined
+    // Remove undefined keys to prevent Firestore errors
     Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
-    // Use set with merge
     await setDoc(meetingRef, payload, { merge: true });
     return planData.dateStr;
 }

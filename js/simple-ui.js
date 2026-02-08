@@ -155,7 +155,7 @@ function renderPreviewSpeakers() {
 function exportPDF() {
     const el = document.getElementById('agenda-paper');
     if (window.html2pdf) html2pdf().set({ margin: 0, filename: 'agenda.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4' } }).from(el).save();
-    else showToast('Erro: Biblioteca PDF não carregada.');
+    else showToast('Erro: Biblioteca PDF não carregada.', 'error');
 }
 function toggleFullScreen() { document.querySelector('.app-layout').classList.toggle('full-screen'); }
 function toggleFullScreen() { document.querySelector('.app-layout').classList.toggle('full-screen'); }

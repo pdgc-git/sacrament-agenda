@@ -191,7 +191,7 @@ function toggleFastMeeting(isFast) {
 async function exportPDF() {
     // Ensure we have the library
     if (typeof html2pdf === 'undefined') {
-        showToast("Biblioteca PDF não carregada. Verifique a internet.");
+        showToast("Biblioteca PDF não carregada. Verifique a internet.", 'error');
         return;
     }
 
@@ -284,7 +284,7 @@ function initAuth() {
             try {
                 await signInWithPopup(auth, provider);
             } catch (error) {
-                showToast("Erro Firebase: " + error.message);
+                showToast("Erro Firebase: " + error.message, 'error');
                 console.error("Firebase Error:", error);
                 if (errorMsg) errorMsg.textContent = "Erro: " + error.message;
             }
@@ -774,7 +774,7 @@ function insertMemberIntoActiveInput(member) {
         state.activeMemberInput.style.borderColor = varCss('--success');
         setTimeout(() => state.activeMemberInput.style.borderColor = '', 1000);
     } else {
-        showToast("Selecione um campo de orador à esquerda primeiro.");
+        showToast("Selecione um campo de orador à esquerda primeiro.", 'warning');
     }
 }
 function varCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
@@ -932,7 +932,7 @@ function setupFormListeners() {
     // Save Button
     document.getElementById('btn-finalize').addEventListener('click', async () => {
         const dateStr = document.getElementById('input-date').value;
-        if (!dateStr) return showToast("Selecione uma data");
+        if (!dateStr) return showToast("Selecione uma data", 'warning');
 
         // Collect Data
         const form = document.getElementById('agendaForm');
@@ -949,9 +949,9 @@ function setupFormListeners() {
 
         try {
             await DM.saveFuturePlan(data); // Using dataManager generic save
-            showToast("Gravado com sucesso!");
+            showToast("Gravado com sucesso!", 'success');
             loadData(); // Refresh cache
-        } catch (e) { showToast("Erro ao gravar: " + e.message); }
+        } catch (e) { showToast("Erro ao gravar: " + e.message, 'error'); }
     });
 }
 
@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await loadData();
                 renderRoster();
             } catch (e) {
-                showToast("Erro: " + e.message);
+                showToast("Erro: " + e.message, 'error');
             }
         });
     }
@@ -1204,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const gender = document.querySelector('input[name="mem-gender"]:checked').value;
             const id = document.getElementById('btn-save-member').dataset.id || null;
 
-            if (!name) return showToast("Nome é obrigatório");
+            if (!name) return showToast("Nome é obrigatório", 'warning');
 
             try {
                 await DM.saveMember({ id, name, calling, group, gender });
@@ -1215,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await loadData();
                 renderRoster(); // Explicitly re-render roster
             } catch (e) {
-                showToast("Erro ao guardar: " + e.message);
+                showToast("Erro ao guardar: " + e.message, 'error');
             }
         });
     }
@@ -1329,7 +1329,7 @@ function downloadTemplate() {
 // Stage 2 -> Final: Save
 async function confirmImport() {
     const rows = document.querySelectorAll('#import-preview-tbody tr');
-    if (rows.length === 0) return showToast("Nada para importar.");
+    if (rows.length === 0) return showToast("Nada para importar.", 'warning');
 
     let imported = 0;
     for (const tr of rows) {
@@ -1344,7 +1344,7 @@ async function confirmImport() {
         }
     }
 
-    showToast(`${imported} membros importados com sucesso!`);
+    showToast(`${imported} membros importados com sucesso!`, 'success');
     document.getElementById('bulk-import-modal').style.display = 'none';
     await loadData();
     renderRoster();
@@ -1384,7 +1384,7 @@ async function processPdfImport() {
     const fileCallings = document.getElementById('file-callings').files[0];
 
     if (!fileMembers) {
-        return showToast("Por favor selecione pelo menos o ficheiro PDF da Lista de Membros.");
+        return showToast("Por favor selecione pelo menos o ficheiro PDF da Lista de Membros.", 'warning');
     }
 
     const btn = document.getElementById('btn-process-pdf');
@@ -1472,7 +1472,7 @@ async function processPdfImport() {
 
     } catch (e) {
         console.error("PDF Error:", e);
-        showToast("Erro ao processar PDF: " + e.message);
+        showToast("Erro ao processar PDF: " + e.message, 'error');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
