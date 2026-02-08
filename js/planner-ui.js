@@ -4,6 +4,8 @@ import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 import * as DM from './dataManager.js';
+import { extractVisualLines, parseMemberLines, normalizeName } from './utils/pdfParser.js';
+import { setupHymnSearch } from './utils/uiUtils.js';
 
 // === State ===
 const state = {
@@ -855,7 +857,7 @@ function renderSpeakersInput() {
             `;
 
             const input = div.querySelector('input');
-            setupHymnSearch(input, (val) => { item.name = val; });
+            setupHymnSearch(input, window.hymns, (val) => { item.name = val; });
             input.addEventListener('input', (e) => item.name = e.target.value);
         }
 
@@ -878,67 +880,26 @@ function removeSpeaker(id) {
 }
 
 
-// === Hymn Search with Warning ===
-function setupHymnSearch(input, onSelect) {
-    const wrapper = input.parentElement;
-    const resultsBox = wrapper.querySelector('.hymn-results');
+// function setupHymnSearch ... MOVED TO utils/uiUtils.js
 
-    // Create Warning Element if not exists
-    let warningEl = wrapper.querySelector('.warning-text');
-    if (!warningEl) {
-        warningEl = document.createElement('div');
-        warningEl.className = 'warning-text';
-        wrapper.appendChild(warningEl);
-    }
-
-    input.addEventListener('focus', () => state.activeMemberInput = null); // Unset member focus on hymn
-
-    input.addEventListener('input', async () => {
-        const val = input.value;
-        warningEl.innerHTML = ''; // Clear warning
-
-        // Search
-        if (window.hymns) {
-            const matches = window.hymns.filter(h =>
-                h.number.toString().startsWith(val) || h.title.toLowerCase().includes(val.toLowerCase())
-            ).slice(0, 5);
-
-            resultsBox.innerHTML = '';
-            if (matches.length > 0 && val.length > 0) {
-                resultsBox.style.display = 'block';
-                matches.forEach(h => {
-                    const row = document.createElement('div');
-                    row.className = 'hymn-result-item';
-                    row.innerText = `${h.number} - ${h.title}`;
-                    row.onclick = async () => {
-                        const str = `${h.number} - ${h.title}`;
-                        input.value = str;
-                        resultsBox.style.display = 'none';
-                        if (onSelect) onSelect(str);
-                        else input.dispatchEvent(new Event('input')); // Trigger update
-
-                        // Check History
-                        const recent = await DM.checkHymnHistory(h.number.toString());
-                        if (recent) {
-                            warningEl.innerHTML = `<i class="ph ph-warning"></i> Cantado em ${recent.date.toLocaleDateString()}`;
-                            input.style.borderColor = varCss('--danger');
-                        } else {
-                            input.style.borderColor = '';
-                        }
-                    };
-                    resultsBox.appendChild(row);
-                });
-            } else { resultsBox.style.display = 'none'; }
-        }
-    });
-
-    document.addEventListener('click', e => {
-        if (!wrapper.contains(e.target)) resultsBox.style.display = 'none';
-    });
-}
 // Init static searches
 function setupFormListeners() {
-    document.querySelectorAll('.hymn-search').forEach(inp => setupHymnSearch(inp));
+    document.querySelectorAll('.hymn-search').forEach(inp => {
+        setupHymnSearch(inp, window.hymns, async (val) => {
+            // Handle Selection Callback (Replaces logic that was inside setupHymnSearch)
+            const num = val.split(' - ')[0]; // Extract number if format is "123 - Title"
+            const warningEl = inp.parentElement.querySelector('.warning-text');
+
+            // Check History
+            const recent = await DM.checkHymnHistory(num);
+            if (recent) {
+                if (warningEl) warningEl.innerHTML = `<i class="ph ph-warning"></i> Cantado em ${recent.date.toLocaleDateString()}`;
+                inp.style.borderColor = varCss('--danger');
+            } else {
+                inp.style.borderColor = '';
+            }
+        });
+    });
 
     // Member search for prayers
     document.querySelectorAll('.member-search').forEach(inp => {
@@ -1520,120 +1481,14 @@ async function processPdfImport() {
 // --- CORE PARSER FUNCTIONS ---
 
 /**
- * Extracts text from PDF but PRESERVES table layout by 
+ * Extracts text from PDF but PRESERVES table layout by
  * grouping items by Y-coordinate (Rows) and separating columns with gaps.
  */
-async function extractVisualLines(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let allLines = [];
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-
-        // 1. Group items by Y position (Row Detection)
-        // We use a tolerance of 4 pixels to account for minor misalignments
-        const rowMap = new Map();
-        const Y_TOLERANCE = 4;
-
-        content.items.forEach(item => {
-            // PDF Y-coordinates start from bottom, so higher value = higher on page
-            const y = item.transform[5];
-            if (!item.str.trim()) return; // Skip empty whitespace items
-
-            let matchY = null;
-            for (const existingY of rowMap.keys()) {
-                if (Math.abs(existingY - y) < Y_TOLERANCE) {
-                    matchY = existingY;
-                    break;
-                }
-            }
-            if (matchY !== null) {
-                rowMap.get(matchY).push(item);
-            } else {
-                rowMap.set(y, [item]);
-            }
-        });
-
-        // 2. Sort Rows (Top to Bottom)
-        const sortedYs = Array.from(rowMap.keys()).sort((a, b) => b - a);
-
-        // 3. Construct Lines
-        sortedYs.forEach(y => {
-            const items = rowMap.get(y);
-            // Sort items Left to Right (X position)
-            items.sort((a, b) => a.transform[4] - b.transform[4]);
-
-            let lineStr = '';
-            for (let k = 0; k < items.length; k++) {
-                const curr = items[k];
-                lineStr += curr.str;
-
-                // Add visual gap if next item is far away
-                if (k < items.length - 1) {
-                    const next = items[k + 1];
-                    const currEnd = curr.transform[4] + curr.width;
-                    const gap = next.transform[4] - currEnd;
-
-                    if (gap > 10) {
-                        lineStr += '   '; // 3 spaces = Column Break
-                    } else {
-                        lineStr += ' ';   // 1 space = Word Break
-                    }
-                }
-            }
-            allLines.push(lineStr.trim());
-        });
-    }
-    return allLines;
-}
-
-function parseMemberLines(lines) {
-    const results = [];
-
-    // Pattern: Name (letters/comma) ... Gap ... Sex (M/F) ... Gap ... Age (Digits)
-    // We look for M/F and Age specifically as anchors
-    const rowRegex = /^(.+?)\s{2,}([MF])\s{2,}(\d{1,3})/;
-
-    lines.forEach(line => {
-        const match = rowRegex.exec(line);
-        if (match) {
-            const rawName = match[1].trim();
-            const sex = match[2];
-            const age = parseInt(match[3]);
-
-            // Determine Group based on Age
-            let group = 'Adult';
-            if (age <= 11) group = 'Primary';
-            else if (age >= 12 && age <= 17) group = 'Youth';
-            else if (age >= 18 && age <= 35) group = 'Young Adult';
-
-            // Clean Name (remove trailing comma if exists)
-            const name = rawName.replace(/,$/, '');
-
-            results.push({
-                name: name,
-                gender: sex,
-                age: age,
-                group: group,
-                calling: '' // Filled later
-            });
-        }
-    });
-
-    return results;
-}
 
 // --- HELPERS ---
 
-function normalizeName(str) {
-    return str.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
-}
 
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 function renderSmartPreview(data) {
     const tbody = document.getElementById('import-preview-tbody');

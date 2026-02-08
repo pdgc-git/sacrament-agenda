@@ -1,5 +1,6 @@
 /* js/simple-ui.js */
 const state = { recognitions: [], announcements: [], releases: [], callings: [], speakers: [] };
+import { setupHymnSearch } from './utils/uiUtils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -44,7 +45,7 @@ function setupEventListeners() {
     });
 
     // Hymn Search
-    document.querySelectorAll('.hymn-search').forEach(setupHymnSearch);
+    document.querySelectorAll('.hymn-search').forEach(input => setupHymnSearch(input, window.hymns));
 }
 
 function setupDataBinding() {
@@ -156,28 +157,8 @@ function exportPDF() {
     else alert('Erro: Biblioteca PDF não carregada.');
 }
 function toggleFullScreen() { document.querySelector('.app-layout').classList.toggle('full-screen'); }
-function setupHymnSearch(input) {
-    const res = input.parentElement.querySelector('.hymn-results');
-    input.addEventListener('input', () => {
-        const val = input.value.toLowerCase();
-        if (!val) { res.style.display = 'none'; return; }
-        if (window.hymns) {
-            const m = window.hymns.filter(h => h.number.toString().startsWith(val) || h.title.toLowerCase().includes(val)).slice(0, 5);
-            res.innerHTML = '';
-            if (m.length) {
-                res.style.display = 'block';
-                m.forEach(h => {
-                    const d = document.createElement('div');
-                    d.className = 'hymn-result-item';
-                    d.textContent = `${h.number} - ${h.title}`;
-                    d.onclick = () => { input.value = d.textContent; res.style.display = 'none'; input.dispatchEvent(new Event('input')); };
-                    res.appendChild(d);
-                });
-            } else res.style.display = 'none';
-        }
-    });
-    document.addEventListener('click', e => { if (!input.parentElement.contains(e.target)) res.style.display = 'none'; });
-}
+function toggleFullScreen() { document.querySelector('.app-layout').classList.toggle('full-screen'); }
+// setupHymnSearch moved to utils/uiUtils.js
 
 function formatDate(dateInput) {
     if (!dateInput) return '...';
