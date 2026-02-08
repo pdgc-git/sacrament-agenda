@@ -1323,16 +1323,27 @@ document.getElementById('roster-filter')?.addEventListener('change', renderRoste
 // === Bulk Import Logic ===
 function openBulkImport() {
     const modal = document.getElementById('bulk-import-modal');
-    modal.style.display = 'flex';
+    if (modal) modal.style.display = 'flex';
 
-    // Reset Stages
-    document.getElementById('import-stage-input').style.display = 'flex';
-    document.getElementById('import-stage-preview').style.display = 'none';
-    document.getElementById('import-paste-area').value = '';
-    document.getElementById('import-preview-tbody').innerHTML = '';
+    // Reset Inputs
+    const fMembers = document.getElementById('file-members');
+    if (fMembers) fMembers.value = '';
+    const fCallings = document.getElementById('file-callings');
+    if (fCallings) fCallings.value = '';
+
+    // Reset Preview Areas
+    const previewBox = document.getElementById('import-preview-container');
+    if (previewBox) previewBox.style.display = 'none';
+
+    const actionBox = document.getElementById('import-actions');
+    if (actionBox) actionBox.style.display = 'none';
+
+    const tbody = document.getElementById('import-preview-tbody');
+    if (tbody) tbody.innerHTML = '';
 }
 
 function downloadTemplate() {
+    // Template for manual CSV - keeping just in case, but button might be gone
     const headers = ['Name', 'Calling', 'Group', 'Gender'];
     const rows = [
         ['Exemplo Nome', 'Bispo', 'Adult', 'M'],
@@ -1351,84 +1362,6 @@ function downloadTemplate() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
-
-// Stage 1 -> Stage 2: Parse & Preview
-async function processPasteImport() {
-    const text = document.getElementById('import-paste-area').value;
-    if (!text.trim()) return alert("Por favor cole alguns dados primeiro.");
-
-    // Detect delimiter
-    const delimiter = text.includes('\t') ? '\t' : ',';
-    const lines = text.split('\n').filter(l => l.trim().length > 0);
-
-    const tbody = document.getElementById('import-preview-tbody');
-    tbody.innerHTML = '';
-
-    let validCount = 0;
-    let startIdx = 0;
-
-    // Check header
-    if (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('nome')) startIdx = 1;
-
-    for (let i = startIdx; i < lines.length; i++) {
-        let cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
-        if (cols.length < 1 || !cols[0]) continue;
-
-        let name = cols[0];
-        let calling = cols[1] || '';
-        let groupRaw = (cols[2] || 'Adult').toLowerCase();
-        let genderRaw = (cols[3] || 'M').toUpperCase();
-
-        // Normalize Defaults
-        let groupVal = 'Adult';
-        if (groupRaw.includes('jov') || groupRaw.includes('youth')) groupVal = 'Youth';
-        else if (groupRaw.includes('prim')) groupVal = 'Primary';
-        else if (groupRaw.includes('ja') || groupRaw.includes('adulto')) groupVal = 'Young Adult';
-
-        let genderVal = genderRaw.startsWith('F') ? 'F' : 'M';
-
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #e2e8f0';
-        tr.innerHTML = `
-            <td style="padding:0.5rem; font-weight:500;">
-                <input type="text" value="${name}" class="preview-name" style="width:100%; border:none; background:transparent;">
-            </td>
-            <td style="padding:0.5rem;">
-                <input type="text" value="${calling}" class="preview-calling" style="width:100%; border:1px solid #e2e8f0; border-radius:4px; padding:2px 4px;">
-            </td>
-            <td style="padding:0.5rem;">
-                <select class="preview-group" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
-                    <option value="Adult" ${groupVal === 'Adult' ? 'selected' : ''}>Adulto</option>
-                    <option value="Young Adult" ${groupVal === 'Young Adult' ? 'selected' : ''}>JA</option>
-                    <option value="Youth" ${groupVal === 'Youth' ? 'selected' : ''}>Jovem</option>
-                    <option value="Primary" ${groupVal === 'Primary' ? 'selected' : ''}>Primária</option>
-                </select>
-            </td>
-            <td style="padding:0.5rem;">
-                <select class="preview-gender" style="padding:2px; border-radius:4px; border:1px solid #e2e8f0;">
-                    <option value="M" ${genderVal === 'M' ? 'selected' : ''}>M</option>
-                    <option value="F" ${genderVal === 'F' ? 'selected' : ''}>F</option>
-                </select>
-            </td>
-            <td style="padding:0.5rem; text-align:center;">
-                <i class="ph ph-x" style="cursor:pointer; color:red;" data-action="remove-import-row"></i>
-            </td>
-        `;
-        tbody.appendChild(tr);
-        validCount++;
-    }
-
-    document.getElementById('import-count').textContent = validCount;
-
-    // Switch View
-    document.getElementById('import-stage-input').style.display = 'none';
-    document.getElementById('import-stage-preview').style.display = 'flex';
-}
-
-function updateImportCount() {
-    const count = document.getElementById('import-preview-tbody').rows.length;
-    document.getElementById('import-count').textContent = count;
 }
 
 // Stage 2 -> Final: Save
@@ -1462,19 +1395,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-close-import-modal')?.addEventListener('click', () => {
         document.getElementById('bulk-import-modal').style.display = 'none';
     });
-    document.getElementById('btn-download-template')?.addEventListener('click', downloadTemplate);
-    document.getElementById('btn-process-paste')?.addEventListener('click', processPasteImport);
-    document.getElementById('btn-back-import')?.addEventListener('click', () => {
-        document.getElementById('import-stage-input').style.display = 'flex';
-        document.getElementById('import-stage-preview').style.display = 'none';
+
+    document.getElementById('btn-cancel-import')?.addEventListener('click', () => {
+        document.getElementById('bulk-import-modal').style.display = 'none';
     });
+
     document.getElementById('btn-confirm-import')?.addEventListener('click', confirmImport);
 
     // Import Table Delegation
     document.getElementById('import-preview-tbody')?.addEventListener('click', (e) => {
-        if (e.target.dataset.action === 'remove-import-row') {
+        if (e.target.closest('.ph-x')) {
             e.target.closest('tr').remove();
-            updateImportCount();
         }
     });
 
