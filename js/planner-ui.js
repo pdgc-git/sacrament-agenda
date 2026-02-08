@@ -1486,59 +1486,83 @@ async function extractTextFromPDF(file) {
     return fullText;
 }
 
-function parseRobust(text, type) {
-    // 1. Extract all quoted content
-    const tokens = [];
-    // The user requirement: Extract all quoted content using regex: /"([^"]*)"/g
-    const regex = /"([^"]*)"/g;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-        tokens.push(match[1].trim()); // Content without quotes
-    }
-
+function parseRobust(rawText, type) {
+    // 1. Sanitize: Remove newlines to treat as one long stream
+    // Replace newlines with space, then collapse multiple spaces
+    const text = rawText.replace(/[\r\n]+/g, ' ').trim();
     const results = [];
 
-    for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i];
+    if (type === 'members') {
+        // Pattern: "Name", "Sex", "Age"
+        // Captures: 1=Name, 2=Sex, 3=Age
+        const regex = /"([^"]+)"\s*,\s*"([MF])"\s*,\s*"(\d+)"/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const age = parseInt(match[3]);
+            let group = 'Adult';
+            if (age <= 11) group = 'Primary';
+            else if (age >= 12 && age <= 17) group = 'Youth';
+            else if (age >= 18 && age <= 35) group = 'Young Adult';
+            else group = 'Adult';
 
-        // Anchor Strategy: Look for Gender Token
-        if (token === 'M' || token === 'F') {
-            if (i === 0) continue;
+            results.push({
+                name: match[1].trim(),
+                gender: match[2].trim(),
+                age: age,
+                group: group,
+                calling: ''
+            });
+        }
+    } else if (type === 'callings') {
+        // Pattern anchor: "Sex", "Age"
+        // We find this, then look around for Name and Calling
+        const anchorRegex = /"([MF])"\s*,\s*"(\d+)"/g;
+        let match;
+        let lastNameSeen = "Desconhecido"; // Fallback
 
-            const name = tokens[i - 1]; // Name is previous token
-            const ageStr = tokens[i + 1]; // Age is next token
-            const age = parseInt(ageStr);
+        while ((match = anchorRegex.exec(text)) !== null) {
+            // match[0] is like '"M", "35"'
+            // match.index is where it starts
 
-            // Validate Age to ensure this is a generic valid row
-            if (!isNaN(age)) {
+            // 1. FIND NAME (Look Behind)
+            // Grab text before the match
+            const preText = text.substring(0, match.index).trim();
+            // Check if it ends with "Name",
+            // We look for a quoted string followed immediately by a comma at the end of preText
+            const nameCheck = /"([^"]+)"\s*,\s*$/;
+            const nameMatch = nameCheck.exec(preText);
 
-                let calling = '';
-                if (type === 'callings') {
-                    // "If type === 'callings', get Calling from token at index + 4"
-                    if (i + 4 < tokens.length) {
-                        calling = tokens[i + 4];
-                    }
-                }
-
-                // Group Inference
-                let group = 'Adult';
-                if (age <= 11) group = 'Primary';
-                else if (age >= 12 && age <= 17) group = 'Youth';
-                else if (age >= 18 && age <= 35) group = 'Young Adult';
-                else group = 'Adult';
-
-                results.push({
-                    name: name,
-                    gender: token,
-                    age: age,
-                    calling: calling,
-                    group: group
-                });
+            let currentName = lastNameSeen;
+            if (nameMatch) {
+                currentName = nameMatch[1].trim();
+                lastNameSeen = currentName;
             }
+            // If no match, we assume the name was empty/implied (e.g. `,, "F"`) 
+            // so we keep using lastNameSeen.
+
+            // 2. FIND CALLING (Look Ahead)
+            // We need to skip 2 fields (DOB, Org) and get the 3rd (Calling).
+            // Fields can be "Quoted" OR Unquoted (empty ,, or just ,text,)
+            // The text after our match starts with a comma.
+            const postText = text.substring(match.index + match[0].length);
+
+            // Pattern: , Field , Field , "Calling"
+            // Field = "..." OR [^,]*
+            // This regex matches: comma, (any field), comma, (any field), comma, "Calling"
+            const callingRegex = /^\s*,\s*(?:"[^"]*"|[^,]*)\s*,\s*(?:"[^"]*"|[^,]*)\s*,\s*"([^"]*)"/;
+            const callMatch = callingRegex.exec(postText);
+
+            let calling = '';
+            if (callMatch) {
+                calling = callMatch[1].trim();
+            }
+
+            results.push({
+                name: currentName,
+                calling: calling
+            });
         }
     }
-
     return results;
 }
 
