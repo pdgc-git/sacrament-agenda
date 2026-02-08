@@ -1444,31 +1444,52 @@ async function processPdfImport() {
         const memberMap = new Map();
         membersData.forEach(m => memberMap.set(normalizeName(m.name), m));
 
-        // 2. Parse Callings (Optional) - using "Smart Match"
+        // 2. Parse Callings (Optional) - using "Column-Aware Match"
         if (fileCallings) {
             btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> Analisando Chamados...`;
             const callingLines = await extractVisualLines(fileCallings);
 
-            // For each line in callings PDF, check if it contains a known member name
             callingLines.forEach(line => {
-                const normLine = normalizeName(line);
+                // Split by visual column breaks (3 spaces created by extractVisualLines)
+                // Filter removes empty strings if split creates them
+                const parts = line.split(/\s{3,}/).map(p => p.trim()).filter(p => p);
 
-                // Try to find a member name inside this line
-                for (const [memNameKey, memberObj] of memberMap.entries()) {
-                    if (normLine.includes(memNameKey)) {
-                        // Found a member in this line! 
-                        // The "Calling" is likely the text REMAINING after removing the name.
-                        // We use the original case-sensitive line to extract the calling
-                        const nameRegex = new RegExp(escapeRegExp(memberObj.name), 'i');
-                        let callingText = line.replace(nameRegex, '').trim();
+                // Find which column index contains the member name
+                let nameIndex = -1;
+                let foundMember = null;
 
-                        // Cleanup common artifacts
-                        callingText = callingText.replace(/^[–-]\s*/, ''); // Remove leading dash
+                for (let i = 0; i < parts.length; i++) {
+                    const normPart = normalizeName(parts[i]);
 
-                        if (callingText.length > 3) { // Filter out noise
-                            memberObj.calling = callingText;
+                    // Check if this specific column matches a known member
+                    // We check if the column text *contains* the key (to handle "Silva, Joao" vs "Joao Silva")
+                    // OR if the key contains the column text.
+                    for (const [memNameKey, memberObj] of memberMap.entries()) {
+                        if (normPart.includes(memNameKey) || memNameKey.includes(normPart)) {
+                            nameIndex = i;
+                            foundMember = memberObj;
+                            break;
                         }
-                        break; // Stop checking members for this line
+                    }
+                    if (foundMember) break;
+                }
+
+                // If we found a member and there are columns BEFORE the name
+                // LCR Format is typically: Organization | Calling | Name | Date...
+                // So if Name is at index 2, parts [0] and [1] are Org and Calling.
+                if (foundMember && nameIndex > 0) {
+                    // Capture everything before the name column
+                    const callingParts = parts.slice(0, nameIndex);
+
+                    // User requested: "Organização - Chamado"
+                    // Join the pre-name parts with a hyphen
+                    let callingText = callingParts.join(' - ');
+
+                    // Cleanup common artifacts (leading dashes etc)
+                    callingText = callingText.replace(/^[–-]\s*/, '').trim();
+
+                    if (callingText.length > 2) {
+                        foundMember.calling = callingText;
                     }
                 }
             });
