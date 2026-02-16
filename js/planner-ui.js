@@ -24,7 +24,11 @@ const state = {
     wardName: 'Ala',
     role: null,
     currentEditorDate: null, // YYYY-MM-DD being edited
-    activeMemberInput: null // Track which input is focused for "Click to Insert"
+    activeMemberInput: null, // Track which input is focused for "Click to Insert"
+    viewMode: 'PLAN', // 'PLAN' or 'FULL'
+    activeSubTab: 'speakers', // 'speakers', 'hymns', 'prayers'
+    assistantFilterGender: null,
+    assistantFilterGroup: null
 };
 
 // Expose state for debugging
@@ -49,13 +53,26 @@ function setupEventListeners() {
     // Timeline
     document.getElementById('btn-refresh-timeline')?.addEventListener('click', () => renderTimeline());
 
-    // Editor Tabs
-    document.querySelectorAll('.segment-btn').forEach(btn => {
+    // Mode Toggle (Plan / Full)
+    document.querySelectorAll('.mode-toggle-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            if (tab) switchEditorTab(tab);
+            const mode = btn.dataset.mode;
+            if (mode) setPlannerMode(mode);
         });
     });
+
+    // Plan Sub-Navigation
+    document.querySelectorAll('.plan-subnav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.subtab;
+            if (tab) renderPlanSubTab(tab);
+        });
+    });
+
+    // Assistant Panel Filters
+    document.getElementById('assist-filter-m')?.addEventListener('click', () => toggleAssistantFilter('M'));
+    document.getElementById('assist-filter-f')?.addEventListener('click', () => toggleAssistantFilter('F'));
+    document.getElementById('assist-filter-youth')?.addEventListener('click', () => toggleAssistantFilter('Youth'));
 
     // Editor Actions
     document.getElementById('btn-export-pdf')?.addEventListener('click', exportPDF);
@@ -703,10 +720,9 @@ async function editPlan(dateStr) {
     renderSpeakersInput();
     renderAllDynamicLists();
 
-    // Initialize Member Pool
-    renderMemberPool();
-    // Default Tab
-    window.switchEditorTab('speakers');
+    // Initialize with Plan mode
+    setPlannerMode('PLAN');
+    renderPlanSubTab('speakers');
 };
 
 // 2. Member Pool Logic
@@ -789,6 +805,349 @@ function insertMemberIntoActiveInput(member) {
     }
 }
 function varCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
+
+// === PLAN vs FULL Mode Logic ===
+
+function setPlannerMode(mode) {
+    state.viewMode = mode;
+    const planContainer = document.getElementById('planner-mode-plan');
+    const fullContainer = document.getElementById('planner-mode-full');
+
+    // Toggle visibility
+    if (mode === 'PLAN') {
+        if (planContainer) planContainer.style.display = 'grid';
+        if (fullContainer) fullContainer.style.display = 'none';
+    } else {
+        if (planContainer) planContainer.style.display = 'none';
+        if (fullContainer) fullContainer.style.display = 'block';
+        // In FULL mode, show all tabs
+        switchEditorTab('full');
+        renderMemberPool();
+    }
+
+    // Update toggle button active states
+    document.querySelectorAll('.mode-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+}
+
+function renderPlanSubTab(tabName) {
+    state.activeSubTab = tabName;
+    const container = document.getElementById('plan-input-container');
+    const assistantList = document.getElementById('assistant-list');
+    if (!container) return;
+
+    // Update subnav active state
+    document.querySelectorAll('.plan-subnav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.subtab === tabName);
+    });
+
+    // Clear & inject content based on tab
+    container.innerHTML = '';
+
+    if (tabName === 'speakers') {
+        container.innerHTML = `
+            <div class="form-section">
+                <h3>Programa Espiritual</h3>
+                <div id="plan-speakers-list"></div>
+                <button class="btn btn-secondary" id="plan-add-speaker" style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
+                <div id="plan-hymn-wrapper">
+                    <button class="btn btn-secondary" id="plan-add-hymn" style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+ Adicionar Hino Interm.</button>
+                </div>
+            </div>
+        `;
+        renderPlanSpeakers();
+        document.getElementById('plan-add-speaker')?.addEventListener('click', () => {
+            addSpeakerUI();
+            renderPlanSpeakers();
+        });
+        document.getElementById('plan-add-hymn')?.addEventListener('click', () => {
+            addProgramHymnUI();
+            renderPlanSpeakers();
+        });
+        // Show member recommendations
+        renderSmartRecommendations('speakers');
+    } else if (tabName === 'hymns') {
+        container.innerHTML = `
+            <div class="form-section">
+                <h3>Música</h3>
+                <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+                    <div class="input-wrapper">
+                        <label>Regente</label>
+                        <input type="text" id="plan-chorister" placeholder="Nome..." value="${getPlanFormValue('chorister')}">
+                    </div>
+                    <div class="input-wrapper">
+                        <label>Pianista</label>
+                        <input type="text" id="plan-organist" placeholder="Nome..." value="${getPlanFormValue('organist')}">
+                    </div>
+                </div>
+                <div class="hymn-input-wrapper">
+                    <label>Hino de Abertura</label>
+                    <input type="text" class="plan-hymn-search" id="plan-openingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('openingHymn')}">
+                    <div class="hymn-results"></div>
+                </div>
+                <div class="hymn-input-wrapper">
+                    <label>Hino Sacramental</label>
+                    <input type="text" class="plan-hymn-search" id="plan-sacramentHymn" placeholder="Número ou Título..." value="${getPlanFormValue('sacramentHymn')}">
+                    <div class="hymn-results"></div>
+                </div>
+                <div class="hymn-input-wrapper">
+                    <label>Hino de Encerramento</label>
+                    <input type="text" class="plan-hymn-search" id="plan-closingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('closingHymn')}">
+                    <div class="hymn-results"></div>
+                </div>
+            </div>
+        `;
+        // Sync plan inputs back to full form
+        ['chorister', 'organist'].forEach(name => {
+            const planInput = document.getElementById(`plan-${name}`);
+            if (planInput) {
+                planInput.addEventListener('input', () => syncToFullForm(name, planInput.value));
+            }
+        });
+        // Setup hymn search on plan inputs
+        container.querySelectorAll('.plan-hymn-search').forEach(inp => {
+            const fieldName = inp.id.replace('plan-', '');
+            setupHymnSearch(inp, window.hymns, async (val) => {
+                syncToFullForm(fieldName, val);
+                await checkHymnWarning(inp, val);
+            });
+            inp.addEventListener('input', () => syncToFullForm(fieldName, inp.value));
+        });
+        // Show hymn info in assistant
+        if (assistantList) {
+            assistantList.innerHTML = `
+                <div style="text-align:center; padding:2rem; color:var(--text-light); font-size:0.85rem;">
+                    <i class="ph ph-music-notes" style="font-size:2rem;"></i>
+                    <p style="margin-top:0.5rem;">Pesquise hinos nos campos à esquerda.<br>Os avisos de repetição aparecem automaticamente.</p>
+                </div>
+            `;
+        }
+    } else if (tabName === 'prayers') {
+        container.innerHTML = `
+            <div class="form-section">
+                <h3>Orações</h3>
+                <div class="input-wrapper" style="margin-bottom:1rem;">
+                    <label>Primeira Oração</label>
+                    <div class="member-search-wrapper">
+                        <input type="text" class="plan-member-search" id="plan-invocation" placeholder="Nome do membro..." value="${getPlanFormValue('invocation')}">
+                        <div class="member-results"></div>
+                    </div>
+                </div>
+                <div class="input-wrapper">
+                    <label>Última Oração</label>
+                    <div class="member-search-wrapper">
+                        <input type="text" class="plan-member-search" id="plan-benediction" placeholder="Nome do membro..." value="${getPlanFormValue('benediction')}">
+                        <div class="member-results"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        // Setup member search on plan prayer inputs
+        container.querySelectorAll('.plan-member-search').forEach(inp => {
+            const fieldName = inp.id.replace('plan-', '');
+            inp.addEventListener('focus', () => state.activeMemberInput = inp);
+            inp.addEventListener('input', () => {
+                syncToFullForm(fieldName, inp.value);
+                const val = inp.value.toLowerCase();
+                const resBox = inp.parentElement.querySelector('.member-results');
+                resBox.innerHTML = '';
+                if (val.length < 2) return;
+                const matches = state.members.filter(m => m.name.toLowerCase().includes(val)).slice(0, 5);
+                matches.forEach(m => {
+                    const r = document.createElement('div');
+                    r.className = 'hymn-result-item';
+                    r.innerText = m.name;
+                    r.onclick = () => {
+                        inp.value = m.name;
+                        resBox.innerHTML = '';
+                        syncToFullForm(fieldName, m.name);
+                    };
+                    resBox.appendChild(r);
+                });
+            });
+        });
+        // Show prayer member recommendations
+        renderSmartRecommendations('prayers');
+    }
+}
+
+function renderPlanSpeakers() {
+    const container = document.getElementById('plan-speakers-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    state.speakers.forEach((item, index) => {
+        const div = document.createElement('div');
+
+        if (item.type === 'speaker') {
+            div.className = 'speaker-row-edit';
+            div.innerHTML = `
+                <div class="input-wrapper">
+                    <label>Orador ${index + 1}</label>
+                    <input type="text" class="plan-speaker-input" data-id="${item.id}" value="${item.name || ''}" placeholder="Nome do membro...">
+                </div>
+                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
+            `;
+            const input = div.querySelector('input');
+            input.addEventListener('focus', () => state.activeMemberInput = input);
+            input.addEventListener('input', (e) => {
+                item.name = e.target.value;
+                const m = state.members.find(x => x.name === e.target.value);
+                item.memberId = m ? m.id : null;
+            });
+        } else if (item.type === 'hymn') {
+            div.className = 'speaker-row-edit hymn';
+            div.innerHTML = `
+                <div class="hymn-input-wrapper" style="margin-bottom:0">
+                    <label>Hino Intermediário</label>
+                    <input type="text" class="hymn-search" value="${item.name || ''}" placeholder="Número ou Título...">
+                    <div class="hymn-results"></div>
+                </div>
+                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px;">×</button>
+            `;
+            const input = div.querySelector('input');
+            setupHymnSearch(input, window.hymns, (val) => { item.name = val; });
+            input.addEventListener('input', (e) => item.name = e.target.value);
+        }
+
+        container.appendChild(div);
+    });
+
+    // Handle remove clicks via delegation
+    container.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-remove-speaker')) {
+            const id = e.target.closest('.btn-remove-speaker').dataset.id;
+            removeSpeaker(id);
+            renderPlanSpeakers();
+        }
+    });
+}
+
+function getPlanFormValue(name) {
+    const fullForm = document.getElementById('agendaForm');
+    if (fullForm && fullForm[name]) return fullForm[name].value || '';
+    return '';
+}
+
+function syncToFullForm(name, value) {
+    const fullForm = document.getElementById('agendaForm');
+    if (fullForm && fullForm[name]) fullForm[name].value = value;
+}
+
+function renderSmartRecommendations(category) {
+    const listEl = document.getElementById('assistant-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    // Filter
+    let pool = state.members.filter(m => {
+        if (state.assistantFilterGender && m.gender !== state.assistantFilterGender) return false;
+        if (state.assistantFilterGroup && m.group !== state.assistantFilterGroup) return false;
+        return true;
+    });
+
+    // Sort: nulls first (never spoke), then ascending by last_talk_date
+    pool.sort((a, b) => {
+        const dateA = a.last_talk_date ? a.last_talk_date.toDate().getTime() : 0;
+        const dateB = b.last_talk_date ? b.last_talk_date.toDate().getTime() : 0;
+        if (dateA === 0 && dateB !== 0) return -1;
+        if (dateA !== 0 && dateB === 0) return 1;
+        return dateA - dateB;
+    });
+
+    if (pool.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-light); font-size:0.85rem;">Nenhum membro encontrado.</div>';
+        return;
+    }
+
+    pool.slice(0, 30).forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'suggestion-card';
+
+        let statusBadge = '<span class="status-indicator status-green">Nunca falou</span>';
+        let lastDateStr = 'Sem registo';
+        if (m.last_talk_date) {
+            const d = m.last_talk_date.toDate();
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            if (d > threeMonthsAgo) {
+                statusBadge = '<span class="status-indicator status-warn">Recente</span>';
+            } else {
+                statusBadge = '<span class="status-indicator status-ok">Disponível</span>';
+            }
+            lastDateStr = 'Último: ' + d.toLocaleDateString();
+        }
+
+        card.innerHTML = `
+            <div>
+                <div class="card-name">${m.name}</div>
+                <div class="card-meta">${lastDateStr}</div>
+            </div>
+            ${statusBadge}
+        `;
+
+        card.addEventListener('click', () => {
+            insertMemberIntoActiveInput(m);
+        });
+
+        listEl.appendChild(card);
+    });
+}
+
+function toggleAssistantFilter(type) {
+    const chips = document.querySelectorAll('#assistant-filters .filter-chip');
+
+    if (type === 'Youth') {
+        if (state.assistantFilterGroup === 'Youth') {
+            state.assistantFilterGroup = null;
+        } else {
+            state.assistantFilterGroup = 'Youth';
+            state.assistantFilterGender = null;
+        }
+    } else {
+        if (state.assistantFilterGender === type) {
+            state.assistantFilterGender = null;
+        } else {
+            state.assistantFilterGender = type;
+            state.assistantFilterGroup = null;
+        }
+    }
+
+    // Update chip active states
+    chips.forEach(c => {
+        const f = c.dataset.filter;
+        if (f === 'Youth') {
+            c.classList.toggle('active', state.assistantFilterGroup === 'Youth');
+        } else {
+            c.classList.toggle('active', state.assistantFilterGender === f);
+        }
+    });
+
+    renderSmartRecommendations(state.activeSubTab);
+}
+
+async function checkHymnWarning(inputEl, val) {
+    // Remove any existing warning
+    const existingWarning = inputEl.parentElement.querySelector('.hymn-warning-box');
+    if (existingWarning) existingWarning.remove();
+    inputEl.style.borderColor = '';
+
+    if (!val) return;
+    const num = val.split(' - ')[0];
+    try {
+        const recent = await DM.checkHymnHistory(num);
+        if (recent) {
+            inputEl.style.borderColor = varCss('--danger');
+            const warning = document.createElement('div');
+            warning.className = 'hymn-warning-box';
+            warning.innerHTML = `<i class="ph ph-warning-circle"></i> Este hino foi cantado em ${recent.date.toLocaleDateString()}`;
+            inputEl.parentElement.appendChild(warning);
+        }
+    } catch (e) {
+        console.warn('Hymn history check failed:', e);
+    }
+}
 
 // Filter Toggles
 function togglePoolFilter(type) {
@@ -1576,3 +1935,5 @@ window.viewMember = viewMember;
 window.editMember = editMember;
 window.deleteMember = deleteMember;
 window.renderAdmin = renderAdmin;
+window.setPlannerMode = setPlannerMode;
+window.renderPlanSubTab = renderPlanSubTab;
