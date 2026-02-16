@@ -150,206 +150,259 @@
 
         <!-- VIEW 3: WORKBENCH EDITOR -->
         <div id="view-planner" class="view-container">
+
+            <!-- Editor Header Bar -->
             <div class="workbench-toolbar">
                 <div class="wb-title">
                     <h2>Editor de Reunião</h2>
                     <p id="editor-date-display">Selecione uma data...</p>
                 </div>
-                <!-- Segmented Control -->
-                <div class="segmented-control">
-                    <button class="segment-btn active" data-tab="speakers" id="tab-btn-speakers">Oradores</button>
-                    <button class="segment-btn" data-tab="hymns" id="tab-btn-hymns">Hinos</button>
-                    <button class="segment-btn" data-tab="prayers" id="tab-btn-prayers">Orações</button>
-                    <button class="segment-btn" data-tab="full" id="tab-btn-full">Completo</button>
+
+                <!-- Central Mode Toggle (Pill) -->
+                <div class="mode-toggle" id="mode-toggle">
+                    <button class="mode-toggle-btn active" data-mode="PLAN" id="mode-btn-plan">
+                        <i class="ph ph-pencil-simple"></i> Planejar
+                    </button>
+                    <button class="mode-toggle-btn" data-mode="FULL" id="mode-btn-full">
+                        <i class="ph ph-eye"></i> Completo
+                    </button>
                 </div>
+
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn btn-secondary" id="btn-export-pdf"><i class="ph ph-file-pdf"></i> PDF</button>
                     <button class="btn btn-primary" id="btn-finalize"><i class="ph ph-floppy-disk"></i> Gravar</button>
                 </div>
             </div>
 
-            <!-- Editor Content Area -->
-            <div class="workbench-container">
-                <form id="agendaForm" class="editor-grid-layout" onsubmit="return false;">
+            <!-- ========== PLAN MODE ========== -->
+            <div id="planner-mode-plan" class="planner-workspace">
 
-                    <!-- Left/Main Column -->
-                    <div class="editor-main-col" id="editor-main-panel">
+                <!-- Left: Vertical Sub-Navigation -->
+                <nav class="plan-subnav">
+                    <button class="plan-subnav-btn active" data-subtab="speakers" id="subnav-speakers" title="Oradores">
+                        <i class="ph ph-microphone-stage"></i>
+                        <span>Oradores</span>
+                    </button>
+                    <button class="plan-subnav-btn" data-subtab="hymns" id="subnav-hymns" title="Hinos">
+                        <i class="ph ph-music-notes"></i>
+                        <span>Hinos</span>
+                    </button>
+                    <button class="plan-subnav-btn" data-subtab="prayers" id="subnav-prayers" title="Orações">
+                        <i class="ph ph-hands-praying"></i>
+                        <span>Orações</span>
+                    </button>
+                </nav>
 
-                        <!-- Common Header (Date & Presiding) - Always visible or top of 'full' -->
-                        <div class="form-section">
-                            <div class="input-row">
-                                <div class="input-wrapper">
-                                    <label>Data</label>
-                                    <input type="date" name="date" id="input-date">
-                                </div>
-                                <div class="input-wrapper">
-                                    <label>Preside</label>
-                                    <input type="text" name="presiding" placeholder="Bispo...">
-                                </div>
-                                <div class="input-wrapper">
-                                    <label>Dirige</label>
-                                    <input type="text" name="conducting" placeholder="Irmão...">
-                                </div>
-                            </div>
-                            <!-- Fast Meeting Toggle -->
-                            <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <input type="checkbox" id="chk-fast-meeting" name="fastMeeting">
-                                <label for="chk-fast-meeting"
-                                    style="cursor: pointer; font-size: 0.9rem; margin:0;">Domingo de Jejum</label>
-                            </div>
-                            <div id="fast-meeting-note"
-                                style="display:none; color: var(--primary); font-size: 0.85rem; margin-top: 0.5rem; font-style: italic;">
-                                Modo Jejum: Hino Intermédio e Oradores ocultos.
-                            </div>
-                        </div>
-
-                        <!-- Speakers Tab Content -->
-                        <div id="tab-speakers" class="tab-content" style="display:block;">
-                            <div class="form-section">
-                                <h3>Programa Espiritual</h3>
-                                <div id="speakers-input-container">
-                                    <!-- Dynamic Rows -->
-                                </div>
-                                <button class="btn btn-secondary" id="btn-add-speaker"
-                                    style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
-                                <div id="intermediate-hymn-wrapper">
-                                    <button class="btn btn-secondary" id="btn-add-hymn-program"
-                                        style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+
-                                        Adicionar Hino Interm.</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Hymns Tab Content -->
-                        <div id="tab-hymns" class="tab-content" style="display:none;">
-                            <div class="form-section">
-                                <h3>Música</h3>
-                                <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                                    <div class="input-wrapper">
-                                        <label>Regente</label><input type="text" name="chorister">
-                                    </div>
-                                    <div class="input-wrapper">
-                                        <label>Pianista</label><input type="text" name="organist">
-                                    </div>
-                                </div>
-                                <div class="form-section" style="margin-top:1.5rem;">
-                                    <div class="hymn-input-wrapper">
-                                        <label>Hino de Abertura</label>
-                                        <input type="text" class="hymn-search" name="openingHymn">
-                                        <div class="hymn-results"></div>
-                                    </div>
-                                    <div class="hymn-input-wrapper">
-                                        <label>Hino Sacramental</label>
-                                        <input type="text" class="hymn-search" name="sacramentHymn">
-                                        <div class="hymn-results"></div>
-                                    </div>
-                                    <div class="hymn-input-wrapper">
-                                        <label>Hino de Encerramento</label>
-                                        <input type="text" class="hymn-search" name="closingHymn">
-                                        <div class="hymn-results"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Additional Sections (Visible in Full Mode) -->
-                        <div id="tab-extras" class="tab-content" style="display:none;">
-                            <!-- Recognitions -->
-                            <div class="form-section">
-                                <h3>Reconhecimentos</h3>
-                                <div id="recognitions-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-recognition">+
-                                    Adicionar Pessoa</button>
-                            </div>
-
-                            <!-- Announcements -->
-                            <div class="form-section">
-                                <h3>Anúncios</h3>
-                                <div id="announcements-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-announcement">+
-                                    Adicionar Anúncio</button>
-                            </div>
-
-                            <!-- Ward Business -->
-                            <div class="form-section">
-                                <h3>Assuntos da Ala</h3>
-
-                                <label style="margin-top:1rem; display:block">Desobrigações</label>
-                                <div id="releases-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-release">+
-                                    Desobrigação</button>
-
-                                <label style="margin-top:1rem; display:block">Chamados (Apoios)</label>
-                                <div id="callings-input-container" class="dynamic-list-input"></div>
-                                <button class="btn btn-secondary" style="width:100%;" id="btn-add-calling">+
-                                    Chamado</button>
-                            </div>
-                        </div>
-
-                        <!-- Prayers Tab Content -->
-                        <div id="tab-prayers" class="tab-content" style="display:none;">
-                            <div class="form-section">
-                                <h3>Orações</h3>
-                                <div class="input-wrapper">
-                                    <label>Primeira Oração</label>
-                                    <div class="member-search-wrapper">
-                                        <input type="text" class="member-search" name="invocation">
-                                        <div class="member-results"></div>
-                                    </div>
-                                </div>
-                                <div class="input-wrapper">
-                                    <label>Última Oração</label>
-                                    <div class="member-search-wrapper">
-                                        <input type="text" class="member-search" name="benediction">
-                                        <div class="member-results"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Stats (Only visible in Full or Stats tab? Keeping minimal) -->
-                        <div id="tab-stats" class="tab-content"
-                            style="display:none; border-top: 1px solid var(--border); padding-top:1rem; margin-top:2rem;">
-                            <h3>Estatísticas</h3>
-                            <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                                <div class="input-wrapper"><label>Sacramento</label><input type="number"
-                                        name="att_sacrament"></div>
-                            </div>
-                        </div>
-
+                <!-- Center: Main Input Area -->
+                <div class="plan-input-container" id="plan-input-container">
+                    <!-- Dynamically injected by renderPlanSubTab() -->
+                    <div class="plan-input-placeholder">
+                        <i class="ph ph-cursor-click" style="font-size: 2rem; color: var(--text-light);"></i>
+                        <p>Selecione uma secção à esquerda para começar.</p>
                     </div>
+                </div>
 
-                    <!-- Right Column (Member Pool) -->
-                    <div class="editor-side-col" id="member-pool-panel">
-                        <div class="member-pool-header">
-                            <div class="member-pool-title">Sugestões de Membros</div>
-                            <input type="text" id="pool-search" class="premium-input" placeholder="Filtrar nome..."
-                                style="font-size: 0.85rem; padding: 0.5rem;">
-                            <div class="pool-filters">
-                                <span class="filter-chip" data-filter="M" id="filter-chip-m">Homens</span>
-                                <span class="filter-chip" data-filter="F" id="filter-chip-f">Mulheres</span>
-                                <span class="filter-chip" data-filter="Youth" id="filter-chip-youth">Jovens</span>
-                            </div>
-                        </div>
-                        <div class="member-list" id="member-pool-list">
-                            <!-- Injected JS -->
-                            <div
-                                style="text-align:center; padding: 2rem; color: var(--text-light); font-size: 0.85rem;">
-                                Carregando membros...
-                            </div>
+                <!-- Right: Smart Assistant Panel -->
+                <aside class="assistant-panel" id="assistant-panel">
+                    <div class="assistant-header">
+                        <h3><i class="ph ph-sparkle"></i> Assistente</h3>
+                        <div class="assistant-filters" id="assistant-filters">
+                            <span class="filter-chip" data-filter="M" id="assist-filter-m">Homens</span>
+                            <span class="filter-chip" data-filter="F" id="assist-filter-f">Mulheres</span>
+                            <span class="filter-chip" data-filter="Youth" id="assist-filter-youth">Jovens</span>
                         </div>
                     </div>
-
-                </form>
+                    <div class="assistant-list" id="assistant-list">
+                        <!-- Suggestion cards injected by renderSmartRecommendations() -->
+                        <div style="text-align:center; padding: 2rem; color: var(--text-light); font-size: 0.85rem;">
+                            Selecione uma secção para ver sugestões.
+                        </div>
+                    </div>
+                </aside>
             </div>
 
-            <!-- Hidden Preview for PDF Generation -->
-            <div id="pdf-preview-hidden" style="display:none;">
-                <!-- Re-using existing print layout logic via JS clone if needed, or just keeping the HTML structure in memory -->
-                <!-- For robust PDF export, we might need the structure present in DOM. Let's keep a hidden rendering container -->
-                <div id="agenda-paper" class="agenda-paper"
-                    style="width: 210mm; min-height: 297mm; padding: 20mm; background:white; color:black;">
-                    <!-- Logic will populate this before print -->
+            <!-- ========== FULL MODE ========== -->
+            <div id="planner-mode-full" style="display: none;">
+                <div class="workbench-container">
+                    <form id="agendaForm" class="editor-grid-layout" onsubmit="return false;">
+
+                        <!-- Left/Main Column -->
+                        <div class="editor-main-col" id="editor-main-panel">
+
+                            <!-- Common Header (Date & Presiding) -->
+                            <div class="form-section">
+                                <div class="input-row">
+                                    <div class="input-wrapper">
+                                        <label>Data</label>
+                                        <input type="date" name="date" id="input-date">
+                                    </div>
+                                    <div class="input-wrapper">
+                                        <label>Preside</label>
+                                        <input type="text" name="presiding" placeholder="Bispo...">
+                                    </div>
+                                    <div class="input-wrapper">
+                                        <label>Dirige</label>
+                                        <input type="text" name="conducting" placeholder="Irmão...">
+                                    </div>
+                                </div>
+                                <!-- Fast Meeting Toggle -->
+                                <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="chk-fast-meeting" name="fastMeeting">
+                                    <label for="chk-fast-meeting"
+                                        style="cursor: pointer; font-size: 0.9rem; margin:0;">Domingo de Jejum</label>
+                                </div>
+                                <div id="fast-meeting-note"
+                                    style="display:none; color: var(--primary); font-size: 0.85rem; margin-top: 0.5rem; font-style: italic;">
+                                    Modo Jejum: Hino Intermédio e Oradores ocultos.
+                                </div>
+                            </div>
+
+                            <!-- Speakers Tab Content -->
+                            <div id="tab-speakers" class="tab-content" style="display:block;">
+                                <div class="form-section">
+                                    <h3>Programa Espiritual</h3>
+                                    <div id="speakers-input-container">
+                                        <!-- Dynamic Rows -->
+                                    </div>
+                                    <button class="btn btn-secondary" id="btn-add-speaker"
+                                        style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
+                                    <div id="intermediate-hymn-wrapper">
+                                        <button class="btn btn-secondary" id="btn-add-hymn-program"
+                                            style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+
+                                            Adicionar Hino Interm.</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hymns Tab Content -->
+                            <div id="tab-hymns" class="tab-content" style="display:none;">
+                                <div class="form-section">
+                                    <h3>Música</h3>
+                                    <div class="input-grid"
+                                        style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                                        <div class="input-wrapper">
+                                            <label>Regente</label><input type="text" name="chorister">
+                                        </div>
+                                        <div class="input-wrapper">
+                                            <label>Pianista</label><input type="text" name="organist">
+                                        </div>
+                                    </div>
+                                    <div class="form-section" style="margin-top:1.5rem;">
+                                        <div class="hymn-input-wrapper">
+                                            <label>Hino de Abertura</label>
+                                            <input type="text" class="hymn-search" name="openingHymn">
+                                            <div class="hymn-results"></div>
+                                        </div>
+                                        <div class="hymn-input-wrapper">
+                                            <label>Hino Sacramental</label>
+                                            <input type="text" class="hymn-search" name="sacramentHymn">
+                                            <div class="hymn-results"></div>
+                                        </div>
+                                        <div class="hymn-input-wrapper">
+                                            <label>Hino de Encerramento</label>
+                                            <input type="text" class="hymn-search" name="closingHymn">
+                                            <div class="hymn-results"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Sections (Visible in Full Mode) -->
+                            <div id="tab-extras" class="tab-content" style="display:none;">
+                                <!-- Recognitions -->
+                                <div class="form-section">
+                                    <h3>Reconhecimentos</h3>
+                                    <div id="recognitions-input-container" class="dynamic-list-input"></div>
+                                    <button class="btn btn-secondary" style="width:100%;" id="btn-add-recognition">+
+                                        Adicionar Pessoa</button>
+                                </div>
+
+                                <!-- Announcements -->
+                                <div class="form-section">
+                                    <h3>Anúncios</h3>
+                                    <div id="announcements-input-container" class="dynamic-list-input"></div>
+                                    <button class="btn btn-secondary" style="width:100%;" id="btn-add-announcement">+
+                                        Adicionar Anúncio</button>
+                                </div>
+
+                                <!-- Ward Business -->
+                                <div class="form-section">
+                                    <h3>Assuntos da Ala</h3>
+
+                                    <label style="margin-top:1rem; display:block">Desobrigações</label>
+                                    <div id="releases-input-container" class="dynamic-list-input"></div>
+                                    <button class="btn btn-secondary" style="width:100%;" id="btn-add-release">+
+                                        Desobrigação</button>
+
+                                    <label style="margin-top:1rem; display:block">Chamados (Apoios)</label>
+                                    <div id="callings-input-container" class="dynamic-list-input"></div>
+                                    <button class="btn btn-secondary" style="width:100%;" id="btn-add-calling">+
+                                        Chamado</button>
+                                </div>
+                            </div>
+
+                            <!-- Prayers Tab Content -->
+                            <div id="tab-prayers" class="tab-content" style="display:none;">
+                                <div class="form-section">
+                                    <h3>Orações</h3>
+                                    <div class="input-wrapper">
+                                        <label>Primeira Oração</label>
+                                        <div class="member-search-wrapper">
+                                            <input type="text" class="member-search" name="invocation">
+                                            <div class="member-results"></div>
+                                        </div>
+                                    </div>
+                                    <div class="input-wrapper">
+                                        <label>Última Oração</label>
+                                        <div class="member-search-wrapper">
+                                            <input type="text" class="member-search" name="benediction">
+                                            <div class="member-results"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stats -->
+                            <div id="tab-stats" class="tab-content"
+                                style="display:none; border-top: 1px solid var(--border); padding-top:1rem; margin-top:2rem;">
+                                <h3>Estatísticas</h3>
+                                <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                                    <div class="input-wrapper"><label>Sacramento</label><input type="number"
+                                            name="att_sacrament"></div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Column (Member Pool) -->
+                        <div class="editor-side-col" id="member-pool-panel">
+                            <div class="member-pool-header">
+                                <div class="member-pool-title">Sugestões de Membros</div>
+                                <input type="text" id="pool-search" class="premium-input" placeholder="Filtrar nome..."
+                                    style="font-size: 0.85rem; padding: 0.5rem;">
+                                <div class="pool-filters">
+                                    <span class="filter-chip" data-filter="M" id="filter-chip-m">Homens</span>
+                                    <span class="filter-chip" data-filter="F" id="filter-chip-f">Mulheres</span>
+                                    <span class="filter-chip" data-filter="Youth" id="filter-chip-youth">Jovens</span>
+                                </div>
+                            </div>
+                            <div class="member-list" id="member-pool-list">
+                                <!-- Injected JS -->
+                                <div
+                                    style="text-align:center; padding: 2rem; color: var(--text-light); font-size: 0.85rem;">
+                                    Carregando membros...
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- PDF Preview Container -->
+                <div id="pdf-preview-hidden" style="display:none;">
+                    <div id="agenda-paper" class="agenda-paper"
+                        style="width: 210mm; min-height: 297mm; padding: 20mm; background:white; color:black;">
+                    </div>
                 </div>
             </div>
 
@@ -593,7 +646,8 @@
             </div>
 
             <div id="import-actions" style="margin-top:1rem; display:none; justify-content:space-between; gap:1rem;">
-                <button id="btn-remove-no-calling" class="btn btn-secondary" style="color:#ef4444; border-color:#fca5a5;">
+                <button id="btn-remove-no-calling" class="btn btn-secondary"
+                    style="color:#ef4444; border-color:#fca5a5;">
                     <i class="ph ph-funnel"></i> Remover sem Chamado
                 </button>
                 <div style="display:flex; gap:1rem;">
