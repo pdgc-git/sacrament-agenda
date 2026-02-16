@@ -1532,6 +1532,41 @@ function formatDate(input) {
 
 
 
+// === VIEW: ADMIN ===
+async function renderAdmin() {
+    const tbody = document.getElementById('admin-users-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1rem;">Carregando utilizadores...</td></tr>';
+
+    try {
+        const users = await DM.getWardUsers();
+        tbody.innerHTML = '';
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum utilizador encontrado.</td></tr>';
+            return;
+        }
+
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${escapeHtml(u.name || 'Sem nome')}</td>
+                <td>${escapeHtml(u.email)}</td>
+                <td><span class="status-badge role-${escapeHtml(u.role)}">${escapeHtml(u.role)}</span></td>
+                <td>${escapeHtml(u.status || 'active')}</td>
+                <td>
+                    ${u.role !== 'owner' ? `<button class="btn-sm" onclick="alert('Funcionalidade de gestão em breve')">Gerir</button>` : '-'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Erro: ${escapeHtml(e.message)}</td></tr>`;
+    }
+}
+
 // Expose functions for legacy HTML handlers and tests
 window.addMemberUI = addMemberUI;
 window.editPlan = editPlan;
@@ -1540,3 +1575,4 @@ window.toggleMenu = toggleMenu;
 window.viewMember = viewMember;
 window.editMember = editMember;
 window.deleteMember = deleteMember;
+window.renderAdmin = renderAdmin;
