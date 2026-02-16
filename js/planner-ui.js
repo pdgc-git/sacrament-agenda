@@ -1386,6 +1386,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // PDF Import Binding
     document.getElementById('btn-process-pdf')?.addEventListener('click', processPdfImport);
+
+    // Remove members without callings from preview
+    document.getElementById('btn-remove-no-calling')?.addEventListener('click', () => {
+        const rows = document.querySelectorAll('#import-preview-tbody tr');
+        let removed = 0;
+        rows.forEach(tr => {
+            const callingInput = tr.querySelector('.preview-calling');
+            if (!callingInput || !callingInput.value.trim()) {
+                tr.remove();
+                removed++;
+            }
+        });
+        showToast(`${removed} membros sem chamado removidos.`, 'success');
+    });
 });
 
 // ==========================================
