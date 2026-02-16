@@ -81,7 +81,7 @@
                 <i class="ph ph-calendar-blank"></i>
                 <span class="nav-text">Cronologia</span>
             </div>
-            <div class="nav-item" data-target="view-planner" title="Workbench (Editor)">
+            <div class="nav-item" data-target="view-planner" title="Workbench (Editor)" style="display:none">
                 <i class="ph ph-pencil-simple"></i>
                 <span class="nav-text">Editor</span>
             </div>
@@ -161,7 +161,7 @@
                 <!-- Central Mode Toggle (Pill) -->
                 <div class="mode-toggle" id="mode-toggle">
                     <button class="mode-toggle-btn active" data-mode="PLAN" id="mode-btn-plan">
-                        <i class="ph ph-pencil-simple"></i> Planejar
+                        <i class="ph ph-pencil-simple"></i> Planear
                     </button>
                     <button class="mode-toggle-btn" data-mode="FULL" id="mode-btn-full">
                         <i class="ph ph-eye"></i> Completo
@@ -223,7 +223,15 @@
 
             <!-- ========== FULL MODE ========== -->
             <div id="planner-mode-full" style="display: none;">
-                <div class="workbench-container">
+                <div class="workbench-container" style="display:block;">
+
+                    <!-- Segmented Control (Legacy) -->
+                    <div class="segmented-control" style="margin-bottom: 1.5rem;">
+                        <button class="segment-btn active" onclick="switchEditorTab('speakers')">Oradores</button>
+                        <button class="segment-btn" onclick="switchEditorTab('hymns')">Hinos</button>
+                        <button class="segment-btn" onclick="switchEditorTab('prayers')">Orações</button>
+                        <button class="segment-btn" onclick="switchEditorTab('full')">Completo</button>
+                    </div>
                     <form id="agendaForm" class="editor-grid-layout" onsubmit="return false;">
 
                         <!-- Left/Main Column -->

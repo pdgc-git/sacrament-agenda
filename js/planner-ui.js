@@ -820,8 +820,8 @@ function setPlannerMode(mode) {
     } else {
         if (planContainer) planContainer.style.display = 'none';
         if (fullContainer) fullContainer.style.display = 'block';
-        // In FULL mode, show all tabs
-        switchEditorTab('full');
+        // In FULL mode, default to speakers tab (legacy behavior)
+        switchEditorTab('speakers');
         renderMemberPool();
     }
 
@@ -851,18 +851,11 @@ function renderPlanSubTab(tabName) {
                 <h3>Programa Espiritual</h3>
                 <div id="plan-speakers-list"></div>
                 <button class="btn btn-secondary" id="plan-add-speaker" style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
-                <div id="plan-hymn-wrapper">
-                    <button class="btn btn-secondary" id="plan-add-hymn" style="width:100%; margin-top:0.5rem; color:var(--text-light); border-style:dashed;">+ Adicionar Hino Interm.</button>
-                </div>
             </div>
         `;
         renderPlanSpeakers();
         document.getElementById('plan-add-speaker')?.addEventListener('click', () => {
             addSpeakerUI();
-            renderPlanSpeakers();
-        });
-        document.getElementById('plan-add-hymn')?.addEventListener('click', () => {
-            addProgramHymnUI();
             renderPlanSpeakers();
         });
         // Show member recommendations
@@ -978,38 +971,24 @@ function renderPlanSpeakers() {
     container.innerHTML = '';
 
     state.speakers.forEach((item, index) => {
-        const div = document.createElement('div');
+        if (item.type !== 'speaker') return;
 
-        if (item.type === 'speaker') {
-            div.className = 'speaker-row-edit';
-            div.innerHTML = `
-                <div class="input-wrapper">
-                    <label>Orador ${index + 1}</label>
-                    <input type="text" class="plan-speaker-input" data-id="${item.id}" value="${item.name || ''}" placeholder="Nome do membro...">
-                </div>
-                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
-            `;
-            const input = div.querySelector('input');
-            input.addEventListener('focus', () => state.activeMemberInput = input);
-            input.addEventListener('input', (e) => {
-                item.name = e.target.value;
-                const m = state.members.find(x => x.name === e.target.value);
-                item.memberId = m ? m.id : null;
-            });
-        } else if (item.type === 'hymn') {
-            div.className = 'speaker-row-edit hymn';
-            div.innerHTML = `
-                <div class="hymn-input-wrapper" style="margin-bottom:0">
-                    <label>Hino Intermediário</label>
-                    <input type="text" class="hymn-search" value="${item.name || ''}" placeholder="Número ou Título...">
-                    <div class="hymn-results"></div>
-                </div>
-                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px;">×</button>
-            `;
-            const input = div.querySelector('input');
-            setupHymnSearch(input, window.hymns, (val) => { item.name = val; });
-            input.addEventListener('input', (e) => item.name = e.target.value);
-        }
+        const div = document.createElement('div');
+        div.className = 'speaker-row-edit';
+        div.innerHTML = `
+            <div class="input-wrapper">
+                <label>Orador ${index + 1}</label>
+                <input type="text" class="plan-speaker-input" data-id="${item.id}" value="${item.name || ''}" placeholder="Nome do membro...">
+            </div>
+            <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
+        `;
+        const input = div.querySelector('input');
+        input.addEventListener('focus', () => state.activeMemberInput = input);
+        input.addEventListener('input', (e) => {
+            item.name = e.target.value;
+            const m = state.members.find(x => x.name === e.target.value);
+            item.memberId = m ? m.id : null;
+        });
 
         container.appendChild(div);
     });
@@ -1103,14 +1082,12 @@ function toggleAssistantFilter(type) {
             state.assistantFilterGroup = null;
         } else {
             state.assistantFilterGroup = 'Youth';
-            state.assistantFilterGender = null;
         }
     } else {
         if (state.assistantFilterGender === type) {
             state.assistantFilterGender = null;
         } else {
             state.assistantFilterGender = type;
-            state.assistantFilterGroup = null;
         }
     }
 
