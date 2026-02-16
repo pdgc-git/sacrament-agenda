@@ -18,6 +18,14 @@ describe('PDF Parser Utilities', () => {
         test('should normalize multiple spaces to single space', () => {
             expect(normalizeName('John    Doe')).toBe('john doe');
         });
+
+        test('should normalize accented characters (NFD)', () => {
+            expect(normalizeName('João Silva')).toBe('joao silva');
+            expect(normalizeName('Joao Silva')).toBe('joao silva');
+            expect(normalizeName('Conceição')).toBe('conceicao');
+            expect(normalizeName('José María')).toBe('jose maria');
+            expect(normalizeName('São Paulo')).toBe('sao paulo');
+        });
     });
 
     describe('parseMemberLines', () => {

@@ -113,7 +113,12 @@ export function parseMemberLines(lines) {
 }
 
 export function normalizeName(str) {
-    return str.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+    return str.normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove diacritical marks (accents)
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')     // Keep only alphanumeric and space
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 export function escapeRegExp(string) {
