@@ -5,7 +5,7 @@ import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 import * as DM from './dataManager.js';
-import { extractVisualLines, parseMemberLines, normalizeName } from './utils/pdfParser.js';
+import { extractVisualLines, parseMemberLines, normalizeName, parseCallingUpdates } from './utils/pdfParser.js';
 
 import { setupHymnSearch } from './utils/uiUtils.js';
 import { showToast } from './components/Toast.js';
@@ -1419,65 +1419,11 @@ async function processPdfImport() {
         const memberMap = new Map();
         membersData.forEach(m => memberMap.set(normalizeName(m.name), m));
 
-        // 2. Parse Callings (Structured Anchor -> Offset Strategy)
+        // 2. Parse Callings (Bidirectional Strategy via utility)
         if (fileCallings) {
             btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> Analisando Chamados...`;
             const callingLines = await extractVisualLines(fileCallings);
-
-            callingLines.forEach(line => {
-                const parts = line.split(/\s{3,}/).map(p => p.trim()).filter(p => p);
-
-                // A. Find the Anchor (Member Name)
-                let nameIndex = -1;
-                let foundMember = null;
-
-                for (let i = 0; i < parts.length; i++) {
-                    const normPart = normalizeName(parts[i]);
-                    // FIX 1: Prevent empty/short strings from matching names (False Positive Fix)
-                    if (normPart.length < 3) continue;
-
-                    for (const [memNameKey, memberObj] of memberMap.entries()) {
-                        if (normPart.includes(memNameKey) || memNameKey.includes(normPart)) {
-                            nameIndex = i;
-                            foundMember = memberObj;
-                            break;
-                        }
-                    }
-                    if (foundMember) break;
-                }
-
-                // B. Extract Organization and Calling relative to Name
-                if (foundMember && nameIndex !== -1) {
-                    const subsequentParts = parts.slice(nameIndex + 1);
-
-                    const validParts = subsequentParts.filter(part => {
-                        if (!part.trim()) return false;
-                        // Skip Sex/Age
-                        if (/^[MF]$/.test(part)) return false;
-                        if (/^\d{1,3}$/.test(part)) return false;
-
-                        // FIX 3: Enhanced Date Filtering
-                        if (/\b(19|20)\d{2}\b/.test(part)) return false; // 1999, 2026
-                        if (/\d{1,2}\s+[a-zç]{3}\s+\d{2,4}/i.test(part)) return false; // 6 jan 2026
-                        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(part)) return false; // 06/01/2026
-
-                        return true;
-                    });
-
-                    if (validParts.length >= 1) {
-                        const org = validParts[0];
-                        // FIX 2: Join ALL remaining parts so we don't cut off text (e.g. "Estaca")
-                        const callingText = validParts.slice(1).join(' ');
-
-                        if (callingText) {
-                            foundMember.calling = `${org} - ${callingText}`;
-                        } else {
-                            // Fallback for merged columns
-                            foundMember.calling = org;
-                        }
-                    }
-                }
-            });
+            parseCallingUpdates(callingLines, Array.from(memberMap.values()));
         }
 
         // 3. Render
@@ -1512,8 +1458,13 @@ function renderSmartPreview(data) {
     document.getElementById('import-actions').style.display = 'flex';
     document.getElementById('import-preview-container').style.display = 'block';
 
-    // Sort by name
-    data.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort: members with callings first, then alphabetical by name
+    data.sort((a, b) => {
+        const aCalling = a.calling ? 1 : 0;
+        const bCalling = b.calling ? 1 : 0;
+        if (bCalling !== aCalling) return bCalling - aCalling;
+        return a.name.localeCompare(b.name);
+    });
 
     data.forEach(m => {
         const tr = document.createElement('tr');

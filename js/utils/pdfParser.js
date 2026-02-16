@@ -119,3 +119,68 @@ export function normalizeName(str) {
 export function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * Parses calling information from PDF lines and assigns callings to members.
+ * Uses a bidirectional search: checks parts BEFORE the name (prefix/org format)
+ * first, then falls back to parts AFTER the name (suffix format).
+ * @param {string[]} lines - Visual lines extracted from the callings PDF
+ * @param {Object[]} members - Array of member objects (mutated in place)
+ */
+export function parseCallingUpdates(lines, members) {
+    // Build normalized-name -> member map for O(1) lookup
+    const memberMap = new Map();
+    members.forEach(m => memberMap.set(normalizeName(m.name), m));
+
+    // Filter to exclude dates and junk from calling parts
+    const isJunkPart = (part) => {
+        if (!part.trim()) return true;
+        if (/^[MF]$/.test(part)) return true;           // Sex column
+        if (/^\d{1,3}$/.test(part)) return true;         // Age column
+        if (/\b(19|20)\d{2}\b/.test(part)) return true;  // Year like 1999, 2026
+        if (/\d{1,2}\s+[a-zç]{3}\s+\d{2,4}/i.test(part)) return true; // "6 jan 2026"
+        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(part)) return true;    // "06/01/2026"
+        return false;
+    };
+
+    lines.forEach(line => {
+        const parts = line.split(/\s{3,}/).map(p => p.trim()).filter(p => p);
+
+        // A. Find the anchor (member name)
+        let nameIndex = -1;
+        let foundMember = null;
+
+        for (let i = 0; i < parts.length; i++) {
+            const normPart = normalizeName(parts[i]);
+            if (normPart.length < 3) continue; // Skip short/empty parts
+
+            for (const [memNameKey, memberObj] of memberMap.entries()) {
+                if (normPart.includes(memNameKey) || memNameKey.includes(normPart)) {
+                    nameIndex = i;
+                    foundMember = memberObj;
+                    break;
+                }
+            }
+            if (foundMember) break;
+        }
+
+        if (!foundMember || nameIndex === -1) return;
+
+        // B. Strategy A (Prefix): check parts BEFORE the name
+        const prefixParts = parts.slice(0, nameIndex).filter(p => !isJunkPart(p));
+
+        if (prefixParts.length > 0) {
+            foundMember.calling = prefixParts.join(' - ');
+            return;
+        }
+
+        // C. Strategy B (Suffix): check parts AFTER the name
+        const suffixParts = parts.slice(nameIndex + 1).filter(p => !isJunkPart(p));
+
+        if (suffixParts.length >= 1) {
+            const org = suffixParts[0];
+            const callingText = suffixParts.slice(1).join(' ');
+            foundMember.calling = callingText ? `${org} - ${callingText}` : org;
+        }
+    });
+}

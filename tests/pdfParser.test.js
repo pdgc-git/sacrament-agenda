@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { parseMemberLines, normalizeName } from '../js/utils/pdfParser.js';
+import { parseMemberLines, normalizeName, parseCallingUpdates } from '../js/utils/pdfParser.js';
 
 describe('PDF Parser Utilities', () => {
 
@@ -72,6 +72,43 @@ describe('PDF Parser Utilities', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Doe, Valid');
+        });
+    });
+
+    describe('parseCallingUpdates', () => {
+        test('should parse prefix format (Organization | Calling | Name)', () => {
+            const members = [{ name: 'John Doe', calling: '' }];
+            const lines = ['Bishopric   Bishop   John Doe'];
+            parseCallingUpdates(lines, members);
+            expect(members[0].calling).toBe('Bishopric - Bishop');
+        });
+
+        test('should parse suffix format (Name | Organization | Calling)', () => {
+            const members = [{ name: 'Jane Doe', calling: '' }];
+            const lines = ['Jane Doe   Primary   Teacher'];
+            parseCallingUpdates(lines, members);
+            expect(members[0].calling).toBe('Primary - Teacher');
+        });
+
+        test('should not treat dates as callings', () => {
+            const members = [{ name: 'John Doe', calling: '' }];
+            const lines = ['John Doe   01 Jan 2023'];
+            parseCallingUpdates(lines, members);
+            expect(members[0].calling).toBe('');
+        });
+
+        test('should handle suffix with single part (org only)', () => {
+            const members = [{ name: 'Jane Doe', calling: '' }];
+            const lines = ['Jane Doe   Bishop'];
+            parseCallingUpdates(lines, members);
+            expect(members[0].calling).toBe('Bishop');
+        });
+
+        test('should skip sex and age columns in suffix', () => {
+            const members = [{ name: 'John Doe', calling: '' }];
+            const lines = ['John Doe   M   45   Elder'];
+            parseCallingUpdates(lines, members);
+            expect(members[0].calling).toBe('Elder');
         });
     });
 });

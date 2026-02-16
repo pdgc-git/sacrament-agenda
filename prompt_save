@@ -1,0 +1,33 @@
+# Project Context: Sacrament Agenda Planner
+
+I am working on a **Sacrament Meeting Agenda Planner** web application.
+**Tech Stack:** Vanilla JavaScript (ES6 modules), HTML5, CSS3, Firebase (Auth & Firestore), and Jest for testing.
+
+## Current Architecture
+The project has recently been refactored into a modular structure:
+* **`js/planner-ui.js`**: Main UI controller (but logic is being extracted).
+* **`js/dataManager.js`**: Handles all Firestore interactions with strict input validation.
+* **`js/utils/`**: Contains pure utility modules (e.g., `pdfParser.js` for spatial PDF parsing, `uiUtils.js`, `security.js`).
+* **`js/components/`**: Reusable UI components (e.g., `Toast.js`).
+* **`tests/`**: Jest unit tests mirroring the utils structure.
+
+## Workflow: Atomic Refactoring
+We follow a strict **"Refactor-Verify-Merge"** workflow. Do not suggest massive, all-in-one changes.
+1.  **Isolate:** We create a specific `feature/` or `fix/` branch for every task.
+2.  **Prompt:** You must provide me with a **single, consolidated prompt** that I can copy-paste into "Antigravity" (an AI coding agent).
+3.  **Verify:** We run tests (`npm test`) or manual checks.
+4.  **Merge:** We merge back to the main branch (`feature-ward-planner`) only when green.
+
+## Output Requirements (Crucial)
+When I ask for code changes, your response **MUST** follow this format:
+1.  **Git Commands:** Start with the git commands to create/switch to the specific branch.
+2.  **Antigravity Prompt:** Provide a **single code block** containing all instructions for the AI agent.
+    * This block must include file creation/overwriting steps.
+    * It must be explicit (e.g., "Overwrite `js/planner-ui.js` with...").
+    * It must NOT be split into multiple boxes.
+
+**Example Request:**
+"I want to add a new feature to export the agenda to Word."
+
+**Your Goal:**
+Break that request down into atomic steps (e.g., "Step 1: Create Export Util", "Step 2: Add UI Button") and provide the Antigravity prompt for the first step.
