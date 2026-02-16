@@ -148,20 +148,25 @@
                 <!-- Program -->
                 <section class="form-group" id="program-section">
                     <h2>Programa Espiritual</h2>
-                    <div id="speakers-input-container" class="dynamic-list-input">
-                        <!-- Speakers added here -->
-                    </div>
-                    <button id="btn-add-speaker" class="btn-add">+ Adicionar Orador</button>
+
+                    <label style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display:block;">Oradores
+                        (Antes do Hino)</label>
+                    <div id="speakers-before-input-container" class="dynamic-list-input"></div>
+                    <button id="btn-add-speaker-before" class="btn-add">+ Adicionar Orador</button>
 
                     <!-- Intermediate Hymn (Hidden if Fast Meeting) -->
                     <div id="intermediate-hymn-wrapper" class="hymn-input-wrapper"
-                        style="margin-top: 1rem; border-top: 1px dashed #ddd; padding-top: 1rem;">
+                        style="margin: 1.5rem 0; border-top: 1px dashed #ddd; border-bottom: 1px dashed #ddd; padding: 1rem 0;">
                         <label>Hino Intermediário (Opcional)</label>
                         <input type="text" class="hymn-search" name="intermediateHymn"
                             placeholder="Buscar por número ou título...">
                         <div class="hymn-results"></div>
-                        <p class="helper-text">Arraste oradores para antes ou depois deste hino.</p>
                     </div>
+
+                    <label style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display:block;">Oradores
+                        (Depois do Hino)</label>
+                    <div id="speakers-after-input-container" class="dynamic-list-input"></div>
+                    <button id="btn-add-speaker-after" class="btn-add">+ Adicionar Orador</button>
                 </section>
 
                 <!-- Closing -->
@@ -287,10 +292,18 @@
                                 Testemunhos da Congregação
                             </div>
 
-                            <!-- Standard Speakers List -->
-                            <div id="speakers-list" class="speakers-list">
-                                <!-- Dynamic Content -->
+                            <!-- Speakers BEFORE -->
+                            <div id="speakers-before-list" class="speakers-list"></div>
+
+                            <!-- Intermediate Hymn -->
+                            <div id="preview-intermediate-hymn" class="program-item"
+                                style="display:none; margin: 0.5rem 0;">
+                                <span class="program-label">Hino Intermediário</span>
+                                <span class="program-value hymn" data-bind="intermediateHymn">...</span>
                             </div>
+
+                            <!-- Speakers AFTER -->
+                            <div id="speakers-after-list" class="speakers-list"></div>
                         </div>
 
                         <hr class="divider">

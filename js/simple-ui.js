@@ -1,7 +1,15 @@
 /* js/simple-ui.js */
-const state = { recognitions: [], announcements: [], releases: [], callings: [], speakers: [] };
+const state = {
+    recognitions: [],
+    announcements: [],
+    releases: [],
+    callings: [],
+    speakersBefore: [],
+    speakersAfter: []
+};
 import { setupHymnSearch } from './utils/uiUtils.js';
 import { showToast } from './components/Toast.js';
+import { hymns } from './hymns.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -10,12 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
     // Dynamic List Buttons
-    ['recognition', 'announcement', 'release', 'calling', 'speaker'].forEach(type => {
+    ['recognition', 'announcement', 'release', 'calling'].forEach(type => {
         document.getElementById(`btn-add-${type}`)?.addEventListener('click', () => {
-            if (type === 'speaker') addSpeaker();
-            else addListItem(type + 's'); // Pluralize
+            addListItem(type + 's'); // Pluralize
         });
     });
+
+    document.getElementById('btn-add-speaker-before')?.addEventListener('click', () => addSpeaker('before'));
+    document.getElementById('btn-add-speaker-after')?.addEventListener('click', () => addSpeaker('after'));
 
     document.getElementById('btn-export-pdf')?.addEventListener('click', exportPDF);
     document.getElementById('fullscreen-toggle')?.addEventListener('click', toggleFullScreen);
@@ -24,13 +34,23 @@ function setupEventListeners() {
     document.getElementById('fastMeeting')?.addEventListener('change', (e) => {
         const isFast = e.target.checked;
         const els = {
-            speakers: document.getElementById('speakers-list'),
+            speakersBefore: document.getElementById('speakers-before-list'),
+            speakersAfter: document.getElementById('speakers-after-list'),
             note: document.getElementById('fast-meeting-note'),
-            hymn: document.getElementById('intermediate-hymn-wrapper')
+            hymn: document.getElementById('intermediate-hymn-wrapper'),
+            previewHymn: document.getElementById('preview-intermediate-hymn')
         };
-        if (els.speakers) els.speakers.style.display = isFast ? 'none' : 'block';
-        if (els.hymn) els.hymn.style.display = isFast ? 'none' : 'block';
+        const display = isFast ? 'none' : 'block';
+        if (els.speakersBefore) els.speakersBefore.style.display = display;
+        if (els.speakersAfter) els.speakersAfter.style.display = display;
+        if (els.hymn) els.hymn.style.display = display;
+        if (els.previewHymn) els.previewHymn.style.display = display; // Use logic for hiding later
         if (els.note) els.note.style.display = isFast ? 'block' : 'none';
+
+        // Force re-render of preview hymn visibility if unchecking fast meeting
+        if (!isFast) {
+            checkIntermediateHymnVisibility();
+        }
     });
 
     // Event Delegation for Dynamic Items
@@ -46,7 +66,32 @@ function setupEventListeners() {
     });
 
     // Hymn Search
-    document.querySelectorAll('.hymn-search').forEach(input => setupHymnSearch(input, window.hymns));
+    document.querySelectorAll('.hymn-search').forEach(input => {
+        setupHymnSearch(input, hymns);
+        // Add specific listener for intermediate hymn to toggle preview visibility
+        if (input.name === 'intermediateHymn') {
+            input.addEventListener('input', checkIntermediateHymnVisibility);
+            input.addEventListener('hymn-selected', checkIntermediateHymnVisibility); // If custom event is used
+            // Since setupHymnSearch might not dispatch 'input' on click, we ensure we catch changes
+            // Assuming setupHymnSearch updates the input value.
+            // We can use a MutationObserver or just polling, but direct events are better.
+            // In the previous check, setupHymnSearch dispatches 'input' or 'hymn-selected'.
+        }
+    });
+}
+
+function checkIntermediateHymnVisibility() {
+    const input = document.querySelector('input[name="intermediateHymn"]');
+    const previewEl = document.getElementById('preview-intermediate-hymn');
+    if (input && previewEl) {
+        // Only show if content exists AND not fast meeting
+        const isFast = document.getElementById('fastMeeting')?.checked;
+        if (input.value.trim() !== '' && !isFast) {
+            previewEl.style.display = 'flex'; // Use flex to match program-item
+        } else {
+            previewEl.style.display = 'none';
+        }
+    }
 }
 
 function setupDataBinding() {
@@ -61,6 +106,8 @@ function setupDataBinding() {
                     target.textContent = input.value;
                 }
             }
+            // For intermediate hymn, also check visibility
+            if (input.name === 'intermediateHymn') checkIntermediateHymnVisibility();
         });
     });
 }
@@ -72,23 +119,41 @@ function addListItem(type) {
     renderListInput(type);
     renderPreviewList(type);
 }
-function addSpeaker() {
-    state.speakers.push({ id: crypto.randomUUID(), name: '' });
-    renderSpeakers();
-    renderPreviewSpeakers();
+
+function addSpeaker(section) {
+    const arrayName = section === 'before' ? 'speakersBefore' : 'speakersAfter';
+    state[arrayName].push({ id: crypto.randomUUID(), name: '' });
+    renderSpeakers(section);
+    renderPreviewSpeakers(section);
 }
+
 function removeListItem(type, id) {
-    state[type] = state[type].filter(i => i.id !== id);
-    if (type === 'speakers') { renderSpeakers(); renderPreviewSpeakers(); }
-    else { renderListInput(type); renderPreviewList(type); }
+    // Check if it's a speaker
+    if (type === 'speakersBefore') {
+        state.speakersBefore = state.speakersBefore.filter(i => i.id !== id);
+        renderSpeakers('before');
+        renderPreviewSpeakers('before');
+    } else if (type === 'speakersAfter') {
+        state.speakersAfter = state.speakersAfter.filter(i => i.id !== id);
+        renderSpeakers('after');
+        renderPreviewSpeakers('after');
+    } else {
+        state[type] = state[type].filter(i => i.id !== id);
+        renderListInput(type);
+        renderPreviewList(type);
+    }
 }
+
 function updateListItem(type, id, field, value) {
-    const item = state[type].find(i => i.id === id);
+    let list = state[type]; // by reference
+    const item = list.find(i => i.id === id);
     if (item) {
         if (field) item[field] = value;
         else item.text = value;
     }
-    if (type === 'speakers') renderPreviewSpeakers();
+
+    if (type === 'speakersBefore') renderPreviewSpeakers('before');
+    else if (type === 'speakersAfter') renderPreviewSpeakers('after');
     else renderPreviewList(type);
 }
 
@@ -112,41 +177,33 @@ function renderListInput(type) {
         container.appendChild(div);
     });
 }
-function renderSpeakers() {
-    const c = document.getElementById('speakers-input-container');
-    c.innerHTML = '';
-    state.speakers.forEach((s, i) => {
-        c.innerHTML += `
+
+function renderSpeakers(section) {
+    const type = section === 'before' ? 'speakersBefore' : 'speakersAfter';
+    const containerId = section === 'before' ? 'speakers-before-input-container' : 'speakers-after-input-container';
+    const container = document.getElementById(containerId);
+
+    if (!container) return;
+    container.innerHTML = '';
+
+    state[type].forEach((s, i) => {
+        container.innerHTML += `
             <div class="input-row">
-                <label style="font-size:0.8rem; width:20px;">${i + 1}.</label>
-                <input type="text" class="dynamic-input" placeholder="Orador" value="${s.name}" data-type="speakers" data-id="${s.id}" data-field="name" style="flex:1">
-                <button class="btn-remove" data-type="speakers" data-id="${s.id}">×</button>
+                <input type="text" class="dynamic-input" placeholder="Orador" value="${s.name}" data-type="${type}" data-id="${s.id}" data-field="name" style="flex:1">
+                <button class="btn-remove" data-type="${type}" data-id="${s.id}">×</button>
             </div>`;
     });
 }
-function renderPreviewList(type) {
-    const map = { recognitions: 'preview-recognitions', announcements: 'preview-announcements', releases: 'preview-releases', callings: 'preview-callings' };
-    const el = document.getElementById(map[type]);
-    if (!el) return;
-    const ul = el.querySelector('ul');
-    ul.innerHTML = '';
 
-    if (state[type].length) {
-        el.style.display = 'block';
-        if (type === 'releases' || type === 'callings') document.getElementById('preview-business').style.display = 'block';
-        state[type].forEach(i => {
-            const li = document.createElement('li');
-            li.textContent = (type === 'releases' || type === 'callings') ? `${i.name} (${i.calling})` : i.text;
-            ul.appendChild(li);
-        });
-    } else {
-        el.style.display = 'none';
-    }
-}
-function renderPreviewSpeakers() {
-    const l = document.getElementById('speakers-list');
+function renderPreviewSpeakers(section) {
+    const type = section === 'before' ? 'speakersBefore' : 'speakersAfter';
+    const containerId = section === 'before' ? 'speakers-before-list' : 'speakers-after-list';
+    const l = document.getElementById(containerId);
+
+    if (!l) return;
     l.innerHTML = '';
-    state.speakers.forEach(s => {
+
+    state[type].forEach(s => {
         l.innerHTML += `<div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">${s.name}</span></div>`;
     });
 }
@@ -154,12 +211,29 @@ function renderPreviewSpeakers() {
 // Utilities
 function exportPDF() {
     const el = document.getElementById('agenda-paper');
-    if (window.html2pdf) html2pdf().set({ margin: 0, filename: 'agenda.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4' } }).from(el).save();
-    else showToast('Erro: Biblioteca PDF não carregada.', 'error');
+    if (window.html2pdf) {
+        html2pdf()
+            .set({
+                margin: 0,
+                filename: 'agenda.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            })
+            .from(el)
+            .save()
+            .catch(err => {
+                console.error('PDF Generation Error:', err);
+                showToast('Erro ao gerar PDF: ' + err.message, 'error');
+            });
+    } else {
+        showToast('Erro: Biblioteca PDF não carregada.', 'error');
+    }
 }
-function toggleFullScreen() { document.querySelector('.app-layout').classList.toggle('full-screen'); }
-function toggleFullScreen() { document.querySelector('.app-layout').classList.toggle('full-screen'); }
-// setupHymnSearch moved to utils/uiUtils.js
+
+function toggleFullScreen() {
+    document.querySelector('.app-layout').classList.toggle('full-screen');
+}
 
 function formatDate(dateInput) {
     if (!dateInput) return '...';
