@@ -132,6 +132,9 @@ export function parseCallingUpdates(lines, members) {
     const memberMap = new Map();
     members.forEach(m => memberMap.set(normalizeName(m.name), m));
 
+    // Accumulate all calling candidates per member (keyed by member object)
+    const callingAccum = new Map();
+
     // Filter to exclude dates and junk from calling parts
     const isJunkPart = (part) => {
         if (!part.trim()) return true;
@@ -166,21 +169,41 @@ export function parseCallingUpdates(lines, members) {
 
         if (!foundMember || nameIndex === -1) return;
 
+        let callingStr = '';
+
         // B. Strategy A (Prefix): check parts BEFORE the name
         const prefixParts = parts.slice(0, nameIndex).filter(p => !isJunkPart(p));
 
         if (prefixParts.length > 0) {
-            foundMember.calling = prefixParts.join(' - ');
-            return;
+            callingStr = prefixParts.join(' - ');
+        } else {
+            // C. Strategy B (Suffix): check parts AFTER the name
+            const suffixParts = parts.slice(nameIndex + 1).filter(p => !isJunkPart(p));
+
+            if (suffixParts.length >= 1) {
+                const org = suffixParts[0];
+                const callingText = suffixParts.slice(1).join(' ');
+                callingStr = callingText ? `${org} - ${callingText}` : org;
+            }
         }
 
-        // C. Strategy B (Suffix): check parts AFTER the name
-        const suffixParts = parts.slice(nameIndex + 1).filter(p => !isJunkPart(p));
-
-        if (suffixParts.length >= 1) {
-            const org = suffixParts[0];
-            const callingText = suffixParts.slice(1).join(' ');
-            foundMember.calling = callingText ? `${org} - ${callingText}` : org;
+        if (callingStr) {
+            if (!callingAccum.has(foundMember)) {
+                callingAccum.set(foundMember, []);
+            }
+            callingAccum.get(foundMember).push(callingStr);
         }
     });
+
+    // Deduplicate: remove fragments that are substrings of longer callings
+    for (const [member, callings] of callingAccum.entries()) {
+        // Sort longest first so we keep the most complete version
+        const sorted = [...callings].sort((a, b) => b.length - a.length);
+        const unique = sorted.filter((c, i) => {
+            // Keep if no longer calling already contains this one
+            const cLower = c.toLowerCase();
+            return !sorted.slice(0, i).some(longer => longer.toLowerCase().includes(cLower));
+        });
+        member.calling = unique.join(' / ');
+    }
 }

@@ -110,5 +110,28 @@ describe('PDF Parser Utilities', () => {
             parseCallingUpdates(lines, members);
             expect(members[0].calling).toBe('Elder');
         });
+
+        test('should discard fragments from wrapped PDF lines', () => {
+            const members = [{ name: 'Burti Marcondes Barbosa, Marielle', calling: '' }];
+            const lines = [
+                'Burti Marcondes   F   37   25 ago 1988   Escola Dominical   Professor(a) da Escola',
+                'Barbosa, Marielle                                           Dominical'
+            ];
+            parseCallingUpdates(lines, members);
+            // "Dominical" is a substring of the full calling, so it should be discarded
+            expect(members[0].calling).toBe('Escola Dominical - Professor(a) da Escola');
+        });
+
+        test('should join multiple distinct callings with /', () => {
+            const members = [{ name: 'Jason Francois', calling: '' }];
+            const lines = [
+                'Jason Francois   Outros Chamados   Professor do Seminário',
+                'Jason Francois   Bispado   Secretário Adjunto Financeiro'
+            ];
+            parseCallingUpdates(lines, members);
+            expect(members[0].calling).toBe(
+                'Outros Chamados - Professor do Seminário / Bispado - Secretário Adjunto Financeiro'
+            );
+        });
     });
 });
