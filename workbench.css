@@ -1036,7 +1036,8 @@ tr:hover .row-actions {
     grid-template-columns: 80px 1fr 300px;
     flex: 1;
     overflow: hidden;
-    height: calc(100vh - 65px); /* toolbar height offset */
+    height: calc(100vh - 65px);
+    /* toolbar height offset */
 }
 
 /* Vertical Sub-Navigation */
@@ -1060,7 +1061,7 @@ tr:hover .row-actions {
     border: none;
     border-radius: var(--radius-md);
     background: transparent;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
     font-size: 1.4rem;
     transition: all 0.2s;
@@ -1075,14 +1076,14 @@ tr:hover .row-actions {
 }
 
 .plan-subnav-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     color: white;
 }
 
 .plan-subnav-btn.active {
-    background: rgba(255,255,255,0.15);
+    background: rgba(255, 255, 255, 0.15);
     color: white;
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.3);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 /* Center Input Area */
@@ -1231,6 +1232,169 @@ tr:hover .row-actions {
 
 .mode-toggle-btn:hover:not(.active) {
     color: var(--text-main);
+}
+
+/* --- Full Mode: Split Layout (Form + Preview) --- */
+.editor-split-layout {
+    display: flex;
+    height: calc(100vh - 65px);
+    overflow: hidden;
+}
+
+.editor-pane-inner {
+    width: 420px;
+    min-width: 360px;
+    background: white;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 1.5rem;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.05);
+}
+
+.editor-pane-inner .form-group {
+    margin-bottom: 2rem;
+}
+
+.editor-pane-inner .form-group h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.editor-pane-inner .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.editor-pane-inner .input-wrapper {
+    margin-bottom: 1rem;
+}
+
+.editor-pane-inner .input-wrapper label,
+.editor-pane-inner .hymn-input-wrapper label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+}
+
+.editor-pane-inner .input-wrapper input,
+.editor-pane-inner .input-wrapper textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.editor-pane-inner .input-wrapper input:focus,
+.editor-pane-inner .input-wrapper textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+}
+
+.editor-pane-inner .helper-text {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.editor-pane-inner .checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.editor-pane-inner .checkbox-wrapper label {
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.editor-pane-inner .dynamic-list-input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.editor-pane-inner .input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.editor-pane-inner .btn-add {
+    background: none;
+    border: 1px dashed var(--action);
+    color: var(--action);
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.85rem;
+    transition: background 0.15s;
+}
+
+.editor-pane-inner .btn-add:hover {
+    background: #eff6ff;
+}
+
+.editor-pane-inner .btn-remove {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.editor-pane-inner .hymn-input-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.editor-pane-inner .hymn-input-wrapper input {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.preview-pane-inner {
+    flex: 1;
+    background: #e5e7eb;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
 }
 
 /* --- Mobile --- */

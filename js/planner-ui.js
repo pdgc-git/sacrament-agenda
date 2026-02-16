@@ -16,7 +16,9 @@ const state = {
     members: [], // Cached members
     history: [],
     futurePlans: [], // Cache for timeline
-    speakers: [], // Dynamic speaker list for Editor
+    speakers: [], // Dynamic speaker list for Editor (PLAN mode)
+    speakersBefore: [], // Full mode: speakers before intermediate hymn
+    speakersAfter: [], // Full mode: speakers after intermediate hymn
     recognitions: [],
     announcements: [],
     releases: [],
@@ -28,7 +30,8 @@ const state = {
     viewMode: 'PLAN', // 'PLAN' or 'FULL'
     activeSubTab: 'speakers', // 'speakers', 'hymns', 'prayers'
     assistantFilterGender: null,
-    assistantFilterGroup: null
+    assistantFilterGroup: null,
+    fullModeInitialized: false // Track if full mode bindings are set up
 };
 
 // Expose state for debugging
@@ -79,14 +82,23 @@ function setupEventListeners() {
     document.getElementById('btn-add-speaker')?.addEventListener('click', () => addSpeakerUI());
     document.getElementById('btn-add-hymn-program')?.addEventListener('click', () => addProgramHymnUI());
 
-    // Extras
+    // Extras (Plan Mode)
     document.getElementById('btn-add-recognition')?.addEventListener('click', () => addListItem('recognitions'));
     document.getElementById('btn-add-announcement')?.addEventListener('click', () => addListItem('announcements'));
     document.getElementById('btn-add-release')?.addEventListener('click', () => addListItem('releases'));
     document.getElementById('btn-add-calling')?.addEventListener('click', () => addListItem('callings'));
 
-    // Fast Meeting
+    // Fast Meeting (Plan Mode)
     document.getElementById('chk-fast-meeting')?.addEventListener('change', (e) => toggleFastMeeting(e.target.checked));
+
+    // === Full Mode Event Listeners ===
+    document.getElementById('full-btn-add-recognition')?.addEventListener('click', () => fullModeAddListItem('recognitions'));
+    document.getElementById('full-btn-add-announcement')?.addEventListener('click', () => fullModeAddListItem('announcements'));
+    document.getElementById('full-btn-add-release')?.addEventListener('click', () => fullModeAddListItem('releases'));
+    document.getElementById('full-btn-add-calling')?.addEventListener('click', () => fullModeAddListItem('callings'));
+    document.getElementById('full-btn-add-speaker-before')?.addEventListener('click', () => fullModeAddSpeaker('before'));
+    document.getElementById('full-btn-add-speaker-after')?.addEventListener('click', () => fullModeAddSpeaker('after'));
+    document.getElementById('full-fastMeeting')?.addEventListener('change', (e) => fullModeToggleFastMeeting(e.target.checked));
 
     // Roster
     document.getElementById('filter-chip-m')?.addEventListener('click', () => togglePoolFilter('M'));
@@ -672,10 +684,13 @@ function renderPlanSummary(plan) {
 async function editPlan(dateStr) {
     state.currentEditorDate = dateStr;
     state.speakers = [];
+    state.speakersBefore = [];
+    state.speakersAfter = [];
     state.recognitions = [];
     state.announcements = [];
     state.releases = [];
     state.callings = [];
+    state.fullModeInitialized = false; // Reset so bindings re-initialize
 
     // Switch View
     document.querySelector('[data-target="view-planner"]').click();
@@ -701,20 +716,47 @@ async function editPlan(dateStr) {
         // Stats
         ['att_sacrament'].forEach(k => { if (form[k]) form[k].value = plan.attendance?.[k.replace('att_', '')] || ''; });
 
-        // Speakers
+        // Speakers (Plan Mode flat list)
         state.speakers = plan.speakers || [];
+
+        // Map speakers to before/after for Full Mode
+        if (plan.speakersBefore || plan.speakersAfter) {
+            state.speakersBefore = plan.speakersBefore || [];
+            state.speakersAfter = plan.speakersAfter || [];
+        } else {
+            // Derive from flat speakers list: split by first hymn item
+            const hymnIdx = state.speakers.findIndex(s => s.type === 'hymn');
+            if (hymnIdx >= 0) {
+                state.speakersBefore = state.speakers.slice(0, hymnIdx).filter(s => s.type === 'speaker').map(s => ({ id: s.id, name: s.name || '' }));
+                state.speakersAfter = state.speakers.slice(hymnIdx + 1).filter(s => s.type === 'speaker').map(s => ({ id: s.id, name: s.name || '' }));
+            } else {
+                // No hymn → all speakers go before
+                state.speakersBefore = state.speakers.filter(s => s.type === 'speaker').map(s => ({ id: s.id, name: s.name || '' }));
+                state.speakersAfter = [];
+            }
+        }
+
         // Extras
         state.recognitions = plan.recognitions || [];
         state.announcements = plan.announcements || [];
         state.releases = plan.releases || [];
         state.callings = plan.callings || [];
+
+        // Ward name and intermediate hymn
+        state.wardNameForFullMode = plan.ward || state.wardName || '';
+        const hymnItem = state.speakers.find(s => s.type === 'hymn');
+        state.intermediateHymn = hymnItem ? (hymnItem.name || '') : (plan.intermediateHymn || '');
     } else {
         // Defaults
         state.speakers = [];
+        state.speakersBefore = [];
+        state.speakersAfter = [];
         state.recognitions = [];
         state.announcements = [];
         state.releases = [];
         state.callings = [];
+        state.wardNameForFullMode = state.wardName || '';
+        state.intermediateHymn = '';
     }
 
     renderSpeakersInput();
@@ -819,10 +861,17 @@ function setPlannerMode(mode) {
         if (fullContainer) fullContainer.style.display = 'none';
     } else {
         if (planContainer) planContainer.style.display = 'none';
-        if (fullContainer) fullContainer.style.display = 'block';
-        // In FULL mode, default to speakers tab (legacy behavior)
-        switchEditorTab('speakers');
-        renderMemberPool();
+        if (fullContainer) fullContainer.style.display = 'flex';
+        // Initialize Full Mode: populate form and set up bindings
+        populateFullModeForm();
+        if (!state.fullModeInitialized) {
+            setupFullModeBindings();
+            state.fullModeInitialized = true;
+        }
+        renderAllFullModeLists();
+        fullModeRenderSpeakers('before');
+        fullModeRenderSpeakers('after');
+        fullModeUpdatePreview();
     }
 
     // Update toggle button active states
@@ -1272,26 +1321,47 @@ function setupFormListeners() {
 
     // Save Button
     document.getElementById('btn-finalize').addEventListener('click', async () => {
-        const dateStr = document.getElementById('input-date').value;
-        if (!dateStr) return showToast("Selecione uma data", 'warning');
+        let dateStr, data;
 
-        // Collect Data
-        const form = document.getElementById('agendaForm');
-        const fd = new FormData(form);
-        const data = Object.fromEntries(fd.entries());
-        data.speakers = state.speakers;
+        if (state.viewMode === 'FULL') {
+            // Collect from Full Mode form
+            const fullForm = document.getElementById('fullModeForm');
+            if (!fullForm) return showToast("Formulário não encontrado", 'error');
+            dateStr = document.getElementById('full-input-date')?.value || document.getElementById('input-date')?.value;
+            if (!dateStr) return showToast("Selecione uma data", 'warning');
+
+            const fd = new FormData(fullForm);
+            data = Object.fromEntries(fd.entries());
+            data.speakersBefore = state.speakersBefore;
+            data.speakersAfter = state.speakersAfter;
+            data.intermediateHymn = fullForm['intermediateHymn']?.value || '';
+            // Also build flat speakers list for backward compatibility
+            const flatSpeakers = [];
+            state.speakersBefore.forEach(s => flatSpeakers.push({ id: s.id, type: 'speaker', name: s.name }));
+            if (data.intermediateHymn) flatSpeakers.push({ id: crypto.randomUUID(), type: 'hymn', name: data.intermediateHymn });
+            state.speakersAfter.forEach(s => flatSpeakers.push({ id: s.id, type: 'speaker', name: s.name }));
+            data.speakers = flatSpeakers;
+        } else {
+            // Collect from Plan Mode form
+            dateStr = document.getElementById('input-date')?.value;
+            if (!dateStr) return showToast("Selecione uma data", 'warning');
+            const form = document.getElementById('agendaForm');
+            const fd = new FormData(form);
+            data = Object.fromEntries(fd.entries());
+            data.speakers = state.speakers;
+            data.attendance = { sacrament: form['att_sacrament']?.value };
+        }
+
         data.recognitions = state.recognitions;
         data.announcements = state.announcements;
         data.releases = state.releases;
         data.callings = state.callings;
-
         data.dateStr = dateStr;
-        data.attendance = { sacrament: form['att_sacrament']?.value };
 
         try {
-            await DM.saveFuturePlan(data); // Using dataManager generic save
+            await DM.saveFuturePlan(data);
             showToast("Gravado com sucesso!", 'success');
-            loadData(); // Refresh cache
+            loadData();
         } catch (e) { showToast("Erro ao gravar: " + e.message, 'error'); }
     });
 }
@@ -1358,6 +1428,345 @@ function renderDynamicListInput(type) {
     });
 }
 
+
+// === FULL MODE FUNCTIONS ===
+
+function populateFullModeForm() {
+    const fullForm = document.getElementById('fullModeForm');
+    if (!fullForm) return;
+
+    // Populate from existing plan mode form or state
+    const planForm = document.getElementById('agendaForm');
+
+    // Copy common fields from plan form to full mode form
+    ['presiding', 'conducting', 'organist', 'chorister', 'openingHymn', 'sacramentHymn', 'closingHymn', 'invocation', 'benediction'].forEach(k => {
+        if (fullForm[k] && planForm && planForm[k]) {
+            fullForm[k].value = planForm[k].value || '';
+        }
+    });
+
+    // Date
+    const dateEl = document.getElementById('full-input-date');
+    if (dateEl) dateEl.value = state.currentEditorDate || '';
+
+    // Ward name
+    if (fullForm['ward']) fullForm['ward'].value = state.wardNameForFullMode || state.wardName || '';
+
+    // Intermediate Hymn
+    if (fullForm['intermediateHymn']) fullForm['intermediateHymn'].value = state.intermediateHymn || '';
+
+    // Fast meeting checkbox
+    const fastCheck = document.getElementById('full-fastMeeting');
+    const planFastCheck = document.getElementById('chk-fast-meeting');
+    if (fastCheck && planFastCheck) fastCheck.checked = planFastCheck.checked;
+}
+
+function setupFullModeBindings() {
+    const fullForm = document.getElementById('fullModeForm');
+    if (!fullForm) return;
+
+    // Simple data binding: when input changes, update preview
+    const bindFields = ['ward', 'date', 'presiding', 'conducting', 'organist', 'chorister', 'openingHymn', 'sacramentHymn', 'closingHymn', 'invocation', 'benediction', 'intermediateHymn'];
+
+    bindFields.forEach(name => {
+        const input = fullForm[name];
+        if (input) {
+            input.addEventListener('input', () => {
+                fullModeUpdatePreviewField(name, input.value);
+                // Also sync back to plan mode form
+                syncToFullForm(name, input.value);
+            });
+        }
+    });
+
+    // Date special handling
+    const dateInput = document.getElementById('full-input-date');
+    if (dateInput) {
+        dateInput.addEventListener('change', () => {
+            const formatted = formatDate(dateInput.value);
+            const el = document.querySelector('[data-bind-full="date"]');
+            if (el) el.textContent = formatted;
+            // Also sync plan mode date
+            document.getElementById('input-date').value = dateInput.value;
+            state.currentEditorDate = dateInput.value;
+        });
+    }
+
+    // Intermediate hymn visibility
+    const intermediateInput = fullForm['intermediateHymn'];
+    if (intermediateInput) {
+        intermediateInput.addEventListener('input', () => {
+            fullModeCheckIntermediateHymnVisibility();
+        });
+    }
+
+    // Setup hymn search for full mode form
+    fullForm.querySelectorAll('.hymn-search').forEach(inp => {
+        setupHymnSearch(inp, window.hymns, async (val) => {
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+
+    // Dynamic input event delegation for full mode
+    fullForm.addEventListener('input', (e) => {
+        if (e.target.classList.contains('full-dynamic-input')) {
+            const type = e.target.dataset.list;
+            const id = e.target.dataset.id;
+            const field = e.target.dataset.field;
+            fullModeUpdateListItem(type, id, field, e.target.value);
+            fullModeUpdatePreviewList(type);
+        }
+        if (e.target.classList.contains('full-speaker-input')) {
+            const section = e.target.dataset.section;
+            const id = e.target.dataset.id;
+            const arr = section === 'before' ? state.speakersBefore : state.speakersAfter;
+            const speaker = arr.find(s => s.id === id);
+            if (speaker) speaker.name = e.target.value;
+            fullModeUpdatePreviewSpeakers(section);
+        }
+    });
+
+    // Dynamic remove button delegation
+    fullForm.addEventListener('click', (e) => {
+        if (e.target.classList.contains('full-btn-remove')) {
+            const type = e.target.dataset.list;
+            const id = e.target.dataset.id;
+            fullModeRemoveListItem(type, id);
+        }
+        if (e.target.classList.contains('full-btn-remove-speaker')) {
+            const section = e.target.dataset.section;
+            const id = e.target.dataset.id;
+            fullModeRemoveSpeaker(section, id);
+        }
+    });
+}
+
+function fullModeUpdatePreviewField(name, value) {
+    const el = document.querySelector(`[data-bind-full="${name}"]`);
+    if (el) {
+        if (name === 'date') {
+            el.textContent = formatDate(value);
+        } else {
+            el.textContent = value || '...';
+        }
+    }
+}
+
+function fullModeAddListItem(type) {
+    const id = crypto.randomUUID();
+    if (type === 'releases' || type === 'callings') {
+        state[type].push({ id, name: '', calling: '' });
+    } else {
+        state[type].push({ id, text: '' });
+    }
+    fullModeRenderListInput(type);
+    fullModeUpdatePreviewList(type);
+}
+
+function fullModeRemoveListItem(type, id) {
+    state[type] = state[type].filter(item => item.id !== id);
+    fullModeRenderListInput(type);
+    fullModeUpdatePreviewList(type);
+}
+
+function fullModeUpdateListItem(type, id, field, value) {
+    const item = state[type].find(i => i.id === id);
+    if (item) {
+        if (type === 'releases' || type === 'callings') {
+            item[field] = value;
+        } else {
+            item.text = value;
+        }
+    }
+}
+
+function renderAllFullModeLists() {
+    ['recognitions', 'announcements', 'releases', 'callings'].forEach(fullModeRenderListInput);
+}
+
+function fullModeRenderListInput(type) {
+    const container = document.getElementById(`full-${type}-input-container`);
+    if (!container) return;
+    container.innerHTML = '';
+
+    state[type].forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'input-row';
+
+        if (type === 'releases' || type === 'callings') {
+            row.innerHTML = `
+                <input type="text" value="${escapeHtml(item.name || '')}" 
+                    class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="name"
+                    placeholder="Nome..." style="flex: 1;">
+                <input type="text" value="${escapeHtml(item.calling || '')}" 
+                    class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="calling"
+                    placeholder="Chamado..." style="flex: 1;">
+                <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${item.id}">×</button>
+            `;
+        } else {
+            row.innerHTML = `
+                <input type="text" value="${escapeHtml(item.text || '')}" 
+                    class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="text"
+                    placeholder="Item..." style="flex: 1;">
+                <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${item.id}">×</button>
+            `;
+        }
+        container.appendChild(row);
+    });
+}
+
+function fullModeUpdatePreviewList(type) {
+    const ul = document.querySelector(`[data-bind-full="${type}"]`);
+    const section = document.getElementById(`full-preview-${type}`);
+    if (!ul || !section) return;
+
+    ul.innerHTML = '';
+    const items = state[type];
+
+    if (items.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    items.forEach(item => {
+        const li = document.createElement('li');
+        if (type === 'releases' || type === 'callings') {
+            const nameStr = item.name || '';
+            const callingStr = item.calling || '';
+            li.textContent = callingStr ? `${nameStr} — ${callingStr}` : nameStr;
+        } else {
+            li.textContent = item.text || '';
+        }
+        if (li.textContent) ul.appendChild(li);
+    });
+
+    // Business section visibility
+    if (type === 'releases' || type === 'callings') {
+        const releasesSection = document.getElementById('full-preview-releases');
+        const callingsSection = document.getElementById('full-preview-callings');
+        const businessSection = document.getElementById('full-preview-business');
+        const hasReleases = state.releases.some(r => r.name);
+        const hasCallings = state.callings.some(c => c.name);
+        if (releasesSection) releasesSection.style.display = hasReleases ? 'block' : 'none';
+        if (callingsSection) callingsSection.style.display = hasCallings ? 'block' : 'none';
+        if (businessSection) businessSection.style.display = (hasReleases || hasCallings) ? 'block' : 'none';
+    }
+}
+
+function fullModeAddSpeaker(section) {
+    const arr = section === 'before' ? state.speakersBefore : state.speakersAfter;
+    arr.push({ id: crypto.randomUUID(), name: '' });
+    fullModeRenderSpeakers(section);
+    fullModeUpdatePreviewSpeakers(section);
+    fullModeCheckIntermediateHymnVisibility();
+}
+
+function fullModeRemoveSpeaker(section, id) {
+    if (section === 'before') {
+        state.speakersBefore = state.speakersBefore.filter(s => s.id !== id);
+    } else {
+        state.speakersAfter = state.speakersAfter.filter(s => s.id !== id);
+    }
+    fullModeRenderSpeakers(section);
+    fullModeUpdatePreviewSpeakers(section);
+    fullModeCheckIntermediateHymnVisibility();
+}
+
+function fullModeRenderSpeakers(section) {
+    const containerId = `full-speakers-${section}-input-container`;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    const arr = section === 'before' ? state.speakersBefore : state.speakersAfter;
+    arr.forEach((speaker, index) => {
+        const row = document.createElement('div');
+        row.className = 'input-row';
+        row.innerHTML = `
+            <input type="text" value="${escapeHtml(speaker.name || '')}" 
+                class="full-speaker-input" data-section="${section}" data-id="${speaker.id}"
+                placeholder="Orador ${index + 1}..." style="flex: 1;">
+            <button type="button" class="btn-remove full-btn-remove-speaker" data-section="${section}" data-id="${speaker.id}">×</button>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function fullModeUpdatePreviewSpeakers(section) {
+    const listId = `full-speakers-${section}-list`;
+    const listEl = document.getElementById(listId);
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    const arr = section === 'before' ? state.speakersBefore : state.speakersAfter;
+    arr.forEach(speaker => {
+        if (speaker.name) {
+            const div = document.createElement('div');
+            div.className = 'speaker-item';
+            div.innerHTML = `
+                <span class="program-label">Discurso</span>
+                <span class="program-value">${escapeHtml(speaker.name)}</span>
+            `;
+            listEl.appendChild(div);
+        }
+    });
+}
+
+function fullModeCheckIntermediateHymnVisibility() {
+    const previewHymn = document.getElementById('full-preview-intermediate-hymn');
+    const fullForm = document.getElementById('fullModeForm');
+    const hymnVal = fullForm ? (fullForm['intermediateHymn']?.value || '') : '';
+    const hasSpeakersBefore = state.speakersBefore.length > 0;
+    const hasSpeakersAfter = state.speakersAfter.length > 0;
+
+    if (previewHymn) {
+        previewHymn.style.display = (hymnVal && (hasSpeakersBefore || hasSpeakersAfter)) ? 'flex' : 'none';
+    }
+}
+
+function fullModeToggleFastMeeting(isFast) {
+    const programSection = document.getElementById('full-program-section');
+    const fastNote = document.getElementById('full-fast-meeting-note');
+
+    if (isFast) {
+        if (programSection) programSection.style.display = 'none';
+        if (fastNote) fastNote.style.display = 'block';
+    } else {
+        if (programSection) programSection.style.display = 'block';
+        if (fastNote) fastNote.style.display = 'none';
+    }
+}
+
+function fullModeUpdatePreview() {
+    const fullForm = document.getElementById('fullModeForm');
+    if (!fullForm) return;
+
+    // Update all simple text bindings
+    ['ward', 'presiding', 'conducting', 'organist', 'chorister', 'openingHymn', 'sacramentHymn', 'closingHymn', 'invocation', 'benediction', 'intermediateHymn'].forEach(name => {
+        const input = fullForm[name];
+        if (input) {
+            fullModeUpdatePreviewField(name, input.value);
+        }
+    });
+
+    // Date
+    const dateInput = document.getElementById('full-input-date');
+    if (dateInput && dateInput.value) {
+        const el = document.querySelector('[data-bind-full="date"]');
+        if (el) el.textContent = formatDate(dateInput.value);
+    }
+
+    // Lists
+    ['recognitions', 'announcements', 'releases', 'callings'].forEach(fullModeUpdatePreviewList);
+
+    // Speakers
+    fullModeUpdatePreviewSpeakers('before');
+    fullModeUpdatePreviewSpeakers('after');
+
+    // Intermediate hymn visibility
+    fullModeCheckIntermediateHymnVisibility();
+}
 
 
 
@@ -1906,7 +2315,6 @@ async function renderAdmin() {
 // Expose functions for legacy HTML handlers and tests
 window.addMemberUI = addMemberUI;
 window.editPlan = editPlan;
-window.switchEditorTab = switchEditorTab;
 window.toggleMenu = toggleMenu;
 window.viewMember = viewMember;
 window.editMember = editMember;
