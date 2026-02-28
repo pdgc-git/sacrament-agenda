@@ -1395,6 +1395,44 @@ tr:hover .row-actions {
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    position: relative;
+}
+
+/* Full Screen Toggle for Completo Mode */
+.editor-split-layout.full-screen .editor-pane-inner {
+    display: none;
+}
+
+.editor-split-layout.full-screen .preview-pane-inner {
+    flex: 1;
+    width: 100%;
+}
+
+.preview-pane-inner .btn-fullscreen-toggle {
+    position: absolute;
+    top: 1rem;
+    right: 2rem;
+    background: white;
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.preview-pane-inner .btn-fullscreen-toggle:hover {
+    color: var(--action);
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 /* --- Mobile --- */

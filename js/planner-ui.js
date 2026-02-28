@@ -2312,6 +2312,28 @@ async function renderAdmin() {
     }
 }
 
+// === Full Screen Toggle for Completo Mode ===
+
+function fullModeToggleFullScreen() {
+    const splitLayout = document.querySelector('.editor-split-layout');
+    if (splitLayout) {
+        splitLayout.classList.toggle('full-screen');
+        // Update button icon
+        const btn = document.getElementById('full-fullscreen-toggle');
+        if (btn) {
+            const icon = btn.querySelector('i');
+            const text = btn.querySelector('.btn-text');
+            if (splitLayout.classList.contains('full-screen')) {
+                if (icon) icon.className = 'ph ph-arrows-in-simple';
+                if (text) text.textContent = 'Sair Ecrã Inteiro';
+            } else {
+                if (icon) icon.className = 'ph ph-arrows-out-simple';
+                if (text) text.textContent = 'Ecrã Inteiro';
+            }
+        }
+    }
+}
+
 // Expose functions for legacy HTML handlers and tests
 window.addMemberUI = addMemberUI;
 window.editPlan = editPlan;
@@ -2322,3 +2344,5 @@ window.deleteMember = deleteMember;
 window.renderAdmin = renderAdmin;
 window.setPlannerMode = setPlannerMode;
 window.renderPlanSubTab = renderPlanSubTab;
+window.fullModeToggleFullScreen = fullModeToggleFullScreen;
+

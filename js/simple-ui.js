@@ -208,6 +208,43 @@ function renderPreviewSpeakers(section) {
     });
 }
 
+// Preview Rendering
+function renderPreviewList(type) {
+    const previewContainer = document.getElementById(`preview-${type}`);
+    const listEl = previewContainer?.querySelector(`[data-bind="${type}"]`);
+    if (!listEl) return;
+
+    const items = state[type] || [];
+    listEl.innerHTML = '';
+
+    items.forEach(item => {
+        const li = document.createElement('li');
+        if (type === 'releases' || type === 'callings') {
+            const name = item.name || '';
+            const calling = item.calling || '';
+            li.textContent = calling ? `${name} — ${calling}` : name;
+        } else {
+            li.textContent = item.text || '';
+        }
+        listEl.appendChild(li);
+    });
+
+    // Toggle section visibility
+    if (previewContainer) {
+        previewContainer.style.display = items.length > 0 ? 'block' : 'none';
+    }
+
+    // Toggle parent business section for releases/callings
+    if (type === 'releases' || type === 'callings') {
+        const businessSection = document.getElementById('preview-business');
+        if (businessSection) {
+            const hasReleases = (state.releases || []).length > 0;
+            const hasCallings = (state.callings || []).length > 0;
+            businessSection.style.display = (hasReleases || hasCallings) ? 'block' : 'none';
+        }
+    }
+}
+
 // Utilities
 function exportPDF() {
     const el = document.getElementById('agenda-paper');
@@ -249,3 +286,4 @@ function formatDate(dateInput) {
 
     return s; // Fallback
 }
+
