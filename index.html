@@ -101,6 +101,67 @@
             align-items: center;
             gap: 0.5rem;
         }
+
+        /* Disabled Card (WIP) */
+        .card-disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: auto;
+            border: 2px dashed #cbd5e1;
+            position: relative;
+        }
+
+        .card-disabled:hover {
+            transform: none;
+            box-shadow: var(--shadow);
+            border-color: #cbd5e1;
+        }
+
+        .card-disabled .btn-fake {
+            color: #94a3b8;
+        }
+
+        .card-disabled .card-icon {
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        .wip-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+        }
+
+        .wip-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .wip-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -125,8 +186,9 @@
                 </div>
             </a>
 
-            <!-- Planner Tool Card -->
-            <a href="planner.html" class="card">
+            <!-- Planner Tool Card (WIP - Disabled) -->
+            <div class="card card-disabled" onclick="showWipToast()">
+                <span class="wip-badge">Em Desenvolvimento</span>
                 <div class="card-icon">
                     <i class="ph ph-users-three"></i>
                 </div>
@@ -134,9 +196,21 @@
                 <p>Modo autenticado. Gerir membros, acompanhar histórico de oradores e músicas, e sincronizar na nuvem.
                 </p>
                 <div class="btn-fake">
-                    Entrar <i class="ph ph-arrow-right"></i>
+                    Em breve <i class="ph ph-hourglass"></i>
                 </div>
-            </a>
+            </div>
+            <div id="wip-toast" class="wip-toast">
+                <i class="ph ph-wrench" style="margin-right:0.5rem"></i>
+                Esta funcionalidade está em desenvolvimento.
+            </div>
+
+            <script>
+                function showWipToast() {
+                    const toast = document.getElementById('wip-toast');
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 2500);
+                }
+            </script>
         </div>
     </div>
 </body>
