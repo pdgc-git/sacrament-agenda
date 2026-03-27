@@ -37,6 +37,20 @@ describe('DataManager', () => {
         expect(result).toEqual({ hasWard: true, wardId: 'ward-123', role: 'editor', status: 'active' });
     });
 
+    test('initUser should catch errors and return fallback object', async () => {
+        const mockError = new Error("Network/Permission error");
+        firestore.getDoc.mockRejectedValue(mockError);
+
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        const result = await initUser({ uid: 'test-uid' });
+
+        expect(result).toEqual({ hasWard: false, error: mockError.message });
+        expect(consoleSpy).toHaveBeenCalledWith("Critical Profile Error:", mockError);
+
+        consoleSpy.mockRestore();
+    });
+
     test('createWard should create ward and update user profile', async () => {
         firestore.addDoc.mockResolvedValue({ id: 'new-ward-id' });
 
