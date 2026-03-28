@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { parseMemberLines, normalizeName, parseCallingUpdates } from '../js/utils/pdfParser.js';
+import { parseMemberLines, normalizeName, parseCallingUpdates, escapeRegExp } from '../js/utils/pdfParser.js';
 
 describe('PDF Parser Utilities', () => {
 
@@ -25,6 +25,25 @@ describe('PDF Parser Utilities', () => {
             expect(normalizeName('Conceição')).toBe('conceicao');
             expect(normalizeName('José María')).toBe('jose maria');
             expect(normalizeName('São Paulo')).toBe('sao paulo');
+        });
+    });
+
+    describe('escapeRegExp', () => {
+        test('should escape special regex characters', () => {
+            expect(escapeRegExp('.*+?^${}()|[]\\')).toBe('\\.\\*\\+\\?\\^\\$\\{\\}\\(\\)\\|\\[\\]\\\\');
+        });
+
+        test('should not change strings without special characters', () => {
+            expect(escapeRegExp('HelloWorld123')).toBe('HelloWorld123');
+            expect(escapeRegExp('Hello World')).toBe('Hello World');
+        });
+
+        test('should handle empty string', () => {
+            expect(escapeRegExp('')).toBe('');
+        });
+
+        test('should escape a mix of normal and special characters', () => {
+            expect(escapeRegExp('abc.def+ghi?')).toBe('abc\\.def\\+ghi\\?');
         });
     });
 
