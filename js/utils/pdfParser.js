@@ -22,6 +22,7 @@ export async function extractVisualLines(file) {
         // We use a tolerance of 4 pixels to account for minor misalignments
         const rowMap = new Map();
         const Y_TOLERANCE = 4;
+        const rowYs = []; // Keep track of Ys in sorted order for binary search
 
         content.items.forEach(item => {
             // PDF Y-coordinates start from bottom, so higher value = higher on page
@@ -29,16 +30,31 @@ export async function extractVisualLines(file) {
             if (!item.str.trim()) return; // Skip empty whitespace items
 
             let matchY = null;
-            for (const existingY of rowMap.keys()) {
-                if (Math.abs(existingY - y) < Y_TOLERANCE) {
-                    matchY = existingY;
+
+            // Binary search for a matching Y in rowYs
+            let low = 0;
+            let high = rowYs.length - 1;
+
+            while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                const midY = rowYs[mid];
+
+                if (Math.abs(midY - y) < Y_TOLERANCE) {
+                    matchY = midY;
                     break;
+                } else if (midY < y) {
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
                 }
             }
+
             if (matchY !== null) {
                 rowMap.get(matchY).push(item);
             } else {
                 rowMap.set(y, [item]);
+                // Insert into rowYs while maintaining order
+                rowYs.splice(low, 0, y);
             }
         });
 
