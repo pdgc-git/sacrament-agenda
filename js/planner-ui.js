@@ -879,6 +879,129 @@ function setPlannerMode(mode) {
     });
 }
 
+function renderPlanSpeakersSubTab(container) {
+    container.innerHTML = `
+        <div class="form-section">
+            <h3>Programa Espiritual</h3>
+            <div id="plan-speakers-list"></div>
+            <button class="btn btn-secondary" id="plan-add-speaker" style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
+        </div>
+    `;
+    renderPlanSpeakers();
+    document.getElementById('plan-add-speaker')?.addEventListener('click', () => {
+        addSpeakerUI();
+        renderPlanSpeakers();
+    });
+    // Show member recommendations
+    renderSmartRecommendations('speakers');
+}
+
+function renderPlanHymnsSubTab(container, assistantList) {
+    container.innerHTML = `
+        <div class="form-section">
+            <h3>Música</h3>
+            <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+                <div class="input-wrapper">
+                    <label>Regente</label>
+                    <input type="text" id="plan-chorister" placeholder="Nome..." value="${getPlanFormValue('chorister')}">
+                </div>
+                <div class="input-wrapper">
+                    <label>Pianista</label>
+                    <input type="text" id="plan-organist" placeholder="Nome..." value="${getPlanFormValue('organist')}">
+                </div>
+            </div>
+            <div class="hymn-input-wrapper">
+                <label>Hino de Abertura</label>
+                <input type="text" class="plan-hymn-search" id="plan-openingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('openingHymn')}">
+                <div class="hymn-results"></div>
+            </div>
+            <div class="hymn-input-wrapper">
+                <label>Hino Sacramental</label>
+                <input type="text" class="plan-hymn-search" id="plan-sacramentHymn" placeholder="Número ou Título..." value="${getPlanFormValue('sacramentHymn')}">
+                <div class="hymn-results"></div>
+            </div>
+            <div class="hymn-input-wrapper">
+                <label>Hino de Encerramento</label>
+                <input type="text" class="plan-hymn-search" id="plan-closingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('closingHymn')}">
+                <div class="hymn-results"></div>
+            </div>
+        </div>
+    `;
+    // Sync plan inputs back to full form
+    ['chorister', 'organist'].forEach(name => {
+        const planInput = document.getElementById(`plan-${name}`);
+        if (planInput) {
+            planInput.addEventListener('input', () => syncToFullForm(name, planInput.value));
+        }
+    });
+    // Setup hymn search on plan inputs
+    container.querySelectorAll('.plan-hymn-search').forEach(inp => {
+        const fieldName = inp.id.replace('plan-', '');
+        setupHymnSearch(inp, window.hymns, async (val) => {
+            syncToFullForm(fieldName, val);
+            await checkHymnWarning(inp, val);
+        });
+        inp.addEventListener('input', () => syncToFullForm(fieldName, inp.value));
+    });
+    // Show hymn info in assistant
+    if (assistantList) {
+        assistantList.innerHTML = `
+            <div style="text-align:center; padding:2rem; color:var(--text-light); font-size:0.85rem;">
+                <i class="ph ph-music-notes" style="font-size:2rem;"></i>
+                <p style="margin-top:0.5rem;">Pesquise hinos nos campos à esquerda.<br>Os avisos de repetição aparecem automaticamente.</p>
+            </div>
+        `;
+    }
+}
+
+function renderPlanPrayersSubTab(container) {
+    container.innerHTML = `
+        <div class="form-section">
+            <h3>Orações</h3>
+            <div class="input-wrapper" style="margin-bottom:1rem;">
+                <label>Primeira Oração</label>
+                <div class="member-search-wrapper">
+                    <input type="text" class="plan-member-search" id="plan-invocation" placeholder="Nome do membro..." value="${getPlanFormValue('invocation')}">
+                    <div class="member-results"></div>
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <label>Última Oração</label>
+                <div class="member-search-wrapper">
+                    <input type="text" class="plan-member-search" id="plan-benediction" placeholder="Nome do membro..." value="${getPlanFormValue('benediction')}">
+                    <div class="member-results"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    // Setup member search on plan prayer inputs
+    container.querySelectorAll('.plan-member-search').forEach(inp => {
+        const fieldName = inp.id.replace('plan-', '');
+        inp.addEventListener('focus', () => state.activeMemberInput = inp);
+        inp.addEventListener('input', () => {
+            syncToFullForm(fieldName, inp.value);
+            const val = inp.value.toLowerCase();
+            const resBox = inp.parentElement.querySelector('.member-results');
+            resBox.innerHTML = '';
+            if (val.length < 2) return;
+            const matches = state.members.filter(m => m.name.toLowerCase().includes(val)).slice(0, 5);
+            matches.forEach(m => {
+                const r = document.createElement('div');
+                r.className = 'hymn-result-item';
+                r.innerText = m.name;
+                r.onclick = () => {
+                    inp.value = m.name;
+                    resBox.innerHTML = '';
+                    syncToFullForm(fieldName, m.name);
+                };
+                resBox.appendChild(r);
+            });
+        });
+    });
+    // Show prayer member recommendations
+    renderSmartRecommendations('prayers');
+}
+
 function renderPlanSubTab(tabName) {
     state.activeSubTab = tabName;
     const container = document.getElementById('plan-input-container');
@@ -894,122 +1017,11 @@ function renderPlanSubTab(tabName) {
     container.innerHTML = '';
 
     if (tabName === 'speakers') {
-        container.innerHTML = `
-            <div class="form-section">
-                <h3>Programa Espiritual</h3>
-                <div id="plan-speakers-list"></div>
-                <button class="btn btn-secondary" id="plan-add-speaker" style="width:100%; margin-top:0.5rem;">+ Adicionar Orador</button>
-            </div>
-        `;
-        renderPlanSpeakers();
-        document.getElementById('plan-add-speaker')?.addEventListener('click', () => {
-            addSpeakerUI();
-            renderPlanSpeakers();
-        });
-        // Show member recommendations
-        renderSmartRecommendations('speakers');
+        renderPlanSpeakersSubTab(container);
     } else if (tabName === 'hymns') {
-        container.innerHTML = `
-            <div class="form-section">
-                <h3>Música</h3>
-                <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
-                    <div class="input-wrapper">
-                        <label>Regente</label>
-                        <input type="text" id="plan-chorister" placeholder="Nome..." value="${getPlanFormValue('chorister')}">
-                    </div>
-                    <div class="input-wrapper">
-                        <label>Pianista</label>
-                        <input type="text" id="plan-organist" placeholder="Nome..." value="${getPlanFormValue('organist')}">
-                    </div>
-                </div>
-                <div class="hymn-input-wrapper">
-                    <label>Hino de Abertura</label>
-                    <input type="text" class="plan-hymn-search" id="plan-openingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('openingHymn')}">
-                    <div class="hymn-results"></div>
-                </div>
-                <div class="hymn-input-wrapper">
-                    <label>Hino Sacramental</label>
-                    <input type="text" class="plan-hymn-search" id="plan-sacramentHymn" placeholder="Número ou Título..." value="${getPlanFormValue('sacramentHymn')}">
-                    <div class="hymn-results"></div>
-                </div>
-                <div class="hymn-input-wrapper">
-                    <label>Hino de Encerramento</label>
-                    <input type="text" class="plan-hymn-search" id="plan-closingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('closingHymn')}">
-                    <div class="hymn-results"></div>
-                </div>
-            </div>
-        `;
-        // Sync plan inputs back to full form
-        ['chorister', 'organist'].forEach(name => {
-            const planInput = document.getElementById(`plan-${name}`);
-            if (planInput) {
-                planInput.addEventListener('input', () => syncToFullForm(name, planInput.value));
-            }
-        });
-        // Setup hymn search on plan inputs
-        container.querySelectorAll('.plan-hymn-search').forEach(inp => {
-            const fieldName = inp.id.replace('plan-', '');
-            setupHymnSearch(inp, window.hymns, async (val) => {
-                syncToFullForm(fieldName, val);
-                await checkHymnWarning(inp, val);
-            });
-            inp.addEventListener('input', () => syncToFullForm(fieldName, inp.value));
-        });
-        // Show hymn info in assistant
-        if (assistantList) {
-            assistantList.innerHTML = `
-                <div style="text-align:center; padding:2rem; color:var(--text-light); font-size:0.85rem;">
-                    <i class="ph ph-music-notes" style="font-size:2rem;"></i>
-                    <p style="margin-top:0.5rem;">Pesquise hinos nos campos à esquerda.<br>Os avisos de repetição aparecem automaticamente.</p>
-                </div>
-            `;
-        }
+        renderPlanHymnsSubTab(container, assistantList);
     } else if (tabName === 'prayers') {
-        container.innerHTML = `
-            <div class="form-section">
-                <h3>Orações</h3>
-                <div class="input-wrapper" style="margin-bottom:1rem;">
-                    <label>Primeira Oração</label>
-                    <div class="member-search-wrapper">
-                        <input type="text" class="plan-member-search" id="plan-invocation" placeholder="Nome do membro..." value="${getPlanFormValue('invocation')}">
-                        <div class="member-results"></div>
-                    </div>
-                </div>
-                <div class="input-wrapper">
-                    <label>Última Oração</label>
-                    <div class="member-search-wrapper">
-                        <input type="text" class="plan-member-search" id="plan-benediction" placeholder="Nome do membro..." value="${getPlanFormValue('benediction')}">
-                        <div class="member-results"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-        // Setup member search on plan prayer inputs
-        container.querySelectorAll('.plan-member-search').forEach(inp => {
-            const fieldName = inp.id.replace('plan-', '');
-            inp.addEventListener('focus', () => state.activeMemberInput = inp);
-            inp.addEventListener('input', () => {
-                syncToFullForm(fieldName, inp.value);
-                const val = inp.value.toLowerCase();
-                const resBox = inp.parentElement.querySelector('.member-results');
-                resBox.innerHTML = '';
-                if (val.length < 2) return;
-                const matches = state.members.filter(m => m.name.toLowerCase().includes(val)).slice(0, 5);
-                matches.forEach(m => {
-                    const r = document.createElement('div');
-                    r.className = 'hymn-result-item';
-                    r.innerText = m.name;
-                    r.onclick = () => {
-                        inp.value = m.name;
-                        resBox.innerHTML = '';
-                        syncToFullForm(fieldName, m.name);
-                    };
-                    resBox.appendChild(r);
-                });
-            });
-        });
-        // Show prayer member recommendations
-        renderSmartRecommendations('prayers');
+        renderPlanPrayersSubTab(container);
     }
 }
 
