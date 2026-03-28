@@ -114,7 +114,6 @@ function setupEventListeners() {
 
     // Import Modal Actions
     document.getElementById('btn-download-template')?.addEventListener('click', () => downloadTemplate());
-    document.getElementById('btn-process-paste')?.addEventListener('click', () => processPasteImport());
     document.getElementById('btn-select-file')?.addEventListener('click', () => document.getElementById('bulk-csv-upload').click());
 
     // Roster Event Delegation
@@ -1982,18 +1981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    // Bind File Upload in Modal
-    document.getElementById('bulk-csv-upload')?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                const text = evt.target.result;
-                await parseAndImport(text);
-            };
-            reader.readAsText(file);
-        }
-    });
+    // Removed old CSV bind logic, we use PDF import now
 
     // Close all menus on global click
     document.addEventListener('click', () => {

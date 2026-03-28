@@ -21,10 +21,9 @@ export function showToast(message, type = 'info', duration = 3000) {
     toast.className = `toast-notification toast-${type}`;
 
     // Icon based on type
-    let icon = '';
+    let icon = '<i class="ph ph-info"></i>';
     if (type === 'success') icon = '<i class="ph ph-check-circle"></i>';
     else if (type === 'error') icon = '<i class="ph ph-warning-circle"></i>';
-    else icon = '<i class="ph ph-info"></i>';
 
     toast.innerHTML = `
         <div class="toast-content">
