@@ -28,11 +28,14 @@ module.exports = {
     where: jest.fn(),
     orderBy: jest.fn(),
     limit: jest.fn(),
-    writeBatch: jest.fn(() => ({
-        set: jest.fn(),
-        update: jest.fn(),
-        commit: jest.fn(() => Promise.resolve())
-    })),
+    writeBatch: jest.fn().mockImplementation(() => {
+        const batch = {
+            set: jest.fn(),
+            update: jest.fn(),
+            commit: jest.fn().mockResolvedValue()
+        };
+        return batch;
+    }),
     Timestamp: {
         now: jest.fn(() => ({ toDate: () => new Date(), toMillis: () => Date.now() })),
         fromDate: jest.fn((date) => ({ toDate: () => date, toMillis: () => date.getTime() }))
