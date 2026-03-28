@@ -22,6 +22,18 @@ describe('DataManager', () => {
         expect(result).toEqual({ hasWard: false });
     });
 
+    test('initUser should handle getDoc permission errors gracefully', async () => {
+        // Suppress console.error for this expected error log
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        firestore.getDoc.mockRejectedValueOnce(new Error('permission-denied'));
+
+        const result = await initUser({ uid: 'test-uid' });
+        expect(result).toEqual({ hasWard: false, error: 'permission-denied' });
+
+        consoleSpy.mockRestore();
+    });
+
     test('initUser should return ward info if user has ward', async () => {
         firestore.getDoc
             .mockResolvedValueOnce({ // users/uid
