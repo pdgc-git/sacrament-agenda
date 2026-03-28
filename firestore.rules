@@ -12,7 +12,8 @@ service cloud.firestore {
     }
 
     function isMember(wardId) {
-      return exists(/databases/$(database)/documents/wards/$(wardId)/users/$(request.auth.uid));
+      let userPath = /databases/$(database)/documents/wards/$(wardId)/users/$(request.auth.uid);
+      return exists(userPath) && get(userPath).data.status == 'active';
     }
 
     function isRole(wardId, roleName) {
