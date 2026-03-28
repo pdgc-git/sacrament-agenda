@@ -1,4 +1,4 @@
-import { initUser, createWard } from '../js/dataManager.js';
+import { initUser, createWard, getMemberStats } from '../js/dataManager.js';
 import * as firestore from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
 
 // Mock Firebase Config
@@ -79,5 +79,65 @@ describe('DataManager', () => {
 
         const count = await dm.importMembersFromCSV(file);
         expect(count).toBe(0);
+    });
+
+    describe('getMemberStats', () => {
+        beforeEach(async () => {
+            // Reset currentWardId by calling initUser(null)
+            await initUser(null);
+        });
+
+        test('should return member data when the member document exists', async () => {
+            const mockMemberData = { name: 'John Doe', group: 'Adult' };
+
+            // Set up ward ID via initUser mock
+            firestore.getDoc
+                .mockResolvedValueOnce({ // users/uid
+                    exists: () => true,
+                    data: () => ({ wardId: 'ward-123' })
+                })
+                .mockResolvedValueOnce({ // wards/users/uid
+                    exists: () => true,
+                    data: () => ({ role: 'editor', status: 'active' })
+                })
+                .mockResolvedValueOnce({ // wards/ward-123/members/member-456
+                    exists: () => true,
+                    data: () => mockMemberData
+                });
+
+            await initUser({ uid: 'test-uid' });
+
+            const stats = await getMemberStats('member-456');
+
+            expect(stats).toEqual(mockMemberData);
+            expect(firestore.getDoc).toHaveBeenCalledTimes(3);
+        });
+
+        test('should return null when the member document does not exist', async () => {
+            firestore.getDoc
+                .mockResolvedValueOnce({ // users/uid
+                    exists: () => true,
+                    data: () => ({ wardId: 'ward-123' })
+                })
+                .mockResolvedValueOnce({ // wards/users/uid
+                    exists: () => true,
+                    data: () => ({ role: 'editor', status: 'active' })
+                })
+                .mockResolvedValueOnce({ // wards/ward-123/members/non-existent
+                    exists: () => false
+                });
+
+            await initUser({ uid: 'test-uid' });
+
+            const stats = await getMemberStats('non-existent');
+
+            expect(stats).toBeNull();
+        });
+
+        test('should throw error when no ward is selected', async () => {
+            // currentWardId is reset in the nested beforeEach by calling initUser(null)
+            await expect(getMemberStats('member-456'))
+                .rejects.toThrow("Nenhuma ala selecionada. Crie ou junte-se a uma ala.");
+        });
     });
 });
