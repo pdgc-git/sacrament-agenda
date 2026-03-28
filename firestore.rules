@@ -54,7 +54,9 @@ service cloud.firestore {
         allow read: if request.auth != null && (request.auth.uid == userId || isMember(wardId));
         
         // Write (Join Request): A user can write their OWN entry to 'pending' state
-        allow create: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId
+                      && request.resource.data.role == 'viewer'
+                      && request.resource.data.status == 'pending';
         
         // Update (Manage Roles): Only Admins can update OTHER users' roles
         allow update: if request.auth != null && isAdmin(wardId);
