@@ -80,4 +80,36 @@ describe('DataManager', () => {
         const count = await dm.importMembersFromCSV(file);
         expect(count).toBe(0);
     });
+
+    describe('saveFuturePlan validation', () => {
+        let dm;
+
+        beforeEach(async () => {
+            dm = await import('../js/dataManager.js');
+            // Setup global currentWardId via initUser
+            firestore.getDoc.mockResolvedValue({ exists: () => true, data: () => ({ wardId: 'ward-123' }) });
+            await dm.initUser({ uid: 'test-uid' });
+        });
+
+        test('should throw error if dateStr is missing', async () => {
+            const planData = { speakers: [] };
+            await expect(dm.saveFuturePlan(planData)).rejects.toThrow("Data inv\u00e1lida. O formato deve ser AAAA-MM-DD.");
+        });
+
+        test('should throw error if dateStr has invalid format', async () => {
+            const invalidDates = ['2023/10/01', '01-10-2023', '2023-1-1', '23-10-01', 'invalid-date'];
+
+            for (const dateStr of invalidDates) {
+                const planData = { dateStr, speakers: [] };
+                await expect(dm.saveFuturePlan(planData)).rejects.toThrow("Data inv\u00e1lida. O formato deve ser AAAA-MM-DD.");
+            }
+        });
+
+        test('should proceed if dateStr is valid', async () => {
+            firestore.setDoc.mockResolvedValue(undefined);
+            const planData = { dateStr: '2023-10-01', speakers: [] };
+            const result = await dm.saveFuturePlan(planData);
+            expect(result).toBe('2023-10-01');
+        });
+    });
 });
