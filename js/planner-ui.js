@@ -388,29 +388,38 @@ function updateWardNameUI(name) {
 // ... (Email Auth & Onboarding Helpers same as before, abbreviated here for brevity) ...
 // Assuming showPendingScreen/showOnboarding/setupEmailAuthListeners logic is standard and preserved.
 // I will include them to ensure functionality.
+function handleToggleSignupMode(e, authState, btnToggle, btnLogin) {
+    e.preventDefault();
+    authState.isSignup = !authState.isSignup;
+    btnToggle.textContent = authState.isSignup ? "Já tenho conta" : "Criar conta";
+    btnLogin.textContent = authState.isSignup ? "Registar" : "Entrar";
+    if (authState.isSignup) showToast("Nota: Para criar uma nova ala, registe-se e depois crie a ala.");
+}
+
+async function handleAuthSubmit(authState, emailIn, passIn, errorDisplay) {
+    try {
+        if (authState.isSignup) {
+            await createUserWithEmailAndPassword(auth, emailIn.value, passIn.value);
+        } else {
+            await signInWithEmailAndPassword(auth, emailIn.value, passIn.value);
+        }
+    } catch (e) {
+        errorDisplay.textContent = e.message;
+    }
+}
+
 function setupEmailAuthListeners(errorDisplay) {
     const btnLogin = document.getElementById('btn-email-login');
     const btnToggle = document.getElementById('btn-signup-toggle');
     const emailIn = document.getElementById('email-input');
     const passIn = document.getElementById('password-input');
-    let isSignup = false;
+    const authState = { isSignup: false };
 
     if (btnToggle) {
-        btnToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            isSignup = !isSignup;
-            btnToggle.textContent = isSignup ? "Já tenho conta" : "Criar conta";
-            btnLogin.textContent = isSignup ? "Registar" : "Entrar";
-            if (isSignup) showToast("Nota: Para criar uma nova ala, registe-se e depois crie a ala.");
-        });
+        btnToggle.addEventListener('click', (e) => handleToggleSignupMode(e, authState, btnToggle, btnLogin));
     }
 
-    btnLogin.addEventListener('click', async () => {
-        try {
-            if (isSignup) await createUserWithEmailAndPassword(auth, emailIn.value, passIn.value);
-            else await signInWithEmailAndPassword(auth, emailIn.value, passIn.value);
-        } catch (e) { errorDisplay.textContent = e.message; }
-    });
+    btnLogin.addEventListener('click', () => handleAuthSubmit(authState, emailIn, passIn, errorDisplay));
 }
 
 function showPendingScreen(overlay) {
@@ -2345,4 +2354,3 @@ window.renderAdmin = renderAdmin;
 window.setPlannerMode = setPlannerMode;
 window.renderPlanSubTab = renderPlanSubTab;
 window.fullModeToggleFullScreen = fullModeToggleFullScreen;
-
