@@ -212,6 +212,53 @@ export async function saveMember(memberData) {
 // Alias for clarity/compatibility
 export const addMember = saveMember;
 
+export async function saveMembersBatch(membersArray) {
+    if (!membersArray || membersArray.length === 0) return 0;
+
+    const wardId = getWardId();
+    const membersRef = collection(db, `wards/${wardId}/members`);
+
+    let totalImported = 0;
+    const CHUNK_SIZE = 500; // Firestore batch limit
+
+    for (let i = 0; i < membersArray.length; i += CHUNK_SIZE) {
+        const chunk = membersArray.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+
+        for (const memberData of chunk) {
+            if (!memberData.name || typeof memberData.name !== 'string' || !memberData.name.trim()) {
+                continue;
+            }
+
+            const validGroups = ['Adult', 'Youth', 'Primary', 'Young Adult'];
+            let group = memberData.group;
+            if (!validGroups.includes(group)) {
+                group = 'Adult';
+            }
+
+            const dataToSave = {
+                name: memberData.name.trim(),
+                calling: memberData.calling || '',
+                group: group,
+                gender: memberData.gender || 'M'
+            };
+
+            if (memberData.id) {
+                const docRef = doc(membersRef, memberData.id);
+                batch.update(docRef, dataToSave);
+            } else {
+                const docRef = doc(membersRef);
+                batch.set(docRef, dataToSave);
+            }
+            totalImported++;
+        }
+
+        await batch.commit();
+    }
+
+    return totalImported;
+}
+
 export async function deleteMember(id) {
     const wardId = getWardId();
     await deleteDoc(doc(db, `wards/${wardId}/members`, id));
@@ -220,11 +267,11 @@ export async function deleteMember(id) {
 export async function getMemberHistory(memberId) {
     // This assumes we can query meetings where this member spoke or prayed.
     // Since we store denormalized names in meetings, we might need a better strategy if we want strict ID linking.
-    // However, our current saveMeeting stores names. 
-    // Ideally, we should store IDs. 
+    // However, our current saveMeeting stores names.
+    // Ideally, we should store IDs.
     // For now, let's rely on the 'last_talk_date' and 'last_prayer_date' from member doc for summary,
     // and maybe query recent meetings if we want detailed logs?
-    // Given the prompt "view info of the member and their prayers and talks log", 
+    // Given the prompt "view info of the member and their prayers and talks log",
     // let's try to find meetings where they are listed.
 
     // NOTE: Our current structure might makes this hard if we only store strings in 'speakers'.
@@ -570,7 +617,7 @@ export async function migrateLegacyData() {
         if (dateStr) {
             const newRef = doc(db, `wards/${wardId}/meetings`, dateStr);
             // Use update if exists (history wins), else set
-            // Simplified: set with merge. If history exists, it overwrites common fields? 
+            // Simplified: set with merge. If history exists, it overwrites common fields?
             // Ideally we check. But for legacy 'plans', they usually are future.
             batch.set(newRef, {
                 ...data,
@@ -584,4 +631,3 @@ export async function migrateLegacyData() {
     await batch.commit();
     alert(`Migrated ${count} legacy documents to 'meetings' collection.`);
 }
-

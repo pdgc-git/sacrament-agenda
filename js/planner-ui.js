@@ -234,7 +234,7 @@ async function exportPDF() {
     }
 
     const element = document.getElementById('agenda-paper');
-    // We need to POPULATE the agenda-paper first! 
+    // We need to POPULATE the agenda-paper first!
     // The previous logic in app.js assumed it was populated or populate it?
     // app.js didn't show population logic in the snippet.
     // Wait, the PDF generation usually requires rendering the "print view".
@@ -1407,17 +1407,17 @@ function renderDynamicListInput(type) {
 
         if (type === 'releases' || type === 'callings') {
             row.innerHTML = `
-                <input type="text" value="${item.name || ''}" 
+                <input type="text" value="${item.name || ''}"
                     class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="name"
                     placeholder="Nome..." style="flex: 1;">
-                <input type="text" value="${item.calling || ''}" 
+                <input type="text" value="${item.calling || ''}"
                     class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="calling"
                     placeholder="Chamado..." style="flex: 1; margin-left: 0.5rem;">
                 <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${item.id}" style="margin-left:5px; padding:0 8px;">×</button>
             `;
         } else {
             row.innerHTML = `
-                <input type="text" value="${item.text || ''}" 
+                <input type="text" value="${item.text || ''}"
                     class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="text"
                     placeholder="Item..." style="flex: 1;">
                 <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${item.id}" style="margin-left:5px; padding:0 8px;">×</button>
@@ -1594,17 +1594,17 @@ function fullModeRenderListInput(type) {
 
         if (type === 'releases' || type === 'callings') {
             row.innerHTML = `
-                <input type="text" value="${escapeHtml(item.name || '')}" 
+                <input type="text" value="${escapeHtml(item.name || '')}"
                     class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="name"
                     placeholder="Nome..." style="flex: 1;">
-                <input type="text" value="${escapeHtml(item.calling || '')}" 
+                <input type="text" value="${escapeHtml(item.calling || '')}"
                     class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="calling"
                     placeholder="Chamado..." style="flex: 1;">
                 <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${item.id}">×</button>
             `;
         } else {
             row.innerHTML = `
-                <input type="text" value="${escapeHtml(item.text || '')}" 
+                <input type="text" value="${escapeHtml(item.text || '')}"
                     class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="text"
                     placeholder="Item..." style="flex: 1;">
                 <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${item.id}">×</button>
@@ -1683,7 +1683,7 @@ function fullModeRenderSpeakers(section) {
         const row = document.createElement('div');
         row.className = 'input-row';
         row.innerHTML = `
-            <input type="text" value="${escapeHtml(speaker.name || '')}" 
+            <input type="text" value="${escapeHtml(speaker.name || '')}"
                 class="full-speaker-input" data-section="${section}" data-id="${speaker.id}"
                 placeholder="Orador ${index + 1}..." style="flex: 1;">
             <button type="button" class="btn-remove full-btn-remove-speaker" data-section="${section}" data-id="${speaker.id}">×</button>
@@ -2077,7 +2077,7 @@ async function confirmImport() {
     const rows = document.querySelectorAll('#import-preview-tbody tr');
     if (rows.length === 0) return showToast("Nada para importar.", 'warning');
 
-    let imported = 0;
+    const membersToSave = [];
     for (const tr of rows) {
         const name = tr.querySelector('.preview-name').value;
         const calling = tr.querySelector('.preview-calling').value;
@@ -2085,9 +2085,13 @@ async function confirmImport() {
         const gender = tr.querySelector('.preview-gender').value;
 
         if (name) {
-            await DM.saveMember({ id: null, name, calling, group, gender });
-            imported++;
+            membersToSave.push({ id: null, name, calling, group, gender });
         }
+    }
+
+    let imported = 0;
+    if (membersToSave.length > 0) {
+        imported = await DM.saveMembersBatch(membersToSave);
     }
 
     showToast(`${imported} membros importados com sucesso!`, 'success');
@@ -2333,4 +2337,3 @@ window.renderAdmin = renderAdmin;
 window.setPlannerMode = setPlannerMode;
 window.renderPlanSubTab = renderPlanSubTab;
 window.fullModeToggleFullScreen = fullModeToggleFullScreen;
-
