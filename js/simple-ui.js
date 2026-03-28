@@ -10,6 +10,7 @@ const state = {
 import { setupHymnSearch } from './utils/uiUtils.js';
 import { showToast } from './components/Toast.js';
 import { hymns } from './hymns.js';
+import { escapeHtml } from './utils/security.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -167,11 +168,11 @@ function renderListInput(type) {
         div.className = 'input-row';
         if (type === 'releases' || type === 'callings') {
             div.innerHTML = `
-                <input type="text" class="dynamic-input" placeholder="Nome" value="${item.name}" data-type="${type}" data-id="${item.id}" data-field="name" style="flex:1">
-                <input type="text" class="dynamic-input" placeholder="Chamado" value="${item.calling}" data-type="${type}" data-id="${item.id}" data-field="calling" style="flex:1">
+                <input type="text" class="dynamic-input" placeholder="Nome" value="${escapeHtml(item.name)}" data-type="${type}" data-id="${item.id}" data-field="name" style="flex:1">
+                <input type="text" class="dynamic-input" placeholder="Chamado" value="${escapeHtml(item.calling)}" data-type="${type}" data-id="${item.id}" data-field="calling" style="flex:1">
             `;
         } else {
-            div.innerHTML = `<input type="text" class="dynamic-input" placeholder="Texto" value="${item.text}" data-type="${type}" data-id="${item.id}" data-field="text" style="flex:1">`;
+            div.innerHTML = `<input type="text" class="dynamic-input" placeholder="Texto" value="${escapeHtml(item.text)}" data-type="${type}" data-id="${item.id}" data-field="text" style="flex:1">`;
         }
         div.innerHTML += `<button class="btn-remove" data-type="${type}" data-id="${item.id}">×</button>`;
         container.appendChild(div);
@@ -189,7 +190,7 @@ function renderSpeakers(section) {
     state[type].forEach((s, i) => {
         container.innerHTML += `
             <div class="input-row">
-                <input type="text" class="dynamic-input" placeholder="Orador" value="${s.name}" data-type="${type}" data-id="${s.id}" data-field="name" style="flex:1">
+                <input type="text" class="dynamic-input" placeholder="Orador" value="${escapeHtml(s.name)}" data-type="${type}" data-id="${s.id}" data-field="name" style="flex:1">
                 <button class="btn-remove" data-type="${type}" data-id="${s.id}">×</button>
             </div>`;
     });
@@ -204,7 +205,7 @@ function renderPreviewSpeakers(section) {
     l.innerHTML = '';
 
     state[type].forEach(s => {
-        l.innerHTML += `<div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">${s.name}</span></div>`;
+        l.innerHTML += `<div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">${escapeHtml(s.name)}</span></div>`;
     });
 }
 
