@@ -235,7 +235,7 @@ async function exportPDF() {
     }
 
     const element = document.getElementById('agenda-paper');
-    // We need to POPULATE the agenda-paper first! 
+    // We need to POPULATE the agenda-paper first!
     // The previous logic in app.js assumed it was populated or populate it?
     // app.js didn't show population logic in the snippet.
     // Wait, the PDF generation usually requires rendering the "print view".
@@ -819,7 +819,7 @@ async function renderMemberPool(filterGender = null, filterGroup = null, searchT
 
         div.innerHTML = `
             <div class="member-info">
-                <h4>${m.name}</h4>
+                <h4>${escapeHtml(m.name)}</h4>
                 <p>${lastDateStr ? 'Último: ' + lastDateStr : 'Sem registo'}</p>
             </div>
             ${statusBadge}
@@ -916,26 +916,26 @@ function renderPlanSubTab(tabName) {
                 <div class="input-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
                     <div class="input-wrapper">
                         <label>Regente</label>
-                        <input type="text" id="plan-chorister" placeholder="Nome..." value="${getPlanFormValue('chorister')}">
+                        <input type="text" id="plan-chorister" placeholder="Nome..." value="${escapeHtml(getPlanFormValue('chorister'))}">
                     </div>
                     <div class="input-wrapper">
                         <label>Pianista</label>
-                        <input type="text" id="plan-organist" placeholder="Nome..." value="${getPlanFormValue('organist')}">
+                        <input type="text" id="plan-organist" placeholder="Nome..." value="${escapeHtml(getPlanFormValue('organist'))}">
                     </div>
                 </div>
                 <div class="hymn-input-wrapper">
                     <label>Hino de Abertura</label>
-                    <input type="text" class="plan-hymn-search" id="plan-openingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('openingHymn')}">
+                    <input type="text" class="plan-hymn-search" id="plan-openingHymn" placeholder="Número ou Título..." value="${escapeHtml(getPlanFormValue('openingHymn'))}">
                     <div class="hymn-results"></div>
                 </div>
                 <div class="hymn-input-wrapper">
                     <label>Hino Sacramental</label>
-                    <input type="text" class="plan-hymn-search" id="plan-sacramentHymn" placeholder="Número ou Título..." value="${getPlanFormValue('sacramentHymn')}">
+                    <input type="text" class="plan-hymn-search" id="plan-sacramentHymn" placeholder="Número ou Título..." value="${escapeHtml(getPlanFormValue('sacramentHymn'))}">
                     <div class="hymn-results"></div>
                 </div>
                 <div class="hymn-input-wrapper">
                     <label>Hino de Encerramento</label>
-                    <input type="text" class="plan-hymn-search" id="plan-closingHymn" placeholder="Número ou Título..." value="${getPlanFormValue('closingHymn')}">
+                    <input type="text" class="plan-hymn-search" id="plan-closingHymn" placeholder="Número ou Título..." value="${escapeHtml(getPlanFormValue('closingHymn'))}">
                     <div class="hymn-results"></div>
                 </div>
             </div>
@@ -972,14 +972,14 @@ function renderPlanSubTab(tabName) {
                 <div class="input-wrapper" style="margin-bottom:1rem;">
                     <label>Primeira Oração</label>
                     <div class="member-search-wrapper">
-                        <input type="text" class="plan-member-search" id="plan-invocation" placeholder="Nome do membro..." value="${getPlanFormValue('invocation')}">
+                        <input type="text" class="plan-member-search" id="plan-invocation" placeholder="Nome do membro..." value="${escapeHtml(getPlanFormValue('invocation'))}">
                         <div class="member-results"></div>
                     </div>
                 </div>
                 <div class="input-wrapper">
                     <label>Última Oração</label>
                     <div class="member-search-wrapper">
-                        <input type="text" class="plan-member-search" id="plan-benediction" placeholder="Nome do membro..." value="${getPlanFormValue('benediction')}">
+                        <input type="text" class="plan-member-search" id="plan-benediction" placeholder="Nome do membro..." value="${escapeHtml(getPlanFormValue('benediction'))}">
                         <div class="member-results"></div>
                     </div>
                 </div>
@@ -1027,9 +1027,9 @@ function renderPlanSpeakers() {
         div.innerHTML = `
             <div class="input-wrapper">
                 <label>Orador ${index + 1}</label>
-                <input type="text" class="plan-speaker-input" data-id="${item.id}" value="${item.name || ''}" placeholder="Nome do membro...">
+                <input type="text" class="plan-speaker-input" data-id="${escapeHtml(item.id)}" value="${escapeHtml(item.name || '')}" placeholder="Nome do membro...">
             </div>
-            <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
+            <button class="btn btn-danger btn-remove-speaker" data-id="${escapeHtml(item.id)}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
         `;
         const input = div.querySelector('input');
         input.addEventListener('focus', () => state.activeMemberInput = input);
@@ -1109,7 +1109,7 @@ function renderSmartRecommendations(category) {
 
         card.innerHTML = `
             <div>
-                <div class="card-name">${m.name}</div>
+                <div class="card-name">${escapeHtml(m.name)}</div>
                 <div class="card-meta">${lastDateStr}</div>
             </div>
             ${statusBadge}
@@ -1220,10 +1220,10 @@ function renderSpeakersInput() {
             div.innerHTML = `
                  <div class="input-wrapper">
                     <label>Orador ${index + 1}</label>
-                    <input type="text" class="speaker-name-input" data-id="${item.id}" value="${item.name || ''}" placeholder="Nome do membro...">
+                    <input type="text" class="speaker-name-input" data-id="${escapeHtml(item.id)}" value="${escapeHtml(item.name || '')}" placeholder="Nome do membro...">
                 </div>
                 <!-- Remove button -->
-                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
+                <button class="btn btn-danger btn-remove-speaker" data-id="${escapeHtml(item.id)}" style="position:absolute; top:10px; right:10px; padding:4px 8px; font-size:0.75rem;">×</button>
             `;
 
             // Bind Input focus for "Click to Insert"
@@ -1241,10 +1241,10 @@ function renderSpeakersInput() {
             div.innerHTML = `
                 <div class="hymn-input-wrapper" style="margin-bottom:0">
                     <label>Hino Intermediário</label>
-                    <input type="text" class="hymn-search" value="${item.name || ''}" placeholder="Número ou Título...">
+                    <input type="text" class="hymn-search" value="${escapeHtml(item.name || '')}" placeholder="Número ou Título...">
                     <div class="hymn-results"></div>
                 </div>
-                <button class="btn btn-danger btn-remove-speaker" data-id="${item.id}" style="position:absolute; top:10px; right:10px;">×</button>
+                <button class="btn btn-danger btn-remove-speaker" data-id="${escapeHtml(item.id)}" style="position:absolute; top:10px; right:10px;">×</button>
             `;
 
             const input = div.querySelector('input');
@@ -1408,20 +1408,20 @@ function renderDynamicListInput(type) {
 
         if (type === 'releases' || type === 'callings') {
             row.innerHTML = `
-                <input type="text" value="${item.name || ''}" 
-                    class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="name"
+                <input type="text" value="${escapeHtml(item.name || '')}"
+                    class="dynamic-input" data-list="${type}" data-id="${escapeHtml(item.id)}" data-field="name"
                     placeholder="Nome..." style="flex: 1;">
-                <input type="text" value="${item.calling || ''}" 
-                    class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="calling"
+                <input type="text" value="${escapeHtml(item.calling || '')}"
+                    class="dynamic-input" data-list="${type}" data-id="${escapeHtml(item.id)}" data-field="calling"
                     placeholder="Chamado..." style="flex: 1; margin-left: 0.5rem;">
-                <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${item.id}" style="margin-left:5px; padding:0 8px;">×</button>
+                <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${escapeHtml(item.id)}" style="margin-left:5px; padding:0 8px;">×</button>
             `;
         } else {
             row.innerHTML = `
-                <input type="text" value="${item.text || ''}" 
-                    class="dynamic-input" data-list="${type}" data-id="${item.id}" data-field="text"
+                <input type="text" value="${escapeHtml(item.text || '')}"
+                    class="dynamic-input" data-list="${type}" data-id="${escapeHtml(item.id)}" data-field="text"
                     placeholder="Item..." style="flex: 1;">
-                <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${item.id}" style="margin-left:5px; padding:0 8px;">×</button>
+                <button class="btn btn-danger btn-remove-dynamic" data-list="${type}" data-id="${escapeHtml(item.id)}" style="margin-left:5px; padding:0 8px;">×</button>
             `;
         }
         container.appendChild(row);
@@ -1595,20 +1595,20 @@ function fullModeRenderListInput(type) {
 
         if (type === 'releases' || type === 'callings') {
             row.innerHTML = `
-                <input type="text" value="${escapeHtml(item.name || '')}" 
-                    class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="name"
+                <input type="text" value="${escapeHtml(item.name || '')}"
+                    class="full-dynamic-input" data-list="${type}" data-id="${escapeHtml(item.id)}" data-field="name"
                     placeholder="Nome..." style="flex: 1;">
-                <input type="text" value="${escapeHtml(item.calling || '')}" 
-                    class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="calling"
+                <input type="text" value="${escapeHtml(item.calling || '')}"
+                    class="full-dynamic-input" data-list="${type}" data-id="${escapeHtml(item.id)}" data-field="calling"
                     placeholder="Chamado..." style="flex: 1;">
-                <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${item.id}">×</button>
+                <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${escapeHtml(item.id)}">×</button>
             `;
         } else {
             row.innerHTML = `
-                <input type="text" value="${escapeHtml(item.text || '')}" 
-                    class="full-dynamic-input" data-list="${type}" data-id="${item.id}" data-field="text"
+                <input type="text" value="${escapeHtml(item.text || '')}"
+                    class="full-dynamic-input" data-list="${type}" data-id="${escapeHtml(item.id)}" data-field="text"
                     placeholder="Item..." style="flex: 1;">
-                <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${item.id}">×</button>
+                <button type="button" class="btn-remove full-btn-remove" data-list="${type}" data-id="${escapeHtml(item.id)}">×</button>
             `;
         }
         container.appendChild(row);
@@ -1684,10 +1684,10 @@ function fullModeRenderSpeakers(section) {
         const row = document.createElement('div');
         row.className = 'input-row';
         row.innerHTML = `
-            <input type="text" value="${escapeHtml(speaker.name || '')}" 
-                class="full-speaker-input" data-section="${section}" data-id="${speaker.id}"
+            <input type="text" value="${escapeHtml(speaker.name || '')}"
+                class="full-speaker-input" data-section="${section}" data-id="${escapeHtml(speaker.id)}"
                 placeholder="Orador ${index + 1}..." style="flex: 1;">
-            <button type="button" class="btn-remove full-btn-remove-speaker" data-section="${section}" data-id="${speaker.id}">×</button>
+            <button type="button" class="btn-remove full-btn-remove-speaker" data-section="${section}" data-id="${escapeHtml(speaker.id)}">×</button>
         `;
         container.appendChild(row);
     });
@@ -1802,17 +1802,17 @@ async function renderRoster() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
-                <div class="view-link" data-id="${m.id}" style="font-weight:600; cursor:pointer;">${m.name}</div>
-                <div style="font-size:0.8em; color:#666">${m.calling || ''}</div>
+                <div class="view-link" data-id="${escapeHtml(m.id)}" style="font-weight:600; cursor:pointer;">${escapeHtml(m.name)}</div>
+                <div style="font-size:0.8em; color:#666">${escapeHtml(m.calling || '')}</div>
             </td>
-            <td>${m.group}</td>
+            <td>${escapeHtml(m.group)}</td>
             <td>${m.last_talk_date ? formatDateShort(m.last_talk_date) : '-'}</td>
             <td>${m.last_prayer_date ? formatDateShort(m.last_prayer_date) : '-'}</td>
             <td class="action-cell">
                 <div class="row-actions">
-                    <i class="ph ph-eye action-icon" data-action="view" data-id="${m.id}" title="Ver"></i>
-                    <i class="ph ph-pencil-simple action-icon edit" data-action="edit" data-id="${m.id}" title="Editar"></i>
-                    <i class="ph ph-trash action-icon delete" data-action="delete" data-id="${m.id}" title="Remover"></i>
+                    <i class="ph ph-eye action-icon" data-action="view" data-id="${escapeHtml(m.id)}" title="Ver"></i>
+                    <i class="ph ph-pencil-simple action-icon edit" data-action="edit" data-id="${escapeHtml(m.id)}" title="Editar"></i>
+                    <i class="ph ph-trash action-icon delete" data-action="delete" data-id="${escapeHtml(m.id)}" title="Remover"></i>
                 </div>
             </td>
         `;
@@ -1906,18 +1906,18 @@ async function viewMember(id) {
         if (history.talks.length === 0) listTalks.innerHTML = '<li style="color:#aaa">Sem registos recentes</li>';
         history.talks.forEach(t => {
             const d = t.date.toDate ? t.date.toDate() : new Date(t.date);
-            listTalks.innerHTML += `<li>${d.toLocaleDateString()} - ${t.topic}</li>`;
+            listTalks.innerHTML += `<li>${d.toLocaleDateString()} - ${escapeHtml(t.topic)}</li>`;
         });
 
         listPrayers.innerHTML = '';
         if (history.prayers.length === 0) listPrayers.innerHTML = '<li style="color:#aaa">Sem registos recentes</li>';
         history.prayers.forEach(p => {
             const d = p.date.toDate ? p.date.toDate() : new Date(p.date);
-            listPrayers.innerHTML += `<li>${d.toLocaleDateString()} - ${p.type}</li>`;
+            listPrayers.innerHTML += `<li>${d.toLocaleDateString()} - ${escapeHtml(p.type)}</li>`;
         });
 
     } catch (e) {
-        listTalks.innerHTML = `<li>Erro: ${e.message}</li>`;
+        listTalks.innerHTML = `<li>Erro: ${escapeHtml(e.message)}</li>`;
     }
 }
 
@@ -2231,10 +2231,10 @@ function renderSmartPreview(data) {
 
         tr.innerHTML = `
              <td style="padding:0.5rem; font-weight:500;">
-                 <input type="text" value="${m.name}" class="preview-name" style="width:100%; border:none; background:transparent;">
+                 <input type="text" value="${escapeHtml(m.name)}" class="preview-name" style="width:100%; border:none; background:transparent;">
              </td>
              <td style="padding:0.5rem; text-align:center;">
-                 ${m.age}
+                 ${escapeHtml(m.age)}
              </td>
              <td style="padding:0.5rem;">
                  <select class="preview-group" style="padding:4px; border-radius:4px; border:1px solid #cbd5e1; width:100%;">
@@ -2245,8 +2245,8 @@ function renderSmartPreview(data) {
                  </select>
              </td>
              <td style="padding:0.5rem;">
-                 <input type="text" value="${m.calling || ''}" class="preview-calling" placeholder="Chamado..." style="width:100%; border:1px solid #cbd5e1; border-radius:4px; padding:4px;">
-                 <input type="hidden" class="preview-gender" value="${m.gender}">
+                 <input type="text" value="${escapeHtml(m.calling || '')}" class="preview-calling" placeholder="Chamado..." style="width:100%; border:1px solid #cbd5e1; border-radius:4px; padding:4px;">
+                 <input type="hidden" class="preview-gender" value="${escapeHtml(m.gender)}">
              </td>
              <td style="padding:0.5rem; text-align:center;">
                  <i class="ph ph-x" style="cursor:pointer; color:red;" onclick="this.closest('tr').remove();"></i>
@@ -2345,4 +2345,3 @@ window.renderAdmin = renderAdmin;
 window.setPlannerMode = setPlannerMode;
 window.renderPlanSubTab = renderPlanSubTab;
 window.fullModeToggleFullScreen = fullModeToggleFullScreen;
-
