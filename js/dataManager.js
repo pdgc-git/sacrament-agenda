@@ -218,26 +218,6 @@ export async function deleteMember(id) {
 }
 
 export async function getMemberHistory(memberId) {
-    // This assumes we can query meetings where this member spoke or prayed.
-    // Since we store denormalized names in meetings, we might need a better strategy if we want strict ID linking.
-    // However, our current saveMeeting stores names. 
-    // Ideally, we should store IDs. 
-    // For now, let's rely on the 'last_talk_date' and 'last_prayer_date' from member doc for summary,
-    // and maybe query recent meetings if we want detailed logs?
-    // Given the prompt "view info of the member and their prayers and talks log", 
-    // let's try to find meetings where they are listed.
-
-    // NOTE: Our current structure might makes this hard if we only store strings in 'speakers'.
-    // BUT, we recently updated 'speakers' array in `saveMeeting` to include objects with `memberId`?
-    // Let's check `planner-ui.js` handleFinalize.
-    // It filters `state.speakers` which has `memberId`.
-    // So if we save that to Firestore, we can query it.
-
-    // Let's assume meetings collection has speakers array with { memberId, name } objects.
-    // We'll search client-side for now or simple query if possible.
-    // For MVP/Robustness, let's just return what we can or mock it if complex query is needed.
-
-    // Actually, let's just query all meetings and filter in memory for this MVP since dataset is small.
     const wardId = getWardId();
     // Default to empty if wardId is missing or query fails
     const talks = [];
@@ -570,7 +550,7 @@ export async function migrateLegacyData() {
         if (dateStr) {
             const newRef = doc(db, `wards/${wardId}/meetings`, dateStr);
             // Use update if exists (history wins), else set
-            // Simplified: set with merge. If history exists, it overwrites common fields? 
+            // Simplified: set with merge. If history exists, it overwrites common fields?
             // Ideally we check. But for legacy 'plans', they usually are future.
             batch.set(newRef, {
                 ...data,
@@ -584,4 +564,3 @@ export async function migrateLegacyData() {
     await batch.commit();
     alert(`Migrated ${count} legacy documents to 'meetings' collection.`);
 }
-
