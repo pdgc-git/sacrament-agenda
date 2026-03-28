@@ -554,58 +554,71 @@ async function renderDashboard() {
     // 1. Calculate Next Sunday
     const today = new Date();
     const nextSunday = getNextSunday(today);
-    const dateStr = nextSunday.toISOString().split('T')[0];
+    const dateStr = nextSunday.toISOString().split("T")[0];
 
-    // 2. Check status
+    // 2. Check status and update hero
     const existingPlan = state.futurePlans.find(p => p.dateStr === dateStr);
-    const heroDateEl = document.getElementById('hero-date');
-    const heroThemeEl = document.getElementById('hero-theme');
-    const statusDot = document.querySelector('.hero-status .status-dot');
+    updateDashboardHero(dateStr, existingPlan);
+
+    // 3. Render Upcoming List
+    renderDashboardUpcomingList(nextSunday);
+}
+
+function updateDashboardHero(dateStr, existingPlan) {
+    const heroDateEl = document.getElementById("hero-date");
+    const heroThemeEl = document.getElementById("hero-theme");
+    const statusDot = document.querySelector(".hero-status .status-dot");
 
     // Format Date: DD/MM/YYYY
     const formattedDate = formatDate(dateStr);
-    heroDateEl.textContent = formattedDate;
+    if (heroDateEl) heroDateEl.textContent = formattedDate;
 
+    const btn = document.querySelector("#focus-hero button");
     if (existingPlan) {
-        heroThemeEl.textContent = existingPlan.presiding ? `Preside: ${existingPlan.presiding}` : 'Em planeamento...';
-        statusDot.className = 'status-dot planned';
+        if (heroThemeEl) heroThemeEl.textContent = existingPlan.presiding ? `Preside: ${existingPlan.presiding}` : "Em planeamento...";
+        if (statusDot) statusDot.className = "status-dot planned";
         // Bind Edit Button
-        const btn = document.querySelector('#focus-hero button');
-        btn.onclick = () => editPlan(dateStr);
-        btn.innerHTML = `<i class="ph ph-pencil-simple"></i> Editar Plano`;
+        if (btn) {
+            btn.onclick = () => editPlan(dateStr);
+            btn.innerHTML = `<i class="ph ph-pencil-simple"></i> Editar Plano`;
+        }
     } else {
-        heroThemeEl.textContent = "Nada planeado ainda.";
-        statusDot.className = 'status-dot draft';
-        const btn = document.querySelector('#focus-hero button');
-        btn.onclick = () => editPlan(dateStr);
-        btn.innerHTML = `<i class="ph ph-plus"></i> Iniciar Plano`;
+        if (heroThemeEl) heroThemeEl.textContent = "Nada planeado ainda.";
+        if (statusDot) statusDot.className = "status-dot draft";
+        if (btn) {
+            btn.onclick = () => editPlan(dateStr);
+            btn.innerHTML = `<i class="ph ph-plus"></i> Iniciar Plano`;
+        }
     }
+}
 
-    // 3. Render Upcoming List
-    const listContainer = document.getElementById('dashboard-upcoming-list');
-    listContainer.innerHTML = '';
+function renderDashboardUpcomingList(nextSunday) {
+    const listContainer = document.getElementById("dashboard-upcoming-list");
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "";
 
     // Generate next 4 weeks
     for (let i = 1; i <= 4; i++) {
         const futureDate = new Date(nextSunday);
         futureDate.setDate(nextSunday.getDate() + (i * 7));
-        const fStr = futureDate.toISOString().split('T')[0];
+        const fStr = futureDate.toISOString().split("T")[0];
         const plan = state.futurePlans.find(p => p.dateStr === fStr);
 
-        const div = document.createElement('div');
-        div.className = 'timeline-item';
+        const div = document.createElement("div");
+        div.className = "timeline-item";
         div.onclick = () => editPlan(fStr);
 
         div.innerHTML = `
             <div class="t-date">
                 ${futureDate.getDate()}
-                <span>${futureDate.toLocaleString('pt-PT', { month: 'short' }).replace('.', '').replace(/^\w/, c => c.toUpperCase())}</span>
+                <span>${futureDate.toLocaleString("pt-PT", { month: "short" }).replace(".", "").replace(/^\w/, c => c.toUpperCase())}</span>
             </div>
             <div class="t-info">
                 <h4>Domingo</h4>
-                <p>${plan ? (plan.presiding || 'Rascunho') : 'Não planeado'}</p>
+                <p>${plan ? (plan.presiding || "Rascunho") : "Não planeado"}</p>
             </div>
-            <div class="status-dot ${plan ? 'planned' : 'draft'}"></div>
+            <div class="status-dot ${plan ? "planned" : "draft"}"></div>
         `;
         listContainer.appendChild(div);
     }
