@@ -59,6 +59,40 @@ describe('DataManager', () => {
         expect(firestore.setDoc).toHaveBeenCalledTimes(2); // Member add + Profile update
     });
 
+    // Tests for saveMember validation
+    describe('saveMember validation', () => {
+        let dm;
+        beforeEach(async () => {
+            dm = await import('../js/dataManager.js');
+            // Mock getWardId by initializing user
+            firestore.getDoc.mockResolvedValue({ exists: () => true, data: () => ({ wardId: 'ward-123' }) });
+            await dm.initUser({ uid: 'test' });
+        });
+
+        test('saveMember should throw if name is missing or empty', async () => {
+            await expect(dm.saveMember({})).rejects.toThrow("O nome do membro é obrigatório.");
+            await expect(dm.saveMember({ name: '' })).rejects.toThrow("O nome do membro é obrigatório.");
+            await expect(dm.saveMember({ name: '   ' })).rejects.toThrow("O nome do membro é obrigatório.");
+            await expect(dm.saveMember({ name: null })).rejects.toThrow("O nome do membro é obrigatório.");
+            await expect(dm.saveMember({ name: 123 })).rejects.toThrow("O nome do membro é obrigatório.");
+        });
+
+        test('saveMember should default group to Adult if not provided', async () => {
+            firestore.addDoc.mockResolvedValue({ id: 'new-member-id' });
+
+            const memberData = { name: 'Test Member' };
+            await dm.saveMember(memberData);
+
+            expect(memberData.group).toBe('Adult');
+            expect(firestore.addDoc).toHaveBeenCalled();
+        });
+
+        test('saveMember should throw if group is invalid', async () => {
+            const memberData = { name: 'Test Member', group: 'InvalidGroup' };
+            await expect(dm.saveMember(memberData)).rejects.toThrow("Grupo inválido. Deve ser um de: Adult, Youth, Primary, Young Adult");
+        });
+    });
+
     // Tests for importMembersFromCSV
     test('importMembersFromCSV should handle empty file gracefully', async () => {
         const file = {
