@@ -1905,18 +1905,18 @@ async function viewMember(id) {
         if (history.talks.length === 0) listTalks.innerHTML = '<li style="color:#aaa">Sem registos recentes</li>';
         history.talks.forEach(t => {
             const d = t.date.toDate ? t.date.toDate() : new Date(t.date);
-            listTalks.innerHTML += `<li>${d.toLocaleDateString()} - ${t.topic}</li>`;
+            listTalks.innerHTML += `<li>${d.toLocaleDateString()} - ${escapeHtml(t.topic)}</li>`;
         });
 
         listPrayers.innerHTML = '';
         if (history.prayers.length === 0) listPrayers.innerHTML = '<li style="color:#aaa">Sem registos recentes</li>';
         history.prayers.forEach(p => {
             const d = p.date.toDate ? p.date.toDate() : new Date(p.date);
-            listPrayers.innerHTML += `<li>${d.toLocaleDateString()} - ${p.type}</li>`;
+            listPrayers.innerHTML += `<li>${d.toLocaleDateString()} - ${escapeHtml(p.type)}</li>`;
         });
 
     } catch (e) {
-        listTalks.innerHTML = `<li>Erro: ${e.message}</li>`;
+        listTalks.innerHTML = `<li>Erro: ${escapeHtml(e.message)}</li>`;
     }
 }
 
