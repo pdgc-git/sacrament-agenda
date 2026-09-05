@@ -4,14 +4,13 @@ import * as DM from '../dataManager.js';
 import { state, canEdit, canEditHymns, cacheMeetings } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
-import { hymns } from '../hymns.js';
-import { openMemberPicker, openHymnPicker } from '../components/picker.js';
+import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, setInviteStatus, hymnRepeats } from '../components/assign.js';
 import {
-    MEETING_KINDS, KINDS_WITHOUT_PROGRAM, INVITE_STATUS, sundaysFrom, toIsoDate, formatDateShort, formatMonth,
-    blankMeeting, missingItems, speakers, newSpeaker, balance, formatBalance, hymnNumber, parseIsoDate, weekIndex,
+    MEETING_KINDS, KINDS_WITHOUT_PROGRAM, INVITE_STATUS, sundaysInMonth, formatDateShort, formatMonth,
+    blankMeeting, missingItems, speakers, newSpeaker, balance, formatBalance, hymnNumber, weekIndex, shiftMonth,
 } from '../utils/meeting.js';
 
-const WEEKS = 13; // ~3 months
+let month = ''; // 'YYYY-MM'
 let meetings = new Map(); // date -> meeting (drafts + completed in range)
 let dates = [];
 let root = null;
@@ -19,8 +18,9 @@ const saveTimers = new Map();
 
 export async function render(container, params) {
     root = container;
-    const start = params[0] ? parseIsoDate(params[0]) : new Date();
-    dates = sundaysFrom(start, WEEKS);
+    const today = new Date();
+    month = /^\d{4}-\d{2}$/.test(params[0] || '') ? params[0] : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    dates = sundaysInMonth(month);
     const rows = await DM.getMeetingsInRange(dates[0], dates[dates.length - 1]);
     cacheMeetings(rows);
     meetings = new Map();
@@ -45,19 +45,33 @@ function normalize(m) {
 
 function draw() {
     const monthBalance = monthBalances();
-    const prev = toIsoDate(shiftWeeks(parseIsoDate(dates[0]), -WEEKS));
-    const next = toIsoDate(shiftWeeks(parseIsoDate(dates[0]), WEEKS));
+    const mb = monthBalance.get(month) || { men: 0, women: 0, youth: 0 };
+    const today = new Date();
+    const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const options = [];
+    for (let k = -6; k <= 12; k++) options.push(shiftMonth(thisMonth, k));
+    if (!options.includes(month)) options.push(month);
+    options.sort();
+    const missingTotal = dates.reduce((n, d) => n + missingItems(meetings.get(d)).length, 0);
     root.innerHTML = `
         <div class="view-head">
-            <div><h2>Plano</h2><div class="sub">${escapeHtml(formatMonth(dates[0]))} — ${escapeHtml(formatMonth(dates[dates.length - 1]))}</div></div>
+            <div>
+                <div class="month-nav">
+                    <a class="btn month-arrow" href="#plano/${shiftMonth(month, -1)}" aria-label="Mês anterior">‹</a>
+                    <h2>${escapeHtml(formatMonth(dates[0]))}</h2>
+                    <a class="btn month-arrow" href="#plano/${shiftMonth(month, 1)}" aria-label="Mês seguinte">›</a>
+                    <select class="input month-select" id="month-select" aria-label="Ir para mês">
+                        ${options.map(o => `<option value="${o}" ${o === month ? 'selected' : ''}>${escapeHtml(formatMonth(o + '-01'))}${o === thisMonth ? ' · este mês' : ''}</option>`).join('')}
+                    </select>
+                    ${month !== thisMonth ? `<a class="btn tiny" href="#plano/${thisMonth}">este mês</a>` : ''}
+                </div>
+                <div class="sub">${dates.length} domingos · ${missingTotal === 0 ? 'tudo atribuído' : `falta${missingTotal === 1 ? '' : 'm'} ${missingTotal}`} · oradores do mês: ${escapeHtml(formatBalance(mb))}</div>
+            </div>
             <div class="actions">
                 <div class="legend">
                     <span><i class="st confirmed"></i>confirmado</span><span><i class="st asked"></i>convidado</span>
                     <span><i class="st declined"></i>recusou</span><span><i class="st to_ask"></i>por convidar</span>
                 </div>
-                <a class="btn tiny" href="#plano/${prev}">‹ anterior</a>
-                <a class="btn tiny" href="#plano">hoje</a>
-                <a class="btn tiny" href="#plano/${next}">seguinte ›</a>
             </div>
         </div>
         <div class="card tight scroll-x">
@@ -74,6 +88,7 @@ function draw() {
     root.querySelector('tbody').addEventListener('click', onGridClick);
     root.querySelector('tbody').addEventListener('change', onGridChange);
     root.querySelector('tbody').addEventListener('input', onGridInput);
+    root.querySelector('#month-select').addEventListener('change', ev => { location.hash = '#plano/' + ev.target.value; });
 }
 
 function rowHtml(m, monthBalance) {
@@ -163,7 +178,7 @@ function hymnsCell(m) {
     return `<div class="hymn-grid">${slots.map(([k, label]) => {
         const v = m[k];
         const n = hymnNumber(v);
-        const recent = n && state.hymnLastSung.has(n) && daysSince(state.hymnLastSung.get(n)) < (state.settings?.hymn_repeat_months || 3) * 30;
+        const recent = hymnRepeats(v);
         const inner = v
             ? `<span class="hymn-plain ${recent ? 'warn' : ''}" title="${escapeHtml(label + ': ' + v)}"><span class="muted small">${label.slice(0, 3)}</span> <span class="no">${escapeHtml(n || '')}</span>${recent ? ' ↺' : ''}</span>`
             : `<span class="muted small">${label}${k === 'intermediate_hymn' ? ' (opc.)' : ''}</span>`;
@@ -173,8 +188,6 @@ function hymnsCell(m) {
     }).join('')}</div>`;
 }
 
-function daysSince(iso) { return Math.round((new Date() - parseIsoDate(iso)) / 86400000); }
-function shiftWeeks(d, w) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7 * w); }
 
 function monthBalances() {
     const map = new Map();
@@ -197,23 +210,23 @@ function onGridClick(ev) {
     const m = meetings.get(btn.dataset.d);
     const act = btn.dataset.act;
     const i = Number(btn.dataset.i);
+    const changed = () => { redrawRow(m); save(m); };
+    const mb = () => monthBalances().get(month);
 
     if (act === 'addspk' || act === 'add4') {
-        const sp = speakers(m.program);
-        while (sp.length <= (act === 'add4' ? 3 : i)) { const s = newSpeaker(); m.program.push(s); sp.push(s); }
-        redrawRow(m); save(m);
-        pickSpeaker(m, act === 'add4' ? 3 : i, rowCell(m.date, act === 'add4' ? 3 : i));
+        const target = act === 'add4' ? 3 : i;
+        while (speakers(m.program).length <= target) addSpeaker(m);
+        changed();
+        pickSpeaker(m, target, rowCell(m.date, target), changed, mb());
     } else if (act === 'pick-spk') {
-        pickSpeaker(m, i, btn);
+        pickSpeaker(m, i, btn, changed, mb());
     } else if (act === 'status') {
-        const s = speakers(m.program)[i];
-        s.invite_status = btn.dataset.v;
-        if (btn.dataset.v === 'asked' && !s.asked_at) s.asked_at = toIsoDate(new Date());
-        redrawRow(m); save(m);
+        setInviteStatus(m, i, btn.dataset.v);
+        changed();
     } else if (act === 'pick-prayer') {
-        pickPrayer(m, btn.dataset.k, btn);
+        pickPrayer(m, btn.dataset.k, btn, changed);
     } else if (act === 'pick-hymn') {
-        pickHymn(m, btn.dataset.k, btn);
+        pickHymn(m, btn.dataset.k, btn, changed);
     }
 }
 
@@ -239,65 +252,17 @@ function rowCell(date, i) {
     return root.querySelector(`tr[data-d="${date}"] [data-act="pick-spk"][data-i="${i}"]`) || root.querySelector(`tr[data-d="${date}"]`);
 }
 
-function pickSpeaker(m, i, anchor) {
-    const sp = speakers(m.program);
-    const s = sp[i];
-    const excludeIds = new Set(sp.filter(x => x !== s && x.member_id).map(x => x.member_id));
-    const declinedIds = new Set(sp.filter(x => x.invite_status === 'declined' && x.member_id).map(x => x.member_id));
-    openMemberPicker(anchor, {
-        title: `Orador ${i + 1} · ${formatDateShort(m.date)}`,
-        verb: 'falou',
-        members: state.members,
-        lastDates: state.lastTalk,
-        excludeIds, declinedIds,
-        recentDays: 90,
-        balance: { sunday: balance(sp, state.membersById), month: monthBalances().get(m.date.slice(0, 7)) },
-        onPick: member => {
-            Object.assign(s, { name: member.name, member_id: member.id, invite_status: 'to_ask', asked_at: null });
-            redrawRow(m); save(m);
-        },
-        onClear: () => {
-            if (sp.length > (state.settings?.default_speakers || 3)) m.program.splice(m.program.indexOf(s), 1);
-            else Object.assign(s, { name: '', member_id: null, topic: '', invite_status: 'to_ask', asked_at: null });
-            redrawRow(m); save(m);
-        },
-    });
-}
-
-function pickPrayer(m, key, anchor) {
-    const other = key === 'invocation' ? 'benediction' : 'invocation';
-    const excludeIds = new Set([m[`${other}_member_id`], ...speakers(m.program).map(s => s.member_id)].filter(Boolean));
-    openMemberPicker(anchor, {
-        title: `${key === 'invocation' ? 'Primeira' : 'Última'} Oração · ${formatDateShort(m.date)}`,
-        verb: 'orou',
-        members: state.members,
-        lastDates: state.lastPrayer,
-        excludeIds,
-        recentDays: 60,
-        onPick: member => { m[`${key}_member_id`] = member.id; m[key] = member.name; redrawRow(m); save(m); },
-        onClear: () => { m[`${key}_member_id`] = null; m[key] = ''; redrawRow(m); save(m); },
-    });
-}
-
-function pickHymn(m, key, anchor) {
-    const labels = { opening_hymn: 'Hino de Abertura', sacrament_hymn: 'Hino Sacramental', intermediate_hymn: 'Hino Intermediário', closing_hymn: 'Hino de Encerramento' };
-    openHymnPicker(anchor, {
-        title: `${labels[key]} · ${formatDateShort(m.date)}`,
-        hymns,
-        lastSung: state.hymnLastSung,
-        repeatMonths: state.settings?.hymn_repeat_months || 3,
-        onPick: h => { m[key] = `${h.number} - ${h.title}`; redrawRow(m); save(m); },
-        onClear: () => { m[key] = ''; redrawRow(m); save(m); },
-    });
-}
-
 function redrawRow(m) {
     const tr = root.querySelector(`tr[data-d="${m.date}"]`);
     if (!tr) return;
     const tmp = document.createElement('tbody');
     tmp.innerHTML = rowHtml(m, monthBalances());
     tr.replaceWith(tmp.firstElementChild);
-    // date-cell balances of other rows in the same month change too, but only the tooltip — skip.
+    const sub = root.querySelector('.view-head .sub');
+    if (sub) {
+        const missingTotal = dates.reduce((n, d) => n + missingItems(meetings.get(d)).length, 0);
+        sub.textContent = `${dates.length} domingos · ${missingTotal === 0 ? 'tudo atribuído' : `falta${missingTotal === 1 ? '' : 'm'} ${missingTotal}`} · oradores do mês: ${formatBalance(monthBalances().get(month))}`;
+    }
 }
 
 function save(m, delay = 250) {

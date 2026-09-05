@@ -87,3 +87,13 @@ describe('meeting utils — program', () => {
         expect(hymnNumber('Sem número')).toBeNull();
     });
 });
+
+describe('meeting utils — months', () => {
+    test('sundaysInMonth lists every Sunday of the month', async () => {
+        const { sundaysInMonth, shiftMonth } = await import('../js/utils/meeting.js');
+        expect(sundaysInMonth('2026-09')).toEqual(['2026-09-06', '2026-09-13', '2026-09-20', '2026-09-27']);
+        expect(sundaysInMonth('2026-11')).toEqual(['2026-11-01', '2026-11-08', '2026-11-15', '2026-11-22', '2026-11-29']);
+        expect(shiftMonth('2026-12', 1)).toBe('2027-01');
+        expect(shiftMonth('2026-01', -1)).toBe('2025-12');
+    });
+});

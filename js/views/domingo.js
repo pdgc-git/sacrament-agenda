@@ -6,6 +6,7 @@ import { state, canEdit } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { renderAgendaHtml } from '../render-agenda.js';
+import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, setInviteStatus, hymnRepeats, HYMN_LABELS } from '../components/assign.js';
 import {
     nextSunday, toIsoDate, formatDateHeading, formatDateShort, blankMeeting, missingItems, speakers,
     newSpeaker, INVITE_STATUS, KINDS_WITHOUT_PROGRAM, MEETING_KINDS, parseIsoDate, weekIndex,
@@ -64,8 +65,8 @@ function draw() {
                         ${kv('Regente', 'chorister', editable)}
                     </div>
                     <div class="group">
-                        <div class="g-head"><b>Do plano</b><span><a href="#plano/${d}">editar no Plano</a></span></div>
-                        ${planRows()}
+                        <div class="g-head"><b>Programa</b><span>${editable ? `<select class="kind-select" data-f="kind">${Object.entries(MEETING_KINDS).map(([k, label]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${label}</option>`).join('')}</select>` : escapeHtml(MEETING_KINDS[m.kind])} · <a href="#plano/${d.slice(0, 7)}">ver o mês</a></span></div>
+                        ${planRows(editable)}
                     </div>
                 </div>
                 <div class="card">
@@ -77,13 +78,14 @@ function draw() {
                         ${pairList('callings', 'Chamados (Apoios)', 'Chamado', editable)}
                     </div>
                 </div>
-                ${done ? '' : `<p class="small muted" style="margin-top:10px">Guarda automaticamente. A reunião marca-se como feita no Modo púlpito, em "Terminar reunião".</p>`}
+                ${done ? '' : `<p class="small muted" style="margin-top:10px">Guarda automaticamente. Tudo o que está aqui também se edita no Plano, mês a mês. A reunião marca-se como feita no Modo púlpito, em "Terminar reunião".</p>`}
             </div>
             <div class="preview-pane"><div id="agenda-paper" class="agenda-paper">${renderAgendaHtml(m, { wardName: state.ward?.name, membersById: state.membersById })}</div></div>
         </div></div>`;
 
     const wrap = root.querySelector('#domingo-root');
     wrap.addEventListener('input', onInput);
+    wrap.addEventListener('change', ev => { if (ev.target.dataset.f === 'kind') { m.kind = ev.target.value; redrawLists(); refreshPreview(); save(); } });
     wrap.addEventListener('click', onClick);
 }
 
@@ -95,26 +97,41 @@ function kv(label, field, editable) {
             : `<span class="v ${m[field] ? '' : 'empty'}">${escapeHtml(m[field] || '—')}</span>`}</div>`;
 }
 
-function planRows() {
+function planRows(editable) {
     if (KINDS_WITHOUT_PROGRAM.has(m.kind)) return '<div class="empty-note">Sem programa.</div>';
-    const hymn = (label, v) => `<div class="row-kv"><span class="k">${label}</span><span class="v ${v ? '' : 'empty'}">${escapeHtml(v || 'por escolher')}</span></div>`;
+    const pickBtn = (act, extra, cls, inner) => editable
+        ? `<button type="button" class="assign ${cls}" data-act="${act}" ${extra}><span class="n">${inner}</span></button>`
+        : `<span class="v ${cls}">${inner}</span>`;
+    const hymn = (key) => {
+        const v = m[key];
+        const inner = v ? `<span class="hymn-plain ${hymnRepeats(v) ? 'warn' : ''}">${escapeHtml(v)}${hymnRepeats(v) ? ' · cantado há pouco ↺' : ''}</span>` : `<span class="muted">por escolher</span>`;
+        return `<div class="row-kv"><span class="k">${HYMN_LABELS[key]}${key === 'intermediate_hymn' ? ' <span class="muted">(opc.)</span>' : ''}</span>${pickBtn('pick-hymn', `data-k="${key}"`, v ? '' : 'empty', inner)}</div>`;
+    };
     const prayer = (label, key) => {
         const name = m[key] || state.membersById.get(m[`${key}_member_id`])?.name || '';
-        return `<div class="row-kv"><span class="k">${label}</span><span class="v ${name ? '' : 'warn'}">${escapeHtml(name || 'por atribuir')}</span></div>`;
+        return `<div class="row-kv"><span class="k">${label}</span>${pickBtn('pick-prayer', `data-k="${key}"`, name ? '' : 'warn', name ? escapeHtml(name) : 'por atribuir')}</div>`;
     };
-    let html = hymn('Hino de Abertura', m.opening_hymn) + prayer('Primeira Oração', 'invocation') + hymn('Hino Sacramental', m.sacrament_hymn);
+    let html = hymn('opening_hymn') + prayer('Primeira Oração', 'invocation') + hymn('sacrament_hymn');
     if (m.kind === 'fast') {
         html += `<div class="row-kv"><span class="k">Programa</span><span class="v">Testemunhos da Congregação</span></div>`;
     } else {
         speakers(m.program).forEach((s, i) => {
             const st = s.invite_status || 'to_ask';
-            html += `<div class="row-kv"><span class="k">${i === 0 ? 'Oradores' : ''}</span>
-                <span class="v ${s.name ? '' : 'warn'}"><i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || `${i + 1}.º por atribuir`)}
-                ${s.topic ? `<span class="topic"> · ${escapeHtml(s.topic)}</span>` : ''}${s.name && st !== 'confirmed' ? `<span class="topic"> · ${INVITE_STATUS[st]}</span>` : ''}</span></div>`;
+            html += `<div class="row-kv speaker-row" data-i="${i}"><span class="k">${i === 0 ? 'Oradores' : ''}</span>
+                <span class="v" style="display:flex; flex-direction:column; gap:3px">
+                    ${pickBtn('pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || `${i + 1}.º por atribuir`)}${s.position === 'after' ? ' <span class="topic">· depois do hino</span>' : ''}`)}
+                    ${editable && s.name ? `<input class="topic-input" data-f="topic" data-i="${i}" value="${escapeHtml(s.topic || '')}" placeholder="tema">
+                        <div class="status-menu"><span class="muted small">${INVITE_STATUS[st]}</span>${Object.entries(INVITE_STATUS).map(([k, label]) =>
+                            `<button type="button" class="${st === k ? 'on' : ''}" data-act="status" data-i="${i}" data-v="${k}" title="${label}" aria-label="${label}"><i class="st ${k}"></i></button>`).join('')}
+                            <button type="button" class="link-btn small" data-act="move" data-i="${i}" style="margin-left:8px">${s.position === 'after' ? '↑ antes do hino' : '↓ depois do hino'}</button>
+                            <button type="button" class="x" data-act="rm-spk" data-i="${i}" aria-label="Remover orador">✕</button></div>`
+                        : (s.topic ? `<span class="topic">${escapeHtml(s.topic)}</span>` : '')}
+                </span></div>`;
         });
-        if (m.intermediate_hymn) html += hymn('Hino Intermediário', m.intermediate_hymn);
+        if (editable) html += `<div class="row-kv"><span class="k"></span><button type="button" class="btn tiny" data-act="add-spk">+ Orador</button></div>`;
+        html += hymn('intermediate_hymn');
     }
-    html += hymn('Hino de Encerramento', m.closing_hymn) + prayer('Última Oração', 'benediction');
+    html += hymn('closing_hymn') + prayer('Última Oração', 'benediction');
     return html;
 }
 
@@ -151,6 +168,10 @@ function onInput(ev) {
     const el = ev.target;
     if (el.dataset.list) {
         m[el.dataset.list][Number(el.dataset.i)][el.dataset.f] = el.value;
+    } else if (el.dataset.f === 'topic') {
+        speakers(m.program)[Number(el.dataset.i)].topic = el.value;
+    } else if (el.dataset.f === 'kind') {
+        return;
     } else if (el.dataset.f) {
         m[el.dataset.f] = el.value;
     } else return;
@@ -174,8 +195,22 @@ function onClick(ev) {
         redrawLists(); refreshPreview(); save();
         return;
     }
-    if (ev.target.id === 'btn-pdf') exportPdf(false);
-    if (ev.target.id === 'btn-share') exportPdf(true);
+    if (ev.target.id === 'btn-pdf') { exportPdf(false); return; }
+    if (ev.target.id === 'btn-share') { exportPdf(true); return; }
+
+    const act = ev.target.closest('[data-act]');
+    if (!act) return;
+    const i = Number(act.dataset.i);
+    const changed = () => { redrawLists(); refreshPreview(); save(); };
+    switch (act.dataset.act) {
+        case 'pick-spk': pickSpeaker(m, i, act, changed); break;
+        case 'add-spk': { const idx = addSpeaker(m); changed(); const btn = root.querySelector(`[data-act="pick-spk"][data-i="${idx}"]`); if (btn) pickSpeaker(m, idx, btn, changed); break; }
+        case 'rm-spk': { const sp = speakers(m.program)[i]; m.program.splice(m.program.indexOf(sp), 1); changed(); break; }
+        case 'move': { const sp = speakers(m.program)[i]; sp.position = sp.position === 'after' ? 'before' : 'after'; changed(); break; }
+        case 'status': setInviteStatus(m, i, act.dataset.v); changed(); break;
+        case 'pick-prayer': pickPrayer(m, act.dataset.k, act, changed); break;
+        case 'pick-hymn': pickHymn(m, act.dataset.k, act, changed); break;
+    }
 }
 
 function redrawLists() {

@@ -1,0 +1,85 @@
+// Assignment actions shared by Plano and Domingo: pick a speaker / prayer / hymn for a meeting
+// through the ranked picker, using the shared app state for rotation stats. Each function mutates
+// the meeting object and calls `onChange()` so the caller can redraw + save.
+import { state } from '../app-state.js';
+import { hymns } from '../hymns.js';
+import { openMemberPicker, openHymnPicker } from './picker.js';
+import { speakers, balance, formatDateShort, toIsoDate, newSpeaker } from '../utils/meeting.js';
+
+export const HYMN_LABELS = {
+    opening_hymn: 'Hino de Abertura', sacrament_hymn: 'Hino Sacramental',
+    intermediate_hymn: 'Hino Intermediário', closing_hymn: 'Hino de Encerramento',
+};
+
+export function pickSpeaker(m, i, anchor, onChange, monthBalance) {
+    const sp = speakers(m.program);
+    const s = sp[i];
+    if (!s) return;
+    const excludeIds = new Set(sp.filter(x => x !== s && x.member_id).map(x => x.member_id));
+    const declinedIds = new Set(sp.filter(x => x.invite_status === 'declined' && x.member_id).map(x => x.member_id));
+    openMemberPicker(anchor, {
+        title: `Orador ${i + 1} · ${formatDateShort(m.date)}`,
+        verb: 'falou',
+        members: state.members,
+        lastDates: state.lastTalk,
+        excludeIds, declinedIds,
+        recentDays: 90,
+        balance: { sunday: balance(sp, state.membersById), month: monthBalance || balance(sp, state.membersById) },
+        onPick: member => {
+            Object.assign(s, { name: member.name, member_id: member.id, invite_status: 'to_ask', asked_at: null });
+            onChange();
+        },
+        onClear: () => {
+            if (sp.length > (state.settings?.default_speakers || 3)) m.program.splice(m.program.indexOf(s), 1);
+            else Object.assign(s, { name: '', member_id: null, topic: '', invite_status: 'to_ask', asked_at: null });
+            onChange();
+        },
+    });
+}
+
+export function addSpeaker(m, position = 'before') {
+    const s = newSpeaker({ position });
+    m.program.push(s);
+    return speakers(m.program).indexOf(s);
+}
+
+export function setInviteStatus(m, i, status) {
+    const s = speakers(m.program)[i];
+    if (!s) return;
+    s.invite_status = status;
+    if (status === 'asked' && !s.asked_at) s.asked_at = toIsoDate(new Date());
+}
+
+export function pickPrayer(m, key, anchor, onChange) {
+    const other = key === 'invocation' ? 'benediction' : 'invocation';
+    const excludeIds = new Set([m[`${other}_member_id`], ...speakers(m.program).map(s => s.member_id)].filter(Boolean));
+    openMemberPicker(anchor, {
+        title: `${key === 'invocation' ? 'Primeira' : 'Última'} Oração · ${formatDateShort(m.date)}`,
+        verb: 'orou',
+        members: state.members,
+        lastDates: state.lastPrayer,
+        excludeIds,
+        recentDays: 60,
+        onPick: member => { m[`${key}_member_id`] = member.id; m[key] = member.name; onChange(); },
+        onClear: () => { m[`${key}_member_id`] = null; m[key] = ''; onChange(); },
+    });
+}
+
+export function pickHymn(m, key, anchor, onChange) {
+    openHymnPicker(anchor, {
+        title: `${HYMN_LABELS[key]} · ${formatDateShort(m.date)}`,
+        hymns,
+        lastSung: state.hymnLastSung,
+        repeatMonths: state.settings?.hymn_repeat_months || 3,
+        onPick: h => { m[key] = `${h.number} - ${h.title}`; onChange(); },
+        onClear: () => { m[key] = ''; onChange(); },
+    });
+}
+
+// True when the hymn stored in `m[key]` was sung within the ward's repeat window.
+export function hymnRepeats(value) {
+    const n = String(value || '').match(/^\s*(\d+)/)?.[1];
+    if (!n || !state.hymnLastSung.has(n)) return false;
+    const days = Math.round((new Date() - new Date(state.hymnLastSung.get(n))) / 86400000);
+    return days < (state.settings?.hymn_repeat_months || 3) * 30;
+}

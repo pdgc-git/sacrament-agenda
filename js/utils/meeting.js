@@ -50,6 +50,22 @@ export function sundaysFrom(start, count) {
     return out;
 }
 
+// All Sundays of a month given as 'YYYY-MM'.
+export function sundaysInMonth(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    const out = [];
+    const d = nextSunday(new Date(y, m - 1, 1));
+    while (d.getMonth() === m - 1) { out.push(toIsoDate(d)); d.setDate(d.getDate() + 7); }
+    return out;
+}
+
+// 'YYYY-MM' shifted by n months.
+export function shiftMonth(ym, n) {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + n, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 // Weeks since epoch for a date: stable index into the conducting rotation, same in every view.
 export function weekIndex(iso) {
     return Math.floor(parseIsoDate(iso).getTime() / (7 * 86400000));

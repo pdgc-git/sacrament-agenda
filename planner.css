@@ -235,13 +235,21 @@ textarea.input { resize: vertical; min-height: 60px; }
 .plan-grid tr.saving td { opacity: .6; }
 .topic-input { font-size: 12px; border: none; border-bottom: 1px dashed var(--rule-strong); background: transparent; padding: 1px 0; width: 100%; color: var(--ink-soft); font-style: italic; }
 .topic-input:focus { outline: none; border-bottom-color: var(--link); }
-.status-menu { display: flex; gap: 2px; margin-top: 3px; align-items: center; }
-.status-menu .small { margin-right: 4px; }
+.status-menu { display: flex; gap: 2px; margin-top: 3px; align-items: center; flex-wrap: wrap; }
+.status-menu .small { margin-right: 4px; white-space: nowrap; }
+.status-menu .link-btn { white-space: nowrap; font-size: 12px; }
+.status-menu .x { margin-left: auto; }
 .status-menu button { padding: 3px; border-radius: 6px; border: 1px solid transparent; background: none; line-height: 0; }
 .status-menu button .st { margin: 0; }
 .status-menu button.on { border-color: var(--rule-strong); background: var(--paper); }
 .plan-month h3 { font-size: 17px; margin: 22px 0 8px; }
 .plan-month:first-of-type h3 { margin-top: 0; }
+
+.month-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.month-nav h2 { min-width: 200px; text-align: center; text-transform: capitalize; }
+.month-arrow { padding: 6px 12px; font-size: 18px; line-height: 1; text-decoration: none; }
+select.month-select { width: auto; max-width: 260px; padding: 6px 10px; font-size: 13px; }
+@media (max-width: 760px) { .month-nav h2 { min-width: 0; flex: 1; } }
 
 /* mobile plan list */
 .plan-list .sun { padding: 12px 0; border-bottom: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; text-decoration: none; color: inherit; }
