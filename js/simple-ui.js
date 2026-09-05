@@ -1,4 +1,12 @@
-/* js/simple-ui.js */
+/* js/simple-ui.js — anonymous single-agenda editor (simple.html). No backend.
+   The preview is rendered by the shared js/render-agenda.js, the same function the planner uses,
+   so both tiers always print the same agenda. */
+import { setupHymnSearch } from './utils/uiUtils.js';
+import { showToast } from './components/Toast.js';
+import { hymns } from './hymns.js';
+import { escapeHtml } from './utils/security.js';
+import { renderAgendaHtml } from './render-agenda.js';
+
 const state = {
     recognitions: [],
     announcements: [],
@@ -7,158 +15,76 @@ const state = {
     speakersBefore: [],
     speakersAfter: []
 };
-import { setupHymnSearch } from './utils/uiUtils.js';
-import { showToast } from './components/Toast.js';
-import { hymns } from './hymns.js';
-import { escapeHtml } from './utils/security.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
-    setupDataBinding();
+    renderPreview();
 });
 
 function setupEventListeners() {
-    // Dynamic List Buttons
     ['recognition', 'announcement', 'release', 'calling'].forEach(type => {
-        document.getElementById(`btn-add-${type}`)?.addEventListener('click', () => {
-            addListItem(type + 's'); // Pluralize
-        });
+        document.getElementById(`btn-add-${type}`)?.addEventListener('click', () => addListItem(type + 's'));
     });
-
     document.getElementById('btn-add-speaker-before')?.addEventListener('click', () => addSpeaker('before'));
     document.getElementById('btn-add-speaker-after')?.addEventListener('click', () => addSpeaker('after'));
-
     document.getElementById('btn-export-pdf')?.addEventListener('click', exportPDF);
     document.getElementById('fullscreen-toggle')?.addEventListener('click', toggleFullScreen);
 
-    // Fast Meeting Toggle
     document.getElementById('fastMeeting')?.addEventListener('change', (e) => {
         const isFast = e.target.checked;
-        const els = {
-            speakersBefore: document.getElementById('speakers-before-list'),
-            speakersAfter: document.getElementById('speakers-after-list'),
-            note: document.getElementById('fast-meeting-note'),
-            hymn: document.getElementById('intermediate-hymn-wrapper'),
-            previewHymn: document.getElementById('preview-intermediate-hymn')
-        };
-        const display = isFast ? 'none' : 'block';
-        if (els.speakersBefore) els.speakersBefore.style.display = display;
-        if (els.speakersAfter) els.speakersAfter.style.display = display;
-        if (els.hymn) els.hymn.style.display = display;
-        if (els.previewHymn) els.previewHymn.style.display = display; // Use logic for hiding later
-        if (els.note) els.note.style.display = isFast ? 'block' : 'none';
-
-        // Force re-render of preview hymn visibility if unchecking fast meeting
-        if (!isFast) {
-            checkIntermediateHymnVisibility();
-        }
+        const program = document.getElementById('program-section');
+        if (program) program.style.display = isFast ? 'none' : '';
+        renderPreview();
     });
 
-    // Event Delegation for Dynamic Items
-    document.getElementById('agendaForm')?.addEventListener('click', (e) => {
+    const form = document.getElementById('agendaForm');
+    form?.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-remove');
         if (btn) removeListItem(btn.dataset.type, btn.dataset.id);
     });
-
-    document.getElementById('agendaForm')?.addEventListener('input', (e) => {
+    form?.addEventListener('input', (e) => {
         if (e.target.classList.contains('dynamic-input')) {
             updateListItem(e.target.dataset.type, e.target.dataset.id, e.target.dataset.field, e.target.value);
         }
+        renderPreview();
     });
 
-    // Hymn Search
     document.querySelectorAll('.hymn-search').forEach(input => {
         setupHymnSearch(input, hymns);
-        // Add specific listener for intermediate hymn to toggle preview visibility
-        if (input.name === 'intermediateHymn') {
-            input.addEventListener('input', checkIntermediateHymnVisibility);
-            input.addEventListener('hymn-selected', checkIntermediateHymnVisibility); // If custom event is used
-            // Since setupHymnSearch might not dispatch 'input' on click, we ensure we catch changes
-            // Assuming setupHymnSearch updates the input value.
-            // We can use a MutationObserver or just polling, but direct events are better.
-            // In the previous check, setupHymnSearch dispatches 'input' or 'hymn-selected'.
-        }
+        input.addEventListener('hymn-selected', renderPreview);
     });
 }
 
-function checkIntermediateHymnVisibility() {
-    const input = document.querySelector('input[name="intermediateHymn"]');
-    const previewEl = document.getElementById('preview-intermediate-hymn');
-    if (input && previewEl) {
-        // Only show if content exists AND not fast meeting
-        const isFast = document.getElementById('fastMeeting')?.checked;
-        if (input.value.trim() !== '' && !isFast) {
-            previewEl.style.display = 'flex'; // Use flex to match program-item
-        } else {
-            previewEl.style.display = 'none';
-        }
-    }
-}
+// ── State helpers ─────────────────────────────────────────────────────────────
 
-function setupDataBinding() {
-    document.querySelectorAll('input[name], textarea[name]').forEach(input => {
-        input.addEventListener('input', () => {
-            const target = document.querySelector(`[data-bind="${input.name}"]`);
-            if (target) {
-                // Apply formatting only if it's the date field
-                if (input.type === 'date') {
-                    target.textContent = formatDate(input.value);
-                } else {
-                    target.textContent = input.value;
-                }
-            }
-            // For intermediate hymn, also check visibility
-            if (input.name === 'intermediateHymn') checkIntermediateHymnVisibility();
-        });
-    });
-}
-
-// Logic Helpers
 function addListItem(type) {
-    const id = crypto.randomUUID();
-    state[type].push({ id, text: '', name: '', calling: '' });
+    state[type].push({ id: crypto.randomUUID(), text: '', name: '', calling: '' });
     renderListInput(type);
-    renderPreviewList(type);
+    renderPreview();
 }
 
 function addSpeaker(section) {
-    const arrayName = section === 'before' ? 'speakersBefore' : 'speakersAfter';
-    state[arrayName].push({ id: crypto.randomUUID(), name: '' });
+    const key = section === 'before' ? 'speakersBefore' : 'speakersAfter';
+    state[key].push({ id: crypto.randomUUID(), name: '' });
     renderSpeakers(section);
-    renderPreviewSpeakers(section);
+    renderPreview();
 }
 
 function removeListItem(type, id) {
-    // Check if it's a speaker
-    if (type === 'speakersBefore') {
-        state.speakersBefore = state.speakersBefore.filter(i => i.id !== id);
-        renderSpeakers('before');
-        renderPreviewSpeakers('before');
-    } else if (type === 'speakersAfter') {
-        state.speakersAfter = state.speakersAfter.filter(i => i.id !== id);
-        renderSpeakers('after');
-        renderPreviewSpeakers('after');
-    } else {
-        state[type] = state[type].filter(i => i.id !== id);
-        renderListInput(type);
-        renderPreviewList(type);
-    }
+    state[type] = state[type].filter(i => i.id !== id);
+    if (type === 'speakersBefore') renderSpeakers('before');
+    else if (type === 'speakersAfter') renderSpeakers('after');
+    else renderListInput(type);
+    renderPreview();
 }
 
 function updateListItem(type, id, field, value) {
-    let list = state[type]; // by reference
-    const item = list.find(i => i.id === id);
-    if (item) {
-        if (field) item[field] = value;
-        else item.text = value;
-    }
-
-    if (type === 'speakersBefore') renderPreviewSpeakers('before');
-    else if (type === 'speakersAfter') renderPreviewSpeakers('after');
-    else renderPreviewList(type);
+    const item = state[type]?.find(i => i.id === id);
+    if (item) item[field || 'text'] = value;
 }
 
-// Rendering Logic
+// ── Form rendering ────────────────────────────────────────────────────────────
+
 function renderListInput(type) {
     const container = document.getElementById(`${type}-input-container`);
     if (!container) return;
@@ -169,8 +95,7 @@ function renderListInput(type) {
         if (type === 'releases' || type === 'callings') {
             div.innerHTML = `
                 <input type="text" class="dynamic-input" placeholder="Nome" value="${escapeHtml(item.name)}" data-type="${type}" data-id="${item.id}" data-field="name" style="flex:1">
-                <input type="text" class="dynamic-input" placeholder="Chamado" value="${escapeHtml(item.calling)}" data-type="${type}" data-id="${item.id}" data-field="calling" style="flex:1">
-            `;
+                <input type="text" class="dynamic-input" placeholder="Chamado" value="${escapeHtml(item.calling)}" data-type="${type}" data-id="${item.id}" data-field="calling" style="flex:1">`;
         } else {
             div.innerHTML = `<input type="text" class="dynamic-input" placeholder="Texto" value="${escapeHtml(item.text)}" data-type="${type}" data-id="${item.id}" data-field="text" style="flex:1">`;
         }
@@ -181,110 +106,65 @@ function renderListInput(type) {
 
 function renderSpeakers(section) {
     const type = section === 'before' ? 'speakersBefore' : 'speakersAfter';
-    const containerId = section === 'before' ? 'speakers-before-input-container' : 'speakers-after-input-container';
-    const container = document.getElementById(containerId);
-
+    const container = document.getElementById(`speakers-${section}-input-container`);
     if (!container) return;
-    container.innerHTML = '';
-
-    state[type].forEach((s, i) => {
-        container.innerHTML += `
-            <div class="input-row">
-                <input type="text" class="dynamic-input" placeholder="Orador" value="${escapeHtml(s.name)}" data-type="${type}" data-id="${s.id}" data-field="name" style="flex:1">
-                <button class="btn-remove" data-type="${type}" data-id="${s.id}">×</button>
-            </div>`;
-    });
+    container.innerHTML = state[type].map(s => `
+        <div class="input-row">
+            <input type="text" class="dynamic-input" placeholder="Orador" value="${escapeHtml(s.name)}" data-type="${type}" data-id="${s.id}" data-field="name" style="flex:1">
+            <button class="btn-remove" data-type="${type}" data-id="${s.id}">×</button>
+        </div>`).join('');
 }
 
-function renderPreviewSpeakers(section) {
-    const type = section === 'before' ? 'speakersBefore' : 'speakersAfter';
-    const containerId = section === 'before' ? 'speakers-before-list' : 'speakers-after-list';
-    const l = document.getElementById(containerId);
+// ── Preview ───────────────────────────────────────────────────────────────────
 
-    if (!l) return;
-    l.innerHTML = '';
-
-    state[type].forEach(s => {
-        l.innerHTML += `<div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">${escapeHtml(s.name)}</span></div>`;
-    });
+// Adapt the form + list state to the meeting shape render-agenda.js expects.
+export function toMeeting(form, st) {
+    const el = name => form?.elements?.namedItem(name);
+    const v = name => el(name)?.value?.trim() || '';
+    return {
+        date: v('date'),
+        ward_name: v('ward') || 'Ala de [Nome]',
+        presiding: v('presiding'), conducting: v('conducting'), organist: v('organist'), chorister: v('chorister'),
+        opening_hymn: v('openingHymn'), sacrament_hymn: v('sacramentHymn'),
+        intermediate_hymn: v('intermediateHymn'), closing_hymn: v('closingHymn'),
+        invocation: v('invocation'), benediction: v('benediction'),
+        kind: el('fastMeeting')?.checked ? 'fast' : 'normal',
+        recognitions: st.recognitions, announcements: st.announcements,
+        releases: st.releases, callings: st.callings,
+        program: [
+            ...st.speakersBefore.map(s => ({ type: 'speaker', id: s.id, name: s.name, position: 'before' })),
+            ...st.speakersAfter.map(s => ({ type: 'speaker', id: s.id, name: s.name, position: 'after' })),
+        ],
+    };
 }
 
-// Preview Rendering
-function renderPreviewList(type) {
-    const previewContainer = document.getElementById(`preview-${type}`);
-    const listEl = previewContainer?.querySelector(`[data-bind="${type}"]`);
-    if (!listEl) return;
-
-    const items = state[type] || [];
-    listEl.innerHTML = '';
-
-    items.forEach(item => {
-        const li = document.createElement('li');
-        if (type === 'releases' || type === 'callings') {
-            const name = item.name || '';
-            const calling = item.calling || '';
-            li.textContent = calling ? `${name} — ${calling}` : name;
-        } else {
-            li.textContent = item.text || '';
-        }
-        listEl.appendChild(li);
-    });
-
-    // Toggle section visibility
-    if (previewContainer) {
-        previewContainer.style.display = items.length > 0 ? 'block' : 'none';
-    }
-
-    // Toggle parent business section for releases/callings
-    if (type === 'releases' || type === 'callings') {
-        const businessSection = document.getElementById('preview-business');
-        if (businessSection) {
-            const hasReleases = (state.releases || []).length > 0;
-            const hasCallings = (state.callings || []).length > 0;
-            businessSection.style.display = (hasReleases || hasCallings) ? 'block' : 'none';
-        }
-    }
+function renderPreview() {
+    const paper = document.getElementById('agenda-paper');
+    if (!paper) return;
+    const form = document.getElementById('agendaForm');
+    paper.innerHTML = renderAgendaHtml(toMeeting(form, state));
 }
 
-// Utilities
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
 function exportPDF() {
-    const el = document.getElementById('agenda-paper');
-    if (window.html2pdf) {
-        html2pdf()
-            .set({
-                margin: 0,
-                filename: 'agenda.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            })
-            .from(el)
-            .save()
-            .catch(err => {
-                console.error('PDF Generation Error:', err);
-                showToast('Erro ao gerar PDF: ' + err.message, 'error');
-            });
-    } else {
-        showToast('Erro: Biblioteca PDF não carregada.', 'error');
-    }
+    const element = document.getElementById('agenda-paper');
+    const wardName = document.querySelector('input[name="ward"]')?.value || 'Agenda';
+    const date = document.querySelector('input[name="date"]')?.value || 'data';
+    const opt = {
+        margin: 0,
+        filename: `Agenda_${wardName.replace(/\s+/g, '_')}_${date}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    if (typeof html2pdf === 'undefined') { showToast('Biblioteca PDF não carregada.', 'error'); return; }
+    html2pdf().set(opt).from(element).save()
+        .then(() => showToast('PDF gerado.', 'success'))
+        .catch(err => { console.error(err); showToast('Erro ao gerar PDF.', 'error'); });
 }
 
 function toggleFullScreen() {
-    document.querySelector('.app-layout').classList.toggle('full-screen');
+    document.body.classList.toggle('fullscreen-mode');
 }
-
-function formatDate(dateInput) {
-    if (!dateInput) return '...';
-
-    // Safety check: Ensure input is a string
-    const s = String(dateInput);
-
-    // Handle YYYY-MM-DD (Standard HTML Date Input)
-    if (s.includes('-') && s.length === 10) {
-        const [year, month, day] = s.split('-');
-        return `${day}-${month}-${year}`;
-    }
-
-    return s; // Fallback
-}
-
+window.toggleFullScreen = toggleFullScreen;

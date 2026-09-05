@@ -1,0 +1,202 @@
+/* Agenda paper — the printed/PDF agenda. Shared by simple.html and planner.html.
+   Extracted verbatim from style.css (Phase 3); rendered by js/render-agenda.js.
+   Keep this the single source of truth for how the agenda looks. */
+
+:root {
+    --agenda-primary: #1e3a8a;
+    --agenda-font: 'Inter', sans-serif;
+}
+
+.agenda-paper {
+    background: white;
+    width: 100%;
+    min-height: 100%;
+    padding: 20mm;
+    /* Standard print margin */
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
+    color: #000;
+    font-family: var(--agenda-font);
+    /* Serif for the document feels more formal */
+    position: relative;
+}
+
+/* Agenda Content Styling */
+.agenda-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header-line {
+    width: 40px;
+    height: 2px;
+    background: var(--agenda-primary);
+    margin: 0 auto 1rem;
+}
+
+.agenda-header h1 {
+    font-weight: 700;
+    font-size: 24pt;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.2rem;
+    color: black;
+}
+
+.agenda-header h2 {
+    font-family: var(--agenda-font);
+    font-weight: 400;
+    font-size: 14pt;
+    color: #444;
+    margin-bottom: 0.2rem;
+}
+
+.agenda-date {
+    font-family: var(--agenda-font);
+    font-size: 11pt;
+    color: #666;
+}
+
+.agenda-body {
+    font-family: var(--agenda-font);
+    font-size: 11pt;
+    line-height: 1.5;
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 2rem;
+    margin-bottom: 1.5rem;
+    font-size: 10pt;
+}
+
+.meta-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #444;
+}
+
+.divider {
+    border: 0;
+    border-top: 1px solid #ddd;
+    margin: 1rem 0;
+}
+
+.program-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.program-label {
+    font-weight: 600;
+    color: #222;
+    min-width: 140px;
+}
+
+.program-value {
+    text-align: right;
+    flex: 1;
+}
+
+.hymn {
+    font-weight: 500;
+    font-style: italic;
+}
+
+.program-section {
+    margin: 1.5rem 0;
+}
+
+.program-section h3 {
+    font-family: var(--agenda-font);
+    font-size: 14pt;
+    border-bottom: 1px solid #000;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.25rem;
+}
+
+.business-content {
+    font-size: 10pt;
+    white-space: pre-line;
+}
+
+.highlight-box {
+    margin: 1.5rem 0 0.5rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+}
+
+.sacrament-note {
+    text-align: center;
+    font-style: italic;
+    font-size: 10pt;
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.speakers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.speaker-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.agenda-footer {
+    margin-top: 3rem;
+    text-align: center;
+    font-size: 9pt;
+    color: #888;
+    position: absolute;
+    bottom: 20mm;
+    left: 0;
+    right: 0;
+}
+
+/* Preview Enhancements */
+.clean-list {
+    list-style: none;
+    padding: 0;
+}
+
+.clean-list li {
+    margin-bottom: 0.25rem;
+    font-size: 10pt;
+}
+
+.business-section h4 {
+    font-size: 10pt;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 0.2rem;
+    text-decoration: underline;
+}
+.fast-meeting-note {
+    text-align: center;
+    margin: 1rem 0;
+    font-style: italic;
+}
+
+.program-item.intermediate-hymn {
+    margin: 0.5rem 0;
+}
+
+.business-block {
+    margin-bottom: 0.5rem;
+}
+
+@media print {
+    body * { visibility: hidden; }
+    .agenda-paper, .agenda-paper * { visibility: visible; }
+    .agenda-paper { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; padding: 15mm; }
+    @page { size: A4; margin: 0; }
+}

@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
     <title>Agenda Sacramental SUD</title>
 
     <!-- Fonts -->
@@ -20,6 +21,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="agenda-paper.css">
 </head>
 
 <body>
@@ -201,126 +203,7 @@
                 <span class="btn-text">Ecrã Inteiro</span>
             </button>
             <div class="paper-wrapper">
-                <div id="agenda-paper" class="agenda-paper">
-
-                    <div class="agenda-header">
-                        <div class="header-line"></div>
-                        <h1>Agenda da Reunião Sacramental</h1>
-                        <h2 data-bind="ward">Ala de [Nome]</h2>
-                        <p class="agenda-date" data-bind="date">--/--/----</p>
-                    </div>
-
-                    <div class="agenda-body">
-
-                        <div class="meta-grid">
-                            <div class="meta-item">
-                                <span class="meta-label">Preside:</span>
-                                <span class="meta-value" data-bind="presiding">...</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Dirige:</span>
-                                <span class="meta-value" data-bind="conducting">...</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Pianista:</span>
-                                <span class="meta-value" data-bind="organist">...</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Regente:</span>
-                                <span class="meta-value" data-bind="chorister">...</span>
-                            </div>
-                        </div>
-
-                        <hr class="divider">
-
-                        <!-- Recognitions Section -->
-                        <div id="preview-recognitions" class="program-section" style="display:none;">
-                            <h3>Reconhecimentos</h3>
-                            <ul class="clean-list" data-bind="recognitions"></ul>
-                        </div>
-
-                        <!-- Announcements (Standalone) -->
-                        <div id="preview-announcements" class="program-section" style="display:none;">
-                            <h3>Anúncios</h3>
-                            <ul class="clean-list" data-bind="announcements"></ul>
-                        </div>
-
-                        <div class="program-item">
-                            <span class="program-label">Hino de Abertura</span>
-                            <span class="program-value hymn" data-bind="openingHymn">...</span>
-                        </div>
-
-                        <div class="program-item">
-                            <span class="program-label">Primeira Oração</span>
-                            <span class="program-value" data-bind="invocation">...</span>
-                        </div>
-
-                        <!-- Business Section (Ward Affairs) -->
-                        <div id="preview-business" class="program-section business-section" style="display:none;">
-                            <h3>Assuntos da Ala</h3>
-
-                            <!-- Releases (First) -->
-                            <div id="preview-releases" style="display:none; margin-bottom: 0.5rem;">
-                                <h4>Desobrigações</h4>
-                                <ul class="clean-list" data-bind="releases"></ul>
-                            </div>
-
-                            <!-- Callings (Second) -->
-                            <div id="preview-callings" style="display:none;">
-                                <h4>Chamados</h4>
-                                <ul class="clean-list" data-bind="callings"></ul>
-                            </div>
-
-                        </div>
-
-                        <div class="program-item highlight-box">
-                            <span class="program-label">Hino Sacramental</span>
-                            <span class="program-value hymn" data-bind="sacramentHymn">...</span>
-                        </div>
-
-                        <div class="sacrament-note">
-                            <p>Administração do Sacramento</p>
-                        </div>
-
-                        <!-- Program Section -->
-                        <div class="program-section speakers-section">
-                            <h3>Programa</h3>
-
-                            <!-- Fast Meeting Text -->
-                            <div id="fast-meeting-note"
-                                style="display:none; text-align: center; margin: 1rem 0; font-style: italic;">
-                                Testemunhos da Congregação
-                            </div>
-
-                            <!-- Speakers BEFORE -->
-                            <div id="speakers-before-list" class="speakers-list"></div>
-
-                            <!-- Intermediate Hymn -->
-                            <div id="preview-intermediate-hymn" class="program-item"
-                                style="display:none; margin: 0.5rem 0;">
-                                <span class="program-label">Hino Intermediário</span>
-                                <span class="program-value hymn" data-bind="intermediateHymn">...</span>
-                            </div>
-
-                            <!-- Speakers AFTER -->
-                            <div id="speakers-after-list" class="speakers-list"></div>
-                        </div>
-
-                        <hr class="divider">
-
-                        <div class="program-item">
-                            <span class="program-label">Hino de Encerramento</span>
-                            <span class="program-value hymn" data-bind="closingHymn">...</span>
-                        </div>
-
-                        <div class="program-item">
-                            <span class="program-label">Última Oração</span>
-                            <span class="program-value" data-bind="benediction">...</span>
-                        </div>
-
-                    </div>
-
-                </div>
+                <div id="agenda-paper" class="agenda-paper"></div>
             </div>
         </main>
     </div>

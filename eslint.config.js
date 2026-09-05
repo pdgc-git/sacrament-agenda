@@ -3,6 +3,7 @@ import pluginJs from "@eslint/js";
 import jest from "eslint-plugin-jest";
 
 export default [
+  { ignores: ["js/vendor/**", "node_modules/**", "docs/**"] },
   {
     languageOptions: {
       globals: {

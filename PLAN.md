@@ -129,6 +129,8 @@ Work in a feature branch (`v2-supabase`), PR per phase. Run `npx jest` before ev
 4. **Acceptance:** `npx jest` fully green; manual smoke against the live VPS: create ward → add member → save draft → finalize → hymn warning fires on reuse.
 
 ### Phase 3 — full UI redesign
+**Built and deployed 2026-09-06** (migration `0004_phase3.sql` applied; `deploy/deploy.sh` rsyncs the static app). Browser smoke test passed against the live site with a test ward; 89 Jest tests green. Open: mobile Plano is the same grid with horizontal scroll (the mockup's per-Sunday phone list was not built); no ward-delete action.
+
 **Design approved 2026-09-05.** The mockup is `docs/mockups-phase3.html` (open it in a browser; it is the spec — copy its structure, labels, and palette, don't reinterpret). Follow `AGENTS.md` styling rules: plain CSS, CSS variables, no inline styles. pt-PT strings as in the mockup.
 
 **Design decisions (settled, don't re-litigate):**
