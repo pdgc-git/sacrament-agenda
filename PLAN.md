@@ -129,16 +129,30 @@ Work in a feature branch (`v2-supabase`), PR per phase. Run `npx jest` before ev
 4. **Acceptance:** `npx jest` fully green; manual smoke against the live VPS: create ward → add member → save draft → finalize → hymn warning fires on reuse.
 
 ### Phase 3 — full UI redesign
-Design first, then build. Load the `frontend-design` skill (and follow `AGENTS.md` styling rules: plain CSS, CSS variables, no inline styles).
-1. Produce mockups for the 6 screens before coding: **Entrada/auth, Dashboard (next Sunday hero + 4-week list), Timeline (3 months), Editor (unify today's PLAN/FULL split — one editor with a live preview pane; PLAN/FULL duplication in v1 was the main source of code bloat), Roster (+ PDF import wizard), Admin (member approval + role management — the missing feature #1).**
-2. New flows that must exist:
-   - Join by **invite code** (replaces "paste ward ID"); pending screen; admin approve/reject with role assignment.
-   - **"Finalizar reunião"** as a first-class action on past-dated drafts (calls `finalize_meeting` RPC) — this is what makes rotation/history/hymn-warnings come alive (bug #2).
-   - Complete print/PDF view: full agenda including business section, recognitions, announcements; A4; also used by browser print (`@media print`).
-   - Mobile-first: bishopric members use phones in meetings.
-3. Rebuild `planner.html` + split `planner-ui.js` into modules ≤400 lines each (`views/dashboard.js`, `views/timeline.js`, `views/editor.js`, `views/roster.js`, `views/admin.js`, shared `render.js`). Every dynamic string through `escapeHtml` (bug #5); single event-delegation setup per view (bug #7); fix `formatDate` (bug #6).
-4. Keep `simple.html` working untouched (it has no backend). Re-enable the Planner card on `index.html`.
-5. **Acceptance:** all v1 features reachable; the four unfinished flows above work end-to-end; Jest green including new tests for approval + finalization; no unescaped interpolation into `innerHTML` (grep check).
+**Design approved 2026-09-05.** The mockup is `docs/mockups-phase3.html` (open it in a browser; it is the spec — copy its structure, labels, and palette, don't reinterpret). Follow `AGENTS.md` styling rules: plain CSS, CSS variables, no inline styles. pt-PT strings as in the mockup.
+
+**Design decisions (settled, don't re-litigate):**
+- The app is organised by the three moments of the meeting, not by data type. Screens: **Plano** (weeks ahead), **Domingo** (the week of), **Púlpito** (Sunday, at the stand), **Ausências** (Sunday, from the stand), plus **Membros**, **Administração**, **Entrada**. No Dashboard, no generic Editor.
+- **Plano**: monthly grid, rows = Sundays, columns = tipo·dirige, Orador 1–3 (4th appears on demand), 1.ª Oração, Última Oração, Hinos. Each speaker cell = name + topic + invite status dot (`to_ask` · `asked` · `confirmed` · `declined`). Row status = what's missing ("Falta N"), not "Rascunho". Meeting kind: normal · fast · conference · primary · stake. Picker opens from any cell: candidates sorted never-spoke first then oldest last talk, **filter chips by gender (H/M) and group (Jovens/JA/Adultos)** (port of v1 `renderMemberPool` filters), footer shows the H·M·jovens balance for the Sunday and the month. Same picker for prayers (by last prayer) and hymns (by last sung, 3-month warning).
+- **Domingo**: opens on the next Sunday. Presidência/música prefilled from ward settings (conducting rotates), program prefilled from Plano (read-only here, link to Plano). Editable here: Reconhecimentos, Anúncios, Assuntos da Ala (Desobrigações, Chamados). Right pane = A4 agenda at A4 proportion. Actions: PDF, Partilhar, Modo púlpito.
+- **Agenda render is one shared function** (`js/render-agenda.js`) used by `simple.html`, Domingo's preview, and the PDF. Order is fixed: header + meta-grid (Preside, Dirige, Pianista, Regente) → Reconhecimentos → Anúncios → Hino de Abertura → Primeira Oração → Assuntos da Ala (Desobrigações, Chamados) → Hino Sacramental (`highlight-box`) → "Administração do Sacramento" → Programa (oradores antes · Hino Intermediário · oradores depois; fast Sunday = "Testemunhos da Congregação") → Hino de Encerramento → Última Oração. Empty sections hidden. Markup/classes exactly as `simple.html` + `style.css` `.agenda-paper`.
+- **Púlpito**: the primary output (the agenda is read from phone/tablet, never printed). Dark surface, large type, exact meeting order, current-item marker (tap advances). Tap a speaker → move before/after the hymn, remove ("não veio"), substitute. Changes persist to the meeting. Footer: Ausências, **Terminar reunião** → total count + pre-checked list of who spoke/prayed (uncheck no-shows) + hymns sung → `finalize_meeting` (bug #2). Must work offline once loaded (cache the meeting in localStorage).
+- **Ausências**: member list with one toggle each; only absences are stored (unmarked = present). Filters: all / missed last week / marked. Desktop view: 8-Sunday dot history, consecutive-absence count, threshold alert (ward setting).
+- **Administração**: ward settings (presiding, conducting rotation list, organist, chorister, default speaker count, absence threshold, hymn-repeat window) + pending approvals + invite code + roles. Accounts are admin-created (no public signup).
+- **Palette**: single accent = the shipped navy `#1E3A8A` on cool neutral greys; dark theme is neutral graphite with accent `#8FB4F0`. **No warm/brass/amber tones** except the hymn-repeat warning. Grey pills for "Falta N". Fonts as mockup (Fraunces headings, Source Sans 3 body, IBM Plex Mono labels; the agenda itself stays Inter).
+
+**Schema additions (migration `0002_phase3.sql`, before building):**
+- `meetings.program` items gain `topic text`, `invite_status text` (to_ask|asked|confirmed|declined, default to_ask), `asked_at date`, `position` (`before`|`after` the intermediate hymn).
+- `meetings.kind text not null default 'normal' check (kind in ('normal','fast','conference','primary','stake'))` — replaces `is_fast_sunday` (keep the column, derive it, or migrate and drop).
+- `agenda.absences (ward_id, meeting_date, member_id, marked_by uuid, marked_at timestamptz, primary key (ward_id, meeting_date, member_id))` + RLS like `meetings`; view `agenda.member_absence_streak`.
+- `agenda.ward_settings (ward_id pk, presiding text, conducting_rotation jsonb, organist text, chorister text, default_speakers int default 3, absence_alert_after int default 3, hymn_repeat_months int default 3)`.
+- `finalize_meeting` RPC takes the confirmed list (who actually spoke/prayed) and writes `program`/prayer columns accordingly before setting `status='completed'`.
+
+**Build:**
+1. Migration above; extend `dataManager.js` (`getWardSettings/saveWardSettings`, `getAbsences/markAbsence/unmarkAbsence`, `getAbsenceStreaks`, `finalizeMeeting(confirmed)`); tests.
+2. Rebuild `planner.html` + split `planner-ui.js` into modules ≤400 lines: `views/plano.js`, `views/domingo.js`, `views/pulpito.js`, `views/ausencias.js`, `views/membros.js`, `views/admin.js`, `views/entrada.js`, shared `render-agenda.js`, `components/picker.js` (the filtered, ranked picker used by Plano for speakers/prayers/hymns). Every dynamic string through `escapeHtml` (bug #5); single event-delegation setup per view (bug #7); fix `formatDate` (bug #6).
+3. `simple.html` switches to `render-agenda.js` but keeps its behaviour and look; re-enable the Planner card on `index.html`.
+4. **Acceptance:** all v1 features reachable; join-by-code + approval, Plano grid with filtered picker, Domingo preview identical to `simple.html` output for the same data (snapshot test), Púlpito swap/remove + Terminar reunião end-to-end (history views populate), Ausências mark + streaks; Jest green with new tests for approval, finalization, render-agenda order, picker sorting/filters; no unescaped interpolation into `innerHTML` (grep check).
 
 ### Phase 4 — deploy + data migration + cutover
 1. Deploy script (`deploy/deploy.sh`): rsync the static files to `/var/www/sacrament-agenda/` on `forwartrans-vps`. No build step.

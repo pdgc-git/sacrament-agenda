@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="pt-PT">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agenda Sacramental — mockups Fase 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --paper:#F5F6F8; --card:#FFFFFF; --ink:#1B2230; --ink-soft:#4A5364; --ink-faint:#8A93A3;
+  --brass:#1E3A8A; --brass-ink:#FFFFFF; --rule:#E1E4EA; --rule-strong:#C9CED8;
+  --sage:#2F7A4A; --sage-bg:#E3F1E7; --amber:#B7791F; --amber-bg:#FBF3E0; --critical:#B3383A; --critical-bg:#F9E3E3;
+  --shell:#161A22; --shadow:0 24px 48px -24px rgba(27,34,48,.28); --focus:#1E3A8A; --link:#1E3A8A;
+  --pulpit-bg:#111318; --pulpit-ink:#EEF0F4; --pulpit-soft:#9AA3B2; --pulpit-rule:#262B35; --pulpit-accent:#8FB4F0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15171B; --card:#1D2026; --ink:#E8EAEE; --ink-soft:#B0B6C1; --ink-faint:#737B89;
+    --brass:#8FB4F0; --brass-ink:#0E1A33; --rule:#2A2E36; --rule-strong:#3A3F49;
+    --sage:#7FC48F; --sage-bg:#1B2B21; --amber:#E2B266; --amber-bg:#2E2717; --critical:#E5847F; --critical-bg:#37201F;
+    --shell:#0A0B0E; --shadow:0 24px 48px -24px rgba(0,0,0,.7); --focus:#8FB4F0; --link:#8FB4F0;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15171B; --card:#1D2026; --ink:#E8EAEE; --ink-soft:#B0B6C1; --ink-faint:#737B89;
+    --brass:#8FB4F0; --brass-ink:#0E1A33; --rule:#2A2E36; --rule-strong:#3A3F49;
+    --sage:#7FC48F; --sage-bg:#1B2B21; --amber:#E2B266; --amber-bg:#2E2717; --critical:#E5847F; --critical-bg:#37201F;
+    --shell:#0A0B0E; --shadow:0 24px 48px -24px rgba(0,0,0,.7); --focus:#8FB4F0; --link:#8FB4F0;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:'Source Sans 3', system-ui, sans-serif; -webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:'Fraunces', Georgia, serif; text-wrap:balance; margin:0}
+.mono{font-family:'IBM Plex Mono', ui-monospace, monospace}
+a:focus-visible, button:focus-visible, input:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+
+.topbar{max-width:1180px; margin:0 auto; padding:20px 20px 0; display:flex; justify-content:flex-end}
+.theme-toggle{display:flex; gap:2px; background:var(--card); border:1px solid var(--rule); border-radius:999px; padding:3px}
+.theme-toggle button{border:none; background:transparent; color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 12px; border-radius:999px; cursor:pointer}
+.theme-toggle button.on{background:var(--ink); color:var(--paper)}
+
+.intro{max-width:720px; margin:0 auto; padding:36px 24px 28px; text-align:center}
+.eyebrow{font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); margin-bottom:14px}
+.intro h1{font-size:clamp(30px,5vw,42px); font-weight:500; line-height:1.15}
+.intro p{color:var(--ink-soft); font-size:16px; line-height:1.6; max-width:60ch; margin:14px auto 0}
+
+/* the three moments — this is the thesis of the redesign */
+.moments{max-width:900px; margin:0 auto 10px; padding:0 24px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+.moment{border:1px solid var(--rule); border-radius:12px; padding:14px 16px; background:var(--card)}
+.moment .when{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--brass)}
+.moment .what{font-family:'Fraunces',serif; font-size:18px; margin:6px 0 4px}
+.moment p{margin:0; font-size:13px; color:var(--ink-soft); line-height:1.5}
+@media (max-width:760px){ .moments{grid-template-columns:1fr} }
+
+nav.tabs{position:sticky; top:0; z-index:20; display:flex; gap:6px; overflow-x:auto; padding:12px 20px; background:color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--rule); scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{flex:none; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.03em; text-decoration:none; color:var(--ink-soft); padding:7px 13px; border-radius:999px; border:1px solid transparent; white-space:nowrap}
+nav.tabs a.active{color:var(--brass-ink); background:var(--brass); border-color:var(--brass)}
+
+main{max-width:1180px; margin:0 auto; padding:20px 20px 100px}
+section.screen-block{padding:56px 0 24px; border-top:1px solid var(--rule); scroll-margin-top:64px}
+section.screen-block:first-of-type{border-top:none}
+.block-head{max-width:720px; margin:0 0 28px}
+.block-head .eyebrow{margin-bottom:8px}
+.block-head h2{font-size:24px; font-weight:500}
+.block-head p{color:var(--ink-soft); font-size:15px; margin:8px 0 0; line-height:1.55}
+.block-head ul{color:var(--ink-soft); font-size:14px; line-height:1.55; margin:10px 0 0; padding-left:18px}
+
+.dual-stage{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start}
+.stage-col{display:flex; flex-direction:column; gap:12px; min-width:0}
+.stage-label{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint)}
+
+/* phone frame */
+.device{width:360px; flex:none; background:var(--shell); border-radius:38px; padding:12px; box-shadow:var(--shadow)}
+.device .screen{background:var(--paper); border-radius:27px; overflow:hidden; min-height:680px; display:flex; flex-direction:column}
+.status-bar{height:30px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 22px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-faint)}
+.app-bar{padding:14px 20px 16px; flex:none; border-bottom:1px solid var(--rule); background:var(--paper)}
+.app-bar .mark{display:flex; align-items:center; gap:9px}
+.tag-glyph{width:22px; height:22px; border-radius:4px; background:var(--brass); color:var(--brass-ink); font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center}
+.app-bar .ward{font-size:14.5px; font-weight:600}
+.app-bar .role{font-size:11.5px; color:var(--ink-faint)}
+.content{padding:18px 20px 28px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:18px}
+.tabbar{flex:none; display:flex; border-top:1px solid var(--rule); background:var(--card)}
+.tabbar .t{flex:1; text-align:center; padding:10px 0 12px; font-size:11px; color:var(--ink-faint); font-weight:600}
+.tabbar .t.on{color:var(--link); position:relative}
+.tabbar .t.on::before{content:""; position:absolute; top:0; left:50%; transform:translateX(-50%); width:28px; height:2px; background:var(--brass)}
+
+/* desktop shell */
+.browser{width:860px; max-width:100%; flex:none; background:var(--shell); border-radius:14px; padding:9px 9px 0; box-shadow:var(--shadow)}
+.browser .chrome{display:flex; align-items:center; gap:10px; padding:7px 8px 10px}
+.browser .dots{display:flex; gap:6px}
+.browser .dots span{width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.22)}
+.browser .url{flex:1; background:rgba(255,255,255,.08); color:rgba(255,255,255,.5); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:5px 12px; border-radius:6px; text-align:center}
+.browser .app{display:flex; background:var(--paper); border-radius:9px 9px 0 0; overflow:hidden; min-height:560px}
+.sidebar{width:180px; flex:none; background:var(--card); border-right:1px solid var(--rule); padding:18px 12px; display:flex; flex-direction:column; gap:2px}
+.sidebar .brand{display:flex; align-items:center; gap:8px; padding:0 6px 16px}
+.sidebar .brand .ward{font-size:13px; font-weight:600}
+.sidebar .brand .role{font-size:10.5px; color:var(--ink-faint)}
+.sidebar .nav-item{display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; font-size:13px; color:var(--ink-soft); text-decoration:none}
+.sidebar .nav-item .dot{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; flex:none}
+.sidebar .nav-item.on{background:var(--brass); color:var(--brass-ink); font-weight:600}
+.sidebar .nav-item.on .dot{opacity:1}
+.sidebar .user{margin-top:auto; padding:12px 8px 0; border-top:1px solid var(--rule); font-size:11.5px; color:var(--ink-faint)}
+.d-main{flex:1; padding:22px 26px; overflow:auto; display:flex; flex-direction:column; gap:18px; min-width:0}
+.d-grid-2{display:grid; grid-template-columns:1.3fr 1fr; gap:22px; align-items:start}
+.d-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+.d-head h4{font-size:18px; font-weight:500; font-family:'Fraunces',serif; margin:0}
+
+.d-table{width:100%; border-collapse:collapse; font-size:13px}
+.d-table th{text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); font-weight:500; padding:10px 10px 8px; border-bottom:1px solid var(--rule); white-space:nowrap}
+.d-table td{padding:9px 10px; border-bottom:1px solid var(--rule); vertical-align:top}
+.d-table tr:last-child td{border-bottom:none}
+
+.card{background:var(--card); border:1px solid var(--rule); border-radius:14px; padding:18px}
+.section-label-h{font-size:12.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; font-weight:500}
+
+.pill{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.02em; padding:3px 9px; border-radius:999px; white-space:nowrap}
+.pill-draft{background:var(--rule); color:var(--ink-soft)}
+.pill-done{background:var(--sage-bg); color:var(--sage)}
+.pill-fast{background:color-mix(in srgb, var(--brass) 12%, var(--card)); color:var(--link); border:1px solid color-mix(in srgb, var(--brass) 40%, transparent)}
+.pill-critical{background:var(--critical-bg); color:var(--critical)}
+.pill-mute{background:var(--rule); color:var(--ink-faint)}
+
+/* assignment cell: name + topic + invite status */
+.assign{display:flex; flex-direction:column; gap:2px; min-width:118px}
+.assign .n{font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px}
+.assign .topic{font-size:11.5px; color:var(--ink-soft); font-style:italic}
+.st{width:8px; height:8px; border-radius:50%; flex:none; display:inline-block}
+.st.ok{background:var(--sage)}
+.st.ask{background:var(--amber)}
+.st.no{background:var(--critical)}
+.st.none{background:transparent; border:1.5px solid var(--rule-strong)}
+.cell-empty{color:var(--ink-faint); font-size:12.5px; border:1px dashed var(--rule-strong); border-radius:7px; padding:5px 8px; display:inline-block}
+.legend{display:flex; gap:16px; font-size:12px; color:var(--ink-soft); flex-wrap:wrap; align-items:center}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+
+.hymn-plain{font-size:12.5px; color:var(--ink-soft)}
+.hymn-plain .no{font-family:'IBM Plex Mono',monospace; color:var(--ink)}
+.hymn-plain.warn, .hymn-plain.warn .no{color:var(--amber)}
+
+/* picker */
+.picker{border:1px solid var(--rule-strong); border-radius:10px; overflow:hidden; background:var(--paper)}
+.picker-head{padding:9px 12px; font-size:12px; color:var(--ink-faint); border-bottom:1px solid var(--rule); display:flex; justify-content:space-between}
+.picker-filters{display:flex; gap:5px; flex-wrap:wrap; padding:8px 10px 6px; border-bottom:1px solid var(--rule)}
+.picker-filters span{font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--rule-strong); color:var(--ink-soft)}
+.picker-filters span.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.picker-list{padding:4px}
+.bal{font-size:11px; color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; white-space:nowrap}
+.bal b{color:var(--ink-soft); font-weight:500}
+.bal .low{color:var(--amber)}
+.sex{font-size:10px; color:var(--ink-faint); font-family:'IBM Plex Mono',monospace}
+.picker-option{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:7px; font-size:13px; cursor:pointer}
+.picker-option:hover{background:var(--card)}
+.picker-option .who{display:flex; align-items:center; gap:7px}
+.picker-option .stat{font-size:11.5px; color:var(--ink-faint); white-space:nowrap}
+.picker-option.top .stat{color:var(--sage)}
+.picker-option.risk .stat{color:var(--amber)}
+.badge-sugerido{font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.04em; text-transform:uppercase; background:var(--sage-bg); color:var(--sage); padding:2px 6px; border-radius:5px}
+.cell-anchor{position:relative}
+.cell-dropdown{position:absolute; top:100%; left:0; z-index:5; width:330px; box-shadow:var(--shadow)}
+
+.dyn-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; font-size:13px; border-bottom:1px solid var(--rule)}
+.dyn-row:last-of-type{border-bottom:none}
+.dyn-row .x{color:var(--ink-faint); cursor:pointer}
+.dyn-empty{font-size:12.5px; color:var(--ink-faint); padding:2px 0 8px}
+
+button.primary{font-family:'Source Sans 3',sans-serif; font-weight:600; font-size:14px; background:var(--brass); color:var(--brass-ink); border:none; border-radius:10px; padding:11px 18px; cursor:pointer}
+button.ghost{font-family:'Source Sans 3',sans-serif; font-weight:600; font-size:13.5px; background:transparent; color:var(--ink-soft); border:1px solid var(--rule-strong); border-radius:10px; padding:10px 16px; cursor:pointer}
+button.sage{background:var(--sage-bg); color:var(--sage); border:1px solid var(--sage); border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:600}
+button.tiny{font-size:11.5px; padding:5px 10px; border-radius:7px}
+input, select{font-family:'Source Sans 3',sans-serif; font-size:14px; color:var(--ink); background:var(--card); border:1px solid var(--rule-strong); border-radius:9px; padding:10px 12px; width:100%}
+label{font-size:12.5px; color:var(--ink-soft); font-weight:600; display:block; margin-bottom:6px}
+.field{margin-bottom:14px}
+.prefilled{font-size:11px; color:var(--ink-faint); font-weight:400; margin-left:6px}
+
+/* Domingo editor */
+.editor-wrap{display:flex; flex:1; min-height:0}
+.editor-form{width:44%; padding:16px 18px; overflow:auto; border-right:1px solid var(--rule)}
+.editor-preview{width:56%; padding:22px; overflow:auto; background:color-mix(in srgb, var(--ink) 5%, var(--paper)); display:flex; justify-content:center; align-items:flex-start}
+.group{margin-bottom:16px}
+.group .g-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
+.group .g-head b{font-size:13px}
+.group .g-head span{font-size:11.5px; color:var(--ink-faint)}
+.row-kv{display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-size:13.5px; border-bottom:1px solid var(--rule); gap:8px}
+.row-kv:last-child{border-bottom:none}
+.row-kv .k{color:var(--ink-soft); font-size:12.5px; width:112px; flex:none}
+.row-kv .v{flex:1; font-weight:600}
+.row-kv .v .topic{font-weight:400; color:var(--ink-soft); font-style:italic; font-size:12px}
+.row-kv .swap{font-size:11.5px; color:var(--link); font-weight:600; white-space:nowrap}
+
+/* === exact copy of the shipped .agenda-paper (style.css) — at A4 proportion, not squeezed === */
+.a4{width:100%; max-width:420px; aspect-ratio:210/297; background:#fff; color:#000; font-family:'Inter', system-ui, sans-serif; padding:9.5% 9.5%; box-shadow:0 2px 6px rgba(0,0,0,.18); font-size:7.4pt; line-height:1.5}
+.a4 .agenda-header{text-align:center; margin-bottom:1.4em}
+.a4 .header-line{width:28px; height:2px; background:#1e3a8a; margin:0 auto .75em}
+.a4 h1{font-family:'Inter',sans-serif; font-weight:700; font-size:2.15em; letter-spacing:.02em; margin:0 0 .12em; color:#000}
+.a4 h2{font-family:'Inter',sans-serif; font-weight:400; font-size:1.27em; color:#444; margin:0 0 .15em}
+.a4 .agenda-date{font-size:1em; color:#666; margin:0}
+.a4 .meta-grid{display:grid; grid-template-columns:1fr 1fr; gap:.35em 2em; margin-bottom:1.3em; font-size:.91em}
+.a4 .meta-item{display:flex; justify-content:space-between}
+.a4 .meta-label{font-weight:600; color:#444}
+.a4 hr.divider{border:0; border-top:1px solid #ddd; margin:.9em 0}
+.a4 .program-item{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:.65em}
+.a4 .program-label{font-weight:600; color:#222; min-width:38%}
+.a4 .program-value{text-align:right; flex:1}
+.a4 .hymn{font-weight:500; font-style:italic}
+.a4 .program-section{margin:1.3em 0}
+.a4 .program-section h3{font-family:'Inter',sans-serif; font-size:1.27em; border-bottom:1px solid #000; margin:0 0 .6em; padding-bottom:.2em; font-weight:700}
+.a4 .program-section h4{font-size:.95em; font-weight:700; margin:.5em 0 .3em}
+.a4 .clean-list{list-style:none; padding:0; margin:0}
+.a4 .clean-list li{margin-bottom:.2em}
+.a4 .highlight-box{margin:1.3em 0 .5em; padding:.5em 0; border-top:1px solid #000; border-bottom:1px solid #000}
+.a4 .sacrament-note{text-align:center; font-style:italic; font-size:.91em; color:#555; margin-bottom:1.8em}
+.a4 .speakers-list{display:flex; flex-direction:column; gap:.45em}
+.a4 .speaker-item{display:flex; justify-content:space-between}
+.a4 .fast-note{text-align:center; margin:1em 0; font-style:italic}
+
+/* === Púlpito: phone, read-only, large type, meeting order === */
+.pulpit{background:var(--pulpit-bg); color:var(--pulpit-ink); border-radius:27px; overflow:hidden; min-height:680px; display:flex; flex-direction:column}
+.pulpit .status-bar{color:var(--pulpit-soft)}
+.pulpit .p-head{padding:8px 22px 14px; border-bottom:1px solid var(--pulpit-rule); display:flex; justify-content:space-between; align-items:flex-end}
+.pulpit .p-head .d{font-family:'Fraunces',serif; font-size:19px}
+.pulpit .p-head .s{font-size:12px; color:var(--pulpit-soft)}
+.pulpit .p-head .exit{font-size:12px; color:var(--pulpit-accent); font-weight:600}
+.pulpit .p-body{padding:6px 22px 20px; overflow:auto; flex:1}
+.p-meta{display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; padding:12px 0 6px; font-size:13px; color:var(--pulpit-soft)}
+.p-meta b{color:var(--pulpit-ink); font-weight:600; display:block; font-size:14px}
+.p-sec{font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--pulpit-accent); padding:16px 0 6px; border-bottom:1px solid var(--pulpit-rule); margin-bottom:4px}
+.p-item{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:11px 0; border-bottom:1px solid var(--pulpit-rule)}
+.p-item .l{font-size:13px; color:var(--pulpit-soft); flex:none; width:96px}
+.p-item .v{font-size:18px; font-weight:600; text-align:right; flex:1; line-height:1.3}
+.p-item .v small{display:block; font-size:12.5px; color:var(--pulpit-soft); font-weight:400; font-style:italic}
+.p-item.hymn .v{font-weight:500; font-style:italic}
+.p-item.done{opacity:.45}
+.p-item.now{position:relative}
+.p-item.now::before{content:""; position:absolute; left:-22px; top:8px; bottom:8px; width:3px; background:var(--pulpit-accent); border-radius:2px}
+.p-list{list-style:none; margin:0; padding:6px 0; font-size:15px; line-height:1.5}
+.p-list li{padding:4px 0}
+.p-sacr{text-align:center; font-style:italic; color:var(--pulpit-soft); font-size:13.5px; padding:14px 0}
+.p-sheet{margin:14px -22px -20px; background:color-mix(in srgb, var(--pulpit-ink) 8%, var(--pulpit-bg)); border-top:1px solid var(--pulpit-rule); padding:14px 22px 20px}
+.p-sheet .t{font-size:14px; font-weight:600; margin-bottom:10px}
+.p-act{display:flex; gap:8px; margin-top:8px}
+.p-act button{flex:1; font-family:'Source Sans 3',sans-serif; font-weight:600; font-size:13.5px; border-radius:10px; padding:11px 12px; cursor:pointer}
+.p-act .gold{background:var(--pulpit-accent); color:#0E1A33; border:none}
+.p-act .dim{background:transparent; color:var(--pulpit-ink); border:1px solid var(--pulpit-rule)}
+.p-foot{flex:none; padding:12px 22px 16px; border-top:1px solid var(--pulpit-rule); display:flex; gap:8px}
+.p-foot button{flex:1; font-family:'Source Sans 3',sans-serif; font-weight:600; font-size:13.5px; border-radius:10px; padding:12px; cursor:pointer}
+.p-foot .gold{background:var(--pulpit-accent); color:#0E1A33; border:none}
+.p-foot .dim{background:transparent; color:var(--pulpit-ink); border:1px solid var(--pulpit-rule)}
+.big-in{display:flex; align-items:center; justify-content:space-between; background:transparent; border:1px solid var(--pulpit-rule); border-radius:12px; padding:12px 14px; margin-bottom:8px}
+.big-in .k{font-size:13px; color:var(--pulpit-soft)}
+.big-in .n{font-family:'Fraunces',serif; font-size:26px; font-variant-numeric:tabular-nums}
+.confirm-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--pulpit-rule); font-size:14px}
+.confirm-row:last-child{border-bottom:none}
+.confirm-row .chk{width:20px; height:20px; border-radius:6px; border:1.5px solid var(--pulpit-soft); display:inline-flex; align-items:center; justify-content:center; font-size:12px}
+.confirm-row .chk.on{background:var(--pulpit-accent); border-color:var(--pulpit-accent); color:#0E1A33}
+
+/* Ausências (from the stand) */
+.abs-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--rule)}
+.abs-row:last-child{border-bottom:none}
+.abs-row .name{flex:1; font-size:15px; font-weight:600}
+.abs-row .sub{font-size:11.5px; color:var(--ink-faint); font-weight:400; display:block}
+.tog{width:44px; height:26px; border-radius:999px; background:var(--rule-strong); position:relative; flex:none}
+.tog::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--card)}
+.tog.on{background:var(--critical)}
+.tog.on::after{left:21px}
+.dot-row{display:flex; gap:4px}
+.dot-row span{width:9px; height:9px; border-radius:50%; background:var(--rule-strong)}
+.dot-row span.present{background:var(--sage)}
+.dot-row span.absent{background:var(--critical)}
+.alert-banner{display:flex; align-items:center; gap:10px; background:var(--critical-bg); color:var(--critical); border-radius:10px; padding:12px 14px; font-size:12.5px; font-weight:600}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.chip{font-size:11.5px; padding:5px 10px; border-radius:999px; border:1px solid var(--rule-strong); color:var(--ink-soft)}
+.chip.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+
+/* roster/admin */
+.member-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--rule)}
+.avatar{width:32px; height:32px; border-radius:50%; background:var(--rule); flex:none; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--ink-soft)}
+.member-row .meta{flex:1; min-width:0}
+.member-row .name{font-size:13.5px; font-weight:600}
+.member-row .sub{font-size:11.5px; color:var(--ink-faint)}
+.dropzone{border:1.5px dashed var(--rule-strong); border-radius:12px; padding:18px; text-align:center; color:var(--ink-faint); font-size:12.5px}
+.approval-row{display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--rule)}
+.approval-row .meta{flex:1}
+.approval-row .name{font-size:13.5px; font-weight:600}
+.approval-row .sub{font-size:11.5px; color:var(--ink-faint)}
+.badge{font-size:10.5px; padding:2px 7px; border-radius:6px; border:1px solid var(--rule-strong); color:var(--ink-soft)}
+.badge.owner{border-color:var(--brass); color:var(--link)}
+.invite-code{display:flex; align-items:center; justify-content:space-between; background:var(--paper); border:1px solid var(--rule); border-radius:10px; padding:12px 14px}
+.invite-code .code{font-family:'IBM Plex Mono',monospace; font-size:16px; letter-spacing:.08em}
+
+.auth-tabs{display:flex; gap:4px; background:var(--card); border:1px solid var(--rule); border-radius:10px; padding:3px; margin-bottom:18px}
+.auth-tabs span{flex:1; text-align:center; font-size:13px; font-weight:600; padding:8px 0; border-radius:8px; color:var(--ink-faint)}
+.auth-tabs span.on{background:var(--paper); color:var(--ink); box-shadow:0 1px 0 var(--rule)}
+.divider-t{display:flex; align-items:center; gap:10px; color:var(--ink-faint); font-size:12px; margin:18px 0}
+.divider-t::before, .divider-t::after{content:""; flex:1; height:1px; background:var(--rule)}
+
+.note{font-size:12px; color:var(--ink-faint); max-width:720px; margin-top:14px; line-height:1.6}
+.schema-note{font-size:12px; color:var(--ink); background:color-mix(in srgb, var(--brass) 7%, var(--card)); border:1px solid color-mix(in srgb, var(--brass) 35%, transparent); border-radius:10px; padding:10px 14px; max-width:720px; margin-top:14px; line-height:1.55}
+footer{max-width:720px; margin:0 auto; padding:40px 24px 80px; color:var(--ink-faint); font-size:12.5px; text-align:center; line-height:1.6}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto !important} }
+@media (max-width:1000px){ .browser{width:100%} }
+@media (max-width:480px){ .device{width:100%} }
+</style>
+
+
+<div class="topbar">
+  <div class="theme-toggle" id="themeToggle">
+    <button data-mode="light">Claro</button><button data-mode="system" class="on">Auto</button><button data-mode="dark">Escuro</button>
+  </div>
+</div>
+
+<div class="intro">
+  <div class="eyebrow">Fase 3 — proposta, 2.ª versão</div>
+  <h1>Organizada pelos três momentos da reunião</h1>
+  <p>A versão anterior era um formulário por domingo. Esta segue o que acontece na realidade: atribui-se com semanas de avanço, fecha-se o programa na semana, e no domingo lê-se do telemóvel ou tablet no púlpito — nunca em papel.</p>
+</div>
+<div class="moments">
+  <div class="moment"><div class="when">Semanas antes</div><div class="what">Plano</div><p>Grelha do mês: oradores (3, às vezes 4) com tema e estado do convite, orações, hinos. Como o Excel, com o histórico à mão.</p></div>
+  <div class="moment"><div class="when">Na semana</div><div class="what">Domingo</div><p>A próxima reunião já vem preenchida do Plano. Acrescentam-se anúncios, assuntos da ala, reconhecimentos. Pré-visualização igual à agenda de sempre.</p></div>
+  <div class="moment"><div class="when">No domingo</div><div class="what">Púlpito</div><p>Só leitura, letra grande, ordem exata. Trocar ou tirar um orador em dois toques. No fim: presença, quem faltou, terminar.</p></div>
+</div>
+
+<nav class="tabs" id="tabs">
+  <a href="#plano">Plano</a>
+  <a href="#domingo">Domingo</a>
+  <a href="#pulpito">Púlpito</a>
+  <a href="#ausencias">Ausências</a>
+  <a href="#membros">Membros</a>
+  <a href="#admin">Administração</a>
+  <a href="#entrada">Entrada</a>
+</nav>
+
+<main>
+
+<!-- PLANO -->
+<section class="screen-block" id="plano">
+  <div class="block-head">
+    <div class="eyebrow">Semanas antes</div>
+    <h2>Plano — o mês inteiro numa grelha</h2>
+    <p>Uma linha por domingo. Cada orador tem nome, tema e estado do convite (por convidar · convidado · confirmado · recusou). O 4.º orador aparece só quando se acrescenta. Ao clicar numa célula abre a lista ordenada por "há quanto tempo", com filtros por <b>homens / mulheres</b> e por <b>jovens / jovens adultos / adultos</b> — como no rol da v1, mas no sítio onde se escolhe. Cada domingo mostra o equilíbrio (H · M · jovens) para se ver de imediato se falta uma irmã ou um jovem.</p>
+  </div>
+  <div class="stage-col" style="width:100%">
+    <div class="stage-label">Computador · grelha</div>
+    <div class="browser" style="width:100%">
+      <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url">agenda.89-58-18-212.nip.io/plano</div></div>
+      <div class="app">
+        <div class="sidebar">
+          <div class="brand"><div class="tag-glyph">A</div><div><div class="ward">Ala Alvalade</div><div class="role">Bispado</div></div></div>
+          <a class="nav-item on"><span class="dot"></span>Plano</a>
+          <a class="nav-item"><span class="dot"></span>Domingo</a>
+          <a class="nav-item"><span class="dot"></span>Ausências</a>
+          <a class="nav-item"><span class="dot"></span>Membros</a>
+          <a class="nav-item"><span class="dot"></span>Administração</a>
+          <div class="user">Ricardo Alves<br>bispo@alaalvalade.pt</div>
+        </div>
+        <div class="d-main">
+          <div class="d-head">
+            <h4>Setembro — outubro 2026</h4>
+            <div class="legend">
+              <span><i class="st ok"></i>confirmado</span><span><i class="st ask"></i>convidado</span><span><i class="st no"></i>recusou</span><span><i class="st none"></i>por convidar</span>
+              <button class="primary" style="margin-left:8px">Guardar</button>
+            </div>
+          </div>
+          <div class="card" style="overflow-x:auto; padding:0">
+            <table class="d-table">
+              <tr><th>Domingo</th><th>Tipo · Dirige</th><th>Orador 1</th><th>Orador 2</th><th>Orador 3</th><th>Orador 4</th><th>1.ª Oração</th><th>Última Oração</th><th>Hinos</th></tr>
+              <tr>
+                <td><b>7 set</b><br><span class="pill pill-done">Feita</span><br><span class="bal">1H · 2M · <b>1 jovem</b></span></td>
+                <td style="font-size:12.5px">Normal<br><span style="color:var(--ink-soft)">Cons. Nunes</span></td>
+                <td><div class="assign"><span class="n"><i class="st ok"></i>Ana Ferreira</span><span class="topic">O sacramento</span></div></td>
+                <td><div class="assign"><span class="n"><i class="st ok"></i>Tiago Nunes</span><span class="topic">Serviço</span></div></td>
+                <td><div class="assign"><span class="n"><i class="st ok"></i>Sofia Pinto</span><span class="topic">Serviço</span></div></td>
+                <td><span style="color:var(--ink-faint)">—</span></td>
+                <td>Rui Martins</td><td>Ana Ferreira</td>
+                <td class="hymn-plain"><span class="no">6</span> · <span class="no">90</span> · <span class="no">152</span></td>
+              </tr>
+              <tr>
+                <td><b>14 set</b><br><span class="pill pill-draft">Falta 1</span><br><span class="bal">1H · 2M · <span class="low">0 jovens</span></span></td>
+                <td style="font-size:12.5px">Normal<br><span style="color:var(--ink-soft)">Bispo Alves</span></td>
+                <td><div class="assign"><span class="n"><i class="st ok"></i>Maria Silva</span><span class="topic">Fé em Cristo</span></div></td>
+                <td><div class="assign"><span class="n"><i class="st ok"></i>João Cardoso</span><span class="topic">Fé em Cristo</span></div></td>
+                <td><div class="assign"><span class="n"><i class="st ask"></i>Beatriz Costa</span><span class="topic">convidada 2 set</span></div></td>
+                <td><span class="cell-empty">+ 4.º</span></td>
+                <td>Beatriz Costa</td>
+                <td><span class="cell-empty">+ atribuir</span></td>
+                <td class="hymn-plain"><span class="no">78</span> · <span class="no">112</span> · int. <span class="no">41</span> · <span class="warn"><span class="no">34</span> ↺</span></td>
+              </tr>
+              <tr>
+                <td><b>21 set</b><br><span class="pill pill-draft">Falta 5</span><br><span class="bal"><span class="low">0H · 0M</span></span></td>
+                <td style="font-size:12.5px">Normal<br><span style="color:var(--ink-soft)">Cons. Nunes</span></td>
+                <td><div class="assign"><span class="n"><i class="st no"></i>Rui Martins</span><span class="topic">recusou · substituir</span></div></td>
+                <td class="cell-anchor">
+                  <span class="cell-empty">+ atribuir</span>
+                  <div class="picker cell-dropdown">
+                    <div class="picker-head"><span>Orador 2 · 21 set</span><span>há mais tempo sem falar primeiro</span></div>
+                    <div class="picker-filters"><span>Todos</span><span>Homens</span><span class="on">Mulheres</span><span class="on">Jovens</span><span>Jovens Adultos</span><span>Adultos</span></div>
+                    <div class="picker-list">
+                      <div class="picker-option top"><span class="who">Inês Lopes <span class="sex">M · 16</span> <span class="badge-sugerido">Sugerido</span></span><span class="stat">nunca falou</span></div>
+                      <div class="picker-option"><span class="who">Beatriz Costa <span class="sex">M · 14</span></span><span class="stat">nunca falou · convidada 14 set</span></div>
+                      <div class="picker-option"><span class="who">Carolina Reis <span class="sex">M · 17</span></span><span class="stat">há 11 meses</span></div>
+                      <div class="picker-option risk"><span class="who">Sofia Pinto <span class="sex">M · 15</span></span><span class="stat">há 6 semanas</span></div>
+                    </div>
+                    <div class="picker-head" style="border-top:1px solid var(--rule); border-bottom:none"><span>Este domingo: 0H · 0M</span><span>Setembro: 2H · 4M · 1 jovem</span></div>
+                  </div>
+                </td>
+                <td><span class="cell-empty">+ atribuir</span></td>
+                <td><span style="color:var(--ink-faint)">—</span></td>
+                <td><span class="cell-empty">+ atribuir</span></td><td><span class="cell-empty">+ atribuir</span></td>
+                <td><span class="cell-empty">+ hinos</span></td>
+              </tr>
+              <tr>
+                <td><b>28 set</b><br><span class="pill pill-fast">Jejum</span></td>
+                <td style="font-size:12.5px">Jejum e Testemunho<br><span style="color:var(--ink-soft)">Bispo Alves</span></td>
+                <td colspan="4" style="color:var(--ink-faint); font-size:12.5px">Testemunhos da congregação — sem oradores</td>
+                <td>Tiago Nunes</td><td><span class="cell-empty">+ atribuir</span></td>
+                <td class="hymn-plain"><span class="no">112</span> · <span class="no">6</span> · <span class="no">41</span></td>
+              </tr>
+              <tr>
+                <td><b>5 out</b><br><span class="pill pill-mute">Conf.</span></td>
+                <td colspan="8" style="color:var(--ink-faint); font-size:12.5px">Conferência Geral — sem reunião na ala</td>
+              </tr>
+              <tr>
+                <td><b>12 out</b><br><span class="pill pill-mute">—</span></td>
+                <td style="font-size:12.5px">Normal<br><span class="cell-empty">dirige?</span></td>
+                <td><span class="cell-empty">+ atribuir</span></td><td><span class="cell-empty">+ atribuir</span></td><td><span class="cell-empty">+ atribuir</span></td><td><span style="color:var(--ink-faint)">—</span></td>
+                <td><span class="cell-empty">+ atribuir</span></td><td><span class="cell-empty">+ atribuir</span></td><td><span class="cell-empty">+ hinos</span></td>
+              </tr>
+            </table>
+          </div>
+          <p class="note" style="margin-top:0">O estado da linha é o que falta, não "rascunho": <b>Falta 1</b> quer dizer uma pessoa ainda por convidar ou por confirmar. Quem dirige roda entre os três do bispado e vem pré-preenchido; o tipo (Normal · Jejum · Conferência · Primária · Estaca) muda as colunas. Mudar o estado de um convite: clicar no ponto. Os filtros do seletor lembram-se da última escolha; a linha de baixo do seletor mostra o equilíbrio do domingo e do mês, para não acabar o mês só com irmãos adultos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="dual-stage" style="margin-top:28px">
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel · um domingo do plano</div>
+      <div class="device"><div class="screen">
+        <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+        <div class="app-bar" style="display:flex; justify-content:space-between; align-items:center">
+          <div><div class="ward">21 de setembro</div><div class="role">Plano · Falta 5</div></div><span style="font-size:12px; color:var(--link); font-weight:600">‹ 14 set &nbsp; 28 set ›</span>
+        </div>
+        <div class="content">
+          <div class="group">
+            <div class="g-head"><b>Oradores</b><span>3 · <span style="color:var(--link)">+ 4.º</span></span></div>
+            <div class="row-kv"><span class="k">1.º</span><span class="v"><i class="st no"></i> Rui Martins <span class="topic">recusou</span></span><span class="swap">Substituir</span></div>
+            <div class="row-kv"><span class="k">2.º</span><span class="v" style="color:var(--ink-faint); font-weight:400">por atribuir</span><span class="swap">Escolher</span></div>
+            <div class="row-kv"><span class="k">3.º</span><span class="v" style="color:var(--ink-faint); font-weight:400">por atribuir</span><span class="swap">Escolher</span></div>
+          </div>
+          <div class="picker">
+            <div class="picker-head"><span>2.º orador</span><span>há mais tempo primeiro</span></div>
+            <div class="picker-filters"><span>Todos</span><span>H</span><span class="on">M</span><span class="on">Jovens</span><span>JA</span><span>Adultos</span></div>
+            <div class="picker-list">
+              <div class="picker-option top"><span class="who">Inês Lopes <span class="sex">16</span> <span class="badge-sugerido">Sugerido</span></span><span class="stat">nunca falou</span></div>
+              <div class="picker-option"><span class="who">Carolina Reis <span class="sex">17</span></span><span class="stat">há 11 meses</span></div>
+              <div class="picker-option risk"><span class="who">Sofia Pinto <span class="sex">15</span></span><span class="stat">há 6 semanas</span></div>
+            </div>
+            <div class="picker-head" style="border-top:1px solid var(--rule); border-bottom:none"><span>Domingo: 0H · 0M</span><span>Set: 2H · 4M · 1 jov.</span></div>
+          </div>
+          <div class="group">
+            <div class="g-head"><b>Orações</b></div>
+            <div class="row-kv"><span class="k">Primeira</span><span class="v" style="color:var(--ink-faint); font-weight:400">por atribuir</span><span class="swap">Escolher</span></div>
+            <div class="row-kv"><span class="k">Última</span><span class="v" style="color:var(--ink-faint); font-weight:400">por atribuir</span><span class="swap">Escolher</span></div>
+          </div>
+          <div class="group">
+            <div class="g-head"><b>Hinos</b></div>
+            <div class="row-kv"><span class="k">Abertura</span><span class="v" style="color:var(--ink-faint); font-weight:400">por escolher</span><span class="swap">Escolher</span></div>
+            <div class="row-kv"><span class="k">Sacramental</span><span class="v" style="color:var(--ink-faint); font-weight:400">por escolher</span><span class="swap">Escolher</span></div>
+            <div class="row-kv"><span class="k">Intermediário</span><span class="v" style="color:var(--ink-faint); font-weight:400">opcional</span><span class="swap">Escolher</span></div>
+            <div class="row-kv"><span class="k">Encerramento</span><span class="v" style="color:var(--ink-faint); font-weight:400">por escolher</span><span class="swap">Escolher</span></div>
+          </div>
+        </div>
+        <div class="tabbar"><div class="t on">Plano</div><div class="t">Domingo</div><div class="t">Ausências</div><div class="t">Membros</div></div>
+      </div></div>
+    </div>
+    <div class="stage-col" style="flex:1; min-width:300px">
+      <div class="stage-label">O que a grelha regista por orador</div>
+      <div class="card">
+        <div class="row-kv"><span class="k">Nome</span><span class="v">do rol de membros</span></div>
+        <div class="row-kv"><span class="k">Tema</span><span class="v">texto livre; muitas vezes igual para os 3</span></div>
+        <div class="row-kv"><span class="k">Convite</span><span class="v">por convidar → convidado (data) → confirmado / recusou</span></div>
+        <div class="row-kv"><span class="k">Posição</span><span class="v">antes ou depois do hino intermediário</span></div>
+        <div class="row-kv"><span class="k">Filtros</span><span class="v">sexo (H/M) e grupo (Jovens 12-17 · JA 18-35 · Adultos), do rol importado do LCR</span></div>
+        <div class="row-kv"><span class="k">Equilíbrio</span><span class="v">H · M · jovens por domingo e por mês, sempre visível</span></div>
+      </div>
+      <p class="note">"Recusou" mantém o nome visível a vermelho até ser substituído, para não se perder quem já foi contactado. Isto não existe hoje no Excel; é o que faz a rotação funcionar de facto.</p>
+      <div class="schema-note">Precisa de duas colunas novas em <span class="mono">agenda.meeting_speakers</span>: <span class="mono">topic text</span> e <span class="mono">invite_status</span> (enum: to_ask · asked · confirmed · declined) + <span class="mono">asked_at date</span>. Tipo de reunião: <span class="mono">meetings.kind</span> (normal · fast · conference · primary · stake).</div>
+    </div>
+  </div>
+</section>
+
+<!-- DOMINGO -->
+<section class="screen-block" id="domingo">
+  <div class="block-head">
+    <div class="eyebrow">Na semana</div>
+    <h2>Domingo — a próxima reunião, já preenchida</h2>
+    <p>Abre sempre no domingo que vem. Tudo o que foi decidido no Plano aparece feito; os campos fixos da ala (pianista, regente) vêm das definições. O que se acrescenta aqui é o que só se sabe na semana: anúncios, assuntos da ala, reconhecimentos. À direita, a agenda tal como sempre foi — a mesma ordem e o mesmo estilo de <span class="mono">simple.html</span>, gerada pela mesma função. Botões: PDF, Partilhar (WhatsApp), Modo púlpito.</p>
+  </div>
+  <div class="stage-col" style="width:100%">
+    <div class="stage-label">Computador · formulário à esquerda, agenda à direita</div>
+    <div class="browser" style="width:100%">
+      <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url">agenda.89-58-18-212.nip.io/domingo</div></div>
+      <div class="app" style="min-height:720px">
+        <div class="sidebar">
+          <div class="brand"><div class="tag-glyph">A</div><div><div class="ward">Ala Alvalade</div><div class="role">Bispado</div></div></div>
+          <a class="nav-item"><span class="dot"></span>Plano</a>
+          <a class="nav-item on"><span class="dot"></span>Domingo</a>
+          <a class="nav-item"><span class="dot"></span>Ausências</a>
+          <a class="nav-item"><span class="dot"></span>Membros</a>
+          <a class="nav-item"><span class="dot"></span>Administração</a>
+          <div class="user">Ricardo Alves<br>bispo@alaalvalade.pt</div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+          <div class="app-bar" style="display:flex; align-items:center; justify-content:space-between">
+            <div><div class="ward">Domingo, 14 de setembro</div><div class="role">Falta 1 · última oração por atribuir</div></div>
+            <div style="display:flex; gap:8px; align-items:center">
+              <button class="ghost">PDF</button><button class="ghost">Partilhar</button><button class="primary">Modo púlpito</button>
+            </div>
+          </div>
+          <div class="editor-wrap">
+            <div class="editor-form">
+              <div class="group">
+                <div class="g-head"><b>Presidência e música</b><span>das definições da ala</span></div>
+                <div class="row-kv"><span class="k">Preside</span><span class="v">Bispo Ricardo Alves</span><span class="swap">Mudar</span></div>
+                <div class="row-kv"><span class="k">Dirige</span><span class="v">Bispo Ricardo Alves</span><span class="swap">Mudar</span></div>
+                <div class="row-kv"><span class="k">Pianista / Organista</span><span class="v">Sofia Pinto</span><span class="swap">Mudar</span></div>
+                <div class="row-kv"><span class="k">Regente</span><span class="v">Rui Martins</span><span class="swap">Mudar</span></div>
+              </div>
+              <div class="group">
+                <div class="g-head"><b>Do plano</b><span>editar no Plano</span></div>
+                <div class="row-kv"><span class="k">Abertura</span><span class="v hymn-plain" style="font-size:13.5px"><span class="no">78</span> Vinde Vós, Que Amais o Senhor</span></div>
+                <div class="row-kv"><span class="k">Primeira Oração</span><span class="v">Beatriz Costa</span></div>
+                <div class="row-kv"><span class="k">Sacramental</span><span class="v hymn-plain" style="font-size:13.5px"><span class="no">112</span> Sim, Eu Te Sigo</span></div>
+                <div class="row-kv"><span class="k">Oradores</span><span class="v">Maria Silva · João Cardoso <span class="topic">Fé em Cristo</span></span></div>
+                <div class="row-kv"><span class="k">Intermediário</span><span class="v hymn-plain" style="font-size:13.5px"><span class="no">41</span> Amai-vos Uns aos Outros</span></div>
+                <div class="row-kv"><span class="k"></span><span class="v"><i class="st ask"></i> Beatriz Costa <span class="topic">convidada, sem resposta</span></span></div>
+                <div class="row-kv"><span class="k">Encerramento</span><span class="v hymn-plain warn" style="font-size:13.5px"><span class="no">34</span> Louvor à Profecia · cantado há 6 semanas</span></div>
+                <div class="row-kv"><span class="k">Última Oração</span><span class="v" style="color:var(--amber); font-weight:600">por atribuir</span><span class="swap">Escolher</span></div>
+              </div>
+              <div class="group">
+                <div class="g-head"><b>Reconhecimentos</b></div>
+                <div class="dyn-row"><span>Élder e Irmã Matos — missionários de retorno</span><span class="x">✕</span></div>
+                <button class="ghost tiny" style="margin-top:6px">+ Adicionar</button>
+              </div>
+              <div class="group">
+                <div class="g-head"><b>Anúncios</b></div>
+                <div class="dyn-row"><span>Serão de ala — sábado 20, 19h</span><span class="x">✕</span></div>
+                <button class="ghost tiny" style="margin-top:6px">+ Adicionar</button>
+              </div>
+              <div class="group">
+                <div class="g-head"><b>Assuntos da Ala</b><span>da reunião de bispado</span></div>
+                <label>Desobrigações</label>
+                <div class="dyn-row"><span>Ana Ferreira — Secretária da Primária</span><span class="x">✕</span></div>
+                <button class="ghost tiny" style="margin:6px 0 12px">+ Desobrigação</button>
+                <label>Chamados (Apoios)</label>
+                <div class="dyn-row"><span>Ana Ferreira — Professora, Primária 7-8</span><span class="x">✕</span></div>
+                <button class="ghost tiny" style="margin-top:6px">+ Chamado</button>
+              </div>
+            </div>
+            <div class="editor-preview">
+              <div class="a4">
+                <div class="agenda-header">
+                  <div class="header-line"></div>
+                  <h1>Agenda da Reunião Sacramental</h1>
+                  <h2>Ala Alvalade</h2>
+                  <p class="agenda-date">14 de setembro de 2026</p>
+                </div>
+                <div class="agenda-body">
+                  <div class="meta-grid">
+                    <div class="meta-item"><span class="meta-label">Preside:</span><span>Bispo Ricardo Alves</span></div>
+                    <div class="meta-item"><span class="meta-label">Dirige:</span><span>Bispo Ricardo Alves</span></div>
+                    <div class="meta-item"><span class="meta-label">Pianista:</span><span>Sofia Pinto</span></div>
+                    <div class="meta-item"><span class="meta-label">Regente:</span><span>Rui Martins</span></div>
+                  </div>
+                  <hr class="divider">
+                  <div class="program-section"><h3>Reconhecimentos</h3><ul class="clean-list"><li>Élder e Irmã Matos — missionários de retorno</li></ul></div>
+                  <div class="program-section"><h3>Anúncios</h3><ul class="clean-list"><li>Serão de ala — sábado 20, 19h</li></ul></div>
+                  <div class="program-item"><span class="program-label">Hino de Abertura</span><span class="program-value hymn">78 — Vinde Vós, Que Amais o Senhor</span></div>
+                  <div class="program-item"><span class="program-label">Primeira Oração</span><span class="program-value">Beatriz Costa</span></div>
+                  <div class="program-section"><h3>Assuntos da Ala</h3>
+                    <h4>Desobrigações</h4><ul class="clean-list"><li>Ana Ferreira — Secretária da Primária</li></ul>
+                    <h4>Chamados</h4><ul class="clean-list"><li>Ana Ferreira — Professora, Primária 7-8</li></ul>
+                  </div>
+                  <div class="program-item highlight-box"><span class="program-label">Hino Sacramental</span><span class="program-value hymn">112 — Sim, Eu Te Sigo</span></div>
+                  <div class="sacrament-note">Administração do Sacramento</div>
+                  <div class="program-section"><h3>Programa</h3>
+                    <div class="speakers-list">
+                      <div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">Maria Silva</span></div>
+                      <div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">João Cardoso</span></div>
+                    </div>
+                    <div class="program-item" style="margin:.6em 0"><span class="program-label">Hino Intermediário</span><span class="program-value hymn">41 — Amai-vos Uns aos Outros</span></div>
+                    <div class="speakers-list"><div class="speaker-item"><span class="program-label">Orador</span><span class="program-value">Beatriz Costa</span></div></div>
+                  </div>
+                  <hr class="divider">
+                  <div class="program-item"><span class="program-label">Hino de Encerramento</span><span class="program-value hymn">34 — Louvor à Profecia</span></div>
+                  <div class="program-item"><span class="program-label">Última Oração</span><span class="program-value" style="color:#b3673a">…</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Ordem da agenda, verificada contra <span class="mono">simple.html</span> e <span class="mono">planner.html</span>: Reconhecimentos → Anúncios → Hino de Abertura → Primeira Oração → Assuntos da Ala (Desobrigações, Chamados) → Hino Sacramental → Administração do Sacramento → Programa (oradores · Hino Intermediário · oradores; em jejum, "Testemunhos da Congregação") → Hino de Encerramento → Última Oração. Secções vazias não aparecem. A pré-visualização usa a folha A4 real, não uma versão encolhida. No telemóvel, o separador Domingo mostra só o formulário; a agenda vê-se no Púlpito.</p>
+  </div>
+</section>
+
+<!-- PÚLPITO -->
+<section class="screen-block" id="pulpito">
+  <div class="block-head">
+    <div class="eyebrow">No domingo</div>
+    <h2>Púlpito — o que se lê da estande</h2>
+    <p>É a saída principal, porque a agenda nunca é impressa. Fundo escuro para não iluminar a cara, letra grande, a ordem exata da reunião. Nada é editável por engano: tocar num orador abre duas opções — trocar a ordem ou tirar (não veio). O item atual fica marcado à esquerda; tocar avança. Funciona sem rede depois de aberto.</p>
+  </div>
+  <div class="dual-stage">
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel · durante a reunião</div>
+      <div class="device"><div class="pulpit">
+        <div class="status-bar"><span>10:58</span><span>●●●</span></div>
+        <div class="p-head"><div><div class="d">14 de setembro</div><div class="s">Ala Alvalade · dirige Bispo Alves</div></div><span class="exit">Sair</span></div>
+        <div class="p-body">
+          <div class="p-meta"><div>Preside<b>Bispo Ricardo Alves</b></div><div>Pianista<b>Sofia Pinto</b></div><div>Dirige<b>Bispo Ricardo Alves</b></div><div>Regente<b>Rui Martins</b></div></div>
+          <div class="p-sec">Reconhecimentos</div>
+          <ul class="p-list"><li>Élder e Irmã Matos — missionários de retorno</li></ul>
+          <div class="p-sec">Anúncios</div>
+          <ul class="p-list"><li>Serão de ala — sábado 20, 19h</li></ul>
+          <div class="p-item hymn done"><span class="l">Hino de Abertura</span><span class="v">78 · Vinde Vós, Que Amais o Senhor</span></div>
+          <div class="p-item done"><span class="l">Primeira Oração</span><span class="v">Beatriz Costa</span></div>
+          <div class="p-sec">Assuntos da Ala</div>
+          <ul class="p-list" style="padding-top:4px"><li><span style="color:var(--pulpit-soft); font-size:12px">Desobrigação</span><br>Ana Ferreira — Secretária da Primária</li><li><span style="color:var(--pulpit-soft); font-size:12px">Chamado</span><br>Ana Ferreira — Professora, Primária 7-8</li></ul>
+          <div class="p-item hymn now"><span class="l">Hino Sacramental</span><span class="v">112 · Sim, Eu Te Sigo</span></div>
+          <div class="p-sacr">Administração do Sacramento</div>
+          <div class="p-sec">Programa</div>
+          <div class="p-item"><span class="l">Orador</span><span class="v">Maria Silva<small>Fé em Cristo</small></span></div>
+          <div class="p-item"><span class="l">Orador</span><span class="v">João Cardoso<small>Fé em Cristo</small></span></div>
+          <div class="p-item hymn"><span class="l">Hino Intermediário</span><span class="v">41 · Amai-vos Uns aos Outros</span></div>
+          <div class="p-item"><span class="l">Orador</span><span class="v">Beatriz Costa</span></div>
+          <div class="p-item hymn"><span class="l">Hino de Encerramento</span><span class="v">34 · Louvor à Profecia</span></div>
+          <div class="p-item"><span class="l">Última Oração</span><span class="v">Tiago Nunes</span></div>
+        </div>
+        <div class="p-foot"><button class="dim">Ausências</button><button class="gold">Terminar reunião</button></div>
+      </div></div>
+    </div>
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel · tocar num orador</div>
+      <div class="device"><div class="pulpit">
+        <div class="status-bar"><span>11:41</span><span>●●●</span></div>
+        <div class="p-head"><div><div class="d">14 de setembro</div><div class="s">Ala Alvalade</div></div><span class="exit">Sair</span></div>
+        <div class="p-body">
+          <div class="p-sec">Programa</div>
+          <div class="p-item done"><span class="l">Orador</span><span class="v">Maria Silva</span></div>
+          <div class="p-item now"><span class="l">Orador</span><span class="v">João Cardoso<small>Fé em Cristo</small></span></div>
+          <div class="p-item hymn"><span class="l">Hino Intermediário</span><span class="v">41 · Amai-vos Uns aos Outros</span></div>
+          <div class="p-item" style="background:color-mix(in srgb, var(--pulpit-accent) 12%, transparent); margin:0 -22px; padding:11px 22px"><span class="l">Orador</span><span class="v">Beatriz Costa</span></div>
+          <div class="p-sheet">
+            <div class="t">Beatriz Costa</div>
+            <div class="p-act"><button class="dim">↑ Passar para antes do hino</button></div>
+            <div class="p-act"><button class="dim">Não veio — tirar da agenda</button></div>
+            <div class="p-act"><button class="gold">Substituir por…</button></div>
+            <p style="font-size:12px; color:var(--pulpit-soft); margin:12px 0 0">Alterações aqui ficam gravadas na reunião e contam para o histórico ao terminar.</p>
+          </div>
+        </div>
+        <div class="p-foot"><button class="dim">Ausências</button><button class="gold">Terminar reunião</button></div>
+      </div></div>
+    </div>
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel · terminar reunião</div>
+      <div class="device"><div class="pulpit">
+        <div class="status-bar"><span>12:05</span><span>●●●</span></div>
+        <div class="p-head"><div><div class="d">Terminar reunião</div><div class="s">14 de setembro</div></div><span class="exit">Voltar</span></div>
+        <div class="p-body">
+          <div class="p-sec">Presença</div>
+          <div class="big-in" style="margin-top:8px"><span class="k">Total na capela</span><span class="n">143</span></div>
+          <div class="p-sec">Quem falou e orou</div>
+          <p style="font-size:12.5px; color:var(--pulpit-soft); margin:6px 0 4px">Pré-marcado pelo programa. Desmarcar quem não o fez — só o que fica marcado entra no histórico.</p>
+          <div class="confirm-row"><span>Beatriz Costa · Primeira Oração</span><span class="chk on">✓</span></div>
+          <div class="confirm-row"><span>Maria Silva · Discurso</span><span class="chk on">✓</span></div>
+          <div class="confirm-row"><span>João Cardoso · Discurso</span><span class="chk on">✓</span></div>
+          <div class="confirm-row"><span>Beatriz Costa · Discurso</span><span class="chk">&nbsp;</span></div>
+          <div class="confirm-row"><span>Tiago Nunes · Última Oração</span><span class="chk on">✓</span></div>
+          <div class="p-sec">Hinos cantados</div>
+          <div class="confirm-row"><span>78 · 112 · 41 · 34</span><span class="chk on">✓</span></div>
+          <div class="p-sec">Ausências</div>
+          <div class="confirm-row"><span>4 marcados da estande</span><span style="color:var(--pulpit-accent); font-size:13px">Rever</span></div>
+        </div>
+        <div class="p-foot"><button class="gold">Terminar e guardar</button></div>
+      </div></div>
+    </div>
+  </div>
+  <p class="note">"Terminar e guardar" é o que hoje nunca acontece (bug #2 do plano): marca a reunião como feita, atualiza a última data de discurso/oração de cada pessoa, regista os hinos para o aviso de repetição, e fecha a lista de ausências. A partir daí os "há quanto tempo" do Plano deixam de estar vazios.</p>
+</section>
+
+<!-- AUSÊNCIAS -->
+<section class="screen-block" id="ausencias">
+  <div class="block-head">
+    <div class="eyebrow">No domingo, da estande</div>
+    <h2>Ausências — a lista que hoje é feita no Keep</h2>
+    <p>Ecrã separado, como pediste. Abre-se do Púlpito ou do menu. Lista dos membros da ala com um interruptor por pessoa; quem se marca como ausente fica registado para aquele domingo. Não pede a presença de cada um — só quem faltou, que é o que se consegue ver da estande. Pesquisa e ordenação por quem já falta há mais semanas.</p>
+  </div>
+  <div class="dual-stage">
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel · marcar da estande</div>
+      <div class="device"><div class="screen">
+        <div class="status-bar"><span>11:12</span><span>●●●</span></div>
+        <div class="app-bar" style="display:flex; justify-content:space-between; align-items:center"><div><div class="ward">Ausências · 14 set</div><div class="role">4 marcados</div></div><span style="font-size:12px; color:var(--link); font-weight:600">Púlpito ›</span></div>
+        <div class="content" style="gap:10px">
+          <input placeholder="Pesquisar nome…">
+          <div class="chips"><span class="chip on">Todos · 42</span><span class="chip">Faltaram a semana passada · 6</span><span class="chip">Marcados · 4</span></div>
+          <div>
+            <div class="abs-row"><span class="name">Rui Martins<span class="sub">faltou 2 semanas seguidas</span></span><span class="tog on"></span></div>
+            <div class="abs-row"><span class="name">Sofia Pinto<span class="sub">faltou a semana passada</span></span><span class="tog on"></span></div>
+            <div class="abs-row"><span class="name">Família Matos<span class="sub">veio a semana passada</span></span><span class="tog on"></span></div>
+            <div class="abs-row"><span class="name">Carla Mendes<span class="sub">veio a semana passada</span></span><span class="tog on"></span></div>
+            <div class="abs-row"><span class="name">Ana Ferreira</span><span class="tog"></span></div>
+            <div class="abs-row"><span class="name">Beatriz Costa</span><span class="tog"></span></div>
+            <div class="abs-row"><span class="name">João Cardoso</span><span class="tog"></span></div>
+            <div class="abs-row"><span class="name">Tiago Nunes</span><span class="tog"></span></div>
+          </div>
+        </div>
+        <div class="tabbar"><div class="t">Plano</div><div class="t">Domingo</div><div class="t on">Ausências</div><div class="t">Membros</div></div>
+      </div></div>
+    </div>
+    <div class="stage-col" style="flex:1; min-width:520px">
+      <div class="stage-label">Computador · histórico, para a reunião de bispado</div>
+      <div class="browser" style="width:100%">
+        <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url">agenda.89-58-18-212.nip.io/ausencias</div></div>
+        <div class="app">
+          <div class="sidebar">
+            <div class="brand"><div class="tag-glyph">A</div><div><div class="ward">Ala Alvalade</div><div class="role">Bispado</div></div></div>
+            <a class="nav-item"><span class="dot"></span>Plano</a>
+            <a class="nav-item"><span class="dot"></span>Domingo</a>
+            <a class="nav-item on"><span class="dot"></span>Ausências</a>
+            <a class="nav-item"><span class="dot"></span>Membros</a>
+            <a class="nav-item"><span class="dot"></span>Administração</a>
+            <div class="user">Ricardo Alves<br>bispo@alaalvalade.pt</div>
+          </div>
+          <div class="d-main">
+            <div class="alert-banner" style="width:fit-content">2 membros faltaram 3 ou mais domingos seguidos</div>
+            <div class="chips"><span class="chip on">Seguidas 2+</span><span class="chip">Todos</span><span class="chip">Este mês</span></div>
+            <div class="card" style="padding:0 6px">
+              <table class="d-table">
+                <tr><th>Nome</th><th>Últimos 8 domingos</th><th>Seguidas</th><th>Última vez</th><th></th></tr>
+                <tr><td><b>Rui Martins</b></td><td><div class="dot-row"><span class="absent"></span><span class="absent"></span><span class="absent"></span><span class="present"></span><span class="present"></span><span class="present"></span><span class="present"></span><span class="present"></span></div></td><td><span class="pill pill-critical">3</span></td><td>24 ago</td><td><button class="ghost tiny">Contactar</button></td></tr>
+                <tr><td><b>Sofia Pinto</b></td><td><div class="dot-row"><span class="absent"></span><span class="absent"></span><span class="absent"></span><span class="absent"></span><span class="present"></span><span class="present"></span><span class="present"></span><span class="present"></span></div></td><td><span class="pill pill-critical">4</span></td><td>17 ago</td><td><button class="ghost tiny">Contactar</button></td></tr>
+                <tr><td><b>Família Matos</b></td><td><div class="dot-row"><span class="absent"></span><span class="present"></span><span class="absent"></span><span class="present"></span><span class="present"></span><span class="present"></span><span class="present"></span><span class="present"></span></div></td><td><span class="pill pill-draft">1</span></td><td>7 set</td><td></td></tr>
+              </table>
+            </div>
+            <p class="note" style="margin:0">Só se guarda quem foi marcado ausente. Quem não foi marcado conta como presente nesse domingo — é a semântica da lista do Keep, não um registo de presenças individual.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="schema-note">Tabela nova <span class="mono">agenda.absences</span> (ward_id, meeting_date, member_id, marked_by, marked_at) — só ausências. Mais simples que o <span class="mono">attendance_log</span> proposto antes, e fiel ao que se faz da estande. O limiar de alerta (2 ou 3 seguidas) é uma definição por ala.</div>
+</section>
+
+<!-- MEMBROS -->
+<section class="screen-block" id="membros">
+  <div class="block-head">
+    <div class="eyebrow">Apoio</div>
+    <h2>Membros — rol e histórico</h2>
+    <p>Sem alterações de fundo em relação à versão anterior: importação do PDF do LCR com pré-visualização, pesquisa, e por pessoa o histórico de discursos, orações e ausências. É de onde o Plano tira os "há quanto tempo".</p>
+  </div>
+  <div class="dual-stage">
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel</div>
+      <div class="device"><div class="screen">
+        <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+        <div class="app-bar"><div class="mark"><div class="tag-glyph">A</div><div><div class="ward">Membros</div><div class="role">42 · Ala Alvalade</div></div></div></div>
+        <div class="content">
+          <input placeholder="Pesquisar por nome…">
+          <div class="chips"><span class="chip on">Todos</span><span class="chip">Adultos</span><span class="chip">Jovens Adultos</span><span class="chip">Jovens</span></div>
+          <div>
+            <div class="member-row"><div class="avatar">MS</div><div class="meta"><div class="name">Maria Silva</div><div class="sub">Falou há 4 meses · Orou há 9 meses</div></div></div>
+            <div class="member-row"><div class="avatar">JC</div><div class="meta"><div class="name">João Cardoso</div><div class="sub">Falou há 7 meses · Nunca orou</div></div></div>
+            <div class="member-row"><div class="avatar">BC</div><div class="meta"><div class="name">Beatriz Costa</div><div class="sub">Nunca falou · Orou há 1 semana · convidada 14 set</div></div></div>
+            <div class="member-row"><div class="avatar">RM</div><div class="meta"><div class="name">Rui Martins</div><div class="sub">Falou há 2 meses · 3 faltas seguidas</div></div></div>
+          </div>
+          <div class="dropzone">Importar do LCR — PDF de membros</div>
+        </div>
+        <div class="tabbar"><div class="t">Plano</div><div class="t">Domingo</div><div class="t">Ausências</div><div class="t on">Membros</div></div>
+      </div></div>
+    </div>
+    <div class="stage-col" style="flex:1; min-width:520px">
+      <div class="stage-label">Computador</div>
+      <div class="browser" style="width:100%">
+        <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url">agenda.89-58-18-212.nip.io/membros</div></div>
+        <div class="app">
+          <div class="sidebar">
+            <div class="brand"><div class="tag-glyph">A</div><div><div class="ward">Ala Alvalade</div><div class="role">Bispado</div></div></div>
+            <a class="nav-item"><span class="dot"></span>Plano</a>
+            <a class="nav-item"><span class="dot"></span>Domingo</a>
+            <a class="nav-item"><span class="dot"></span>Ausências</a>
+            <a class="nav-item on"><span class="dot"></span>Membros</a>
+            <a class="nav-item"><span class="dot"></span>Administração</a>
+            <div class="user">Ricardo Alves<br>bispo@alaalvalade.pt</div>
+          </div>
+          <div class="d-main">
+            <div class="d-head"><h4>42 membros</h4><input style="width:220px" placeholder="Pesquisar por nome…"></div>
+            <div class="card" style="padding:0 6px">
+              <table class="d-table">
+                <tr><th>Nome</th><th>Chamado</th><th>Grupo</th><th>Falou</th><th>Orou</th><th>Faltas seguidas</th></tr>
+                <tr><td>Maria Silva</td><td>Primária</td><td>Adulto</td><td>há 4 meses</td><td>há 9 meses</td><td>0</td></tr>
+                <tr><td>João Cardoso</td><td>Quórum de Élderes</td><td>Adulto</td><td>há 7 meses</td><td>nunca</td><td>0</td></tr>
+                <tr><td>Beatriz Costa</td><td>Sociedade de Socorro</td><td>Adulto</td><td>nunca</td><td>há 1 semana</td><td>0</td></tr>
+                <tr><td>Rui Martins</td><td>Coro</td><td>Adulto</td><td>há 2 meses</td><td>há 5 meses</td><td><span class="pill pill-critical">3</span></td></tr>
+                <tr><td>Sofia Pinto</td><td>Jovens Adultos</td><td>Jovem Adulto</td><td>há 6 meses</td><td>há 2 meses</td><td><span class="pill pill-critical">4</span></td></tr>
+              </table>
+            </div>
+            <div class="dropzone" style="width:fit-content; padding:12px 18px">Importar do LCR — arraste o PDF ou clique</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<section class="screen-block" id="admin">
+  <div class="block-head">
+    <div class="eyebrow">Apoio</div>
+    <h2>Administração — definições da ala, acessos</h2>
+    <p>Novo aqui: as <b>definições da ala</b> que pré-preenchem o Domingo — bispado (preside e quem dirige, em rotação), pianista/organista e regente habituais, limiar de faltas. O resto é o que faltava para a adesão funcionar: pedidos pendentes por código de convite e papéis.</p>
+  </div>
+  <div class="stage-col" style="width:100%">
+    <div class="stage-label">Computador</div>
+    <div class="browser" style="width:100%">
+      <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url">agenda.89-58-18-212.nip.io/administracao</div></div>
+      <div class="app">
+        <div class="sidebar">
+          <div class="brand"><div class="tag-glyph">A</div><div><div class="ward">Ala Alvalade</div><div class="role">Bispado</div></div></div>
+          <a class="nav-item"><span class="dot"></span>Plano</a>
+          <a class="nav-item"><span class="dot"></span>Domingo</a>
+          <a class="nav-item"><span class="dot"></span>Ausências</a>
+          <a class="nav-item"><span class="dot"></span>Membros</a>
+          <a class="nav-item on"><span class="dot"></span>Administração</a>
+          <div class="user">Ricardo Alves<br>bispo@alaalvalade.pt</div>
+        </div>
+        <div class="d-main">
+          <div class="d-grid-2">
+            <div style="display:flex; flex-direction:column; gap:18px">
+              <div class="card">
+                <div class="section-label-h" style="margin-bottom:10px">Definições da ala</div>
+                <div class="row-kv"><span class="k">Nome</span><span class="v">Ala Alvalade</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Preside</span><span class="v">Bispo Ricardo Alves</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Dirige (rotação)</span><span class="v">Bispo Alves → Cons. Nunes → Cons. Lopes</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Pianista / Organista</span><span class="v">Sofia Pinto</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Regente</span><span class="v">Rui Martins</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Oradores por defeito</span><span class="v">3</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Alerta de faltas</span><span class="v">3 domingos seguidos</span><span class="swap">Editar</span></div>
+                <div class="row-kv"><span class="k">Aviso de hino repetido</span><span class="v">3 meses</span><span class="swap">Editar</span></div>
+              </div>
+              <div class="card">
+                <div class="section-label-h" style="margin-bottom:10px">Pedidos pendentes · 2</div>
+                <div class="approval-row"><div class="avatar">TN</div><div class="meta"><div class="name">Tiago Nunes</div><div class="sub">tiago.nunes@exemplo.pt · há 2 dias</div></div><button class="sage">Aprovar</button><button class="ghost tiny">Recusar</button></div>
+                <div class="approval-row" style="border-bottom:none"><div class="avatar">AF</div><div class="meta"><div class="name">Ana Ferreira</div><div class="sub">ana.ferreira@exemplo.pt · há 5 horas</div></div><button class="sage">Aprovar</button><button class="ghost tiny">Recusar</button></div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:18px">
+              <div class="card">
+                <div class="section-label-h" style="margin-bottom:10px">Código de convite</div>
+                <div class="invite-code"><span class="code">7F2A9K1C</span><button class="ghost tiny">Regenerar</button></div>
+                <p class="note" style="margin-top:8px">Sem registo público: a conta é criada pelo bispado, a pessoa entra e junta-se com o código.</p>
+              </div>
+              <div class="card">
+                <div class="section-label-h" style="margin-bottom:6px">Acessos</div>
+                <div class="row-kv"><span class="v" style="font-weight:400">Ricardo Alves</span><span class="badge owner">Proprietário</span></div>
+                <div class="row-kv"><span class="v" style="font-weight:400">Maria Silva</span><span class="badge">Editor</span></div>
+                <div class="row-kv"><span class="v" style="font-weight:400">Rui Martins</span><span class="badge">Música</span></div>
+                <div class="row-kv"><span class="v" style="font-weight:400">João Cardoso</span><span class="badge">Leitor</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENTRADA -->
+<section class="screen-block" id="entrada">
+  <div class="block-head">
+    <div class="eyebrow">Apoio</div>
+    <h2>Entrada</h2>
+    <p>Igual à versão anterior: entrar, ou juntar-se a uma ala com o código de convite de 8 carateres.</p>
+  </div>
+  <div class="dual-stage">
+    <div class="stage-col">
+      <div class="stage-label">Telemóvel</div>
+      <div class="device"><div class="screen">
+        <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+        <div class="content" style="justify-content:center; gap:22px">
+          <div style="text-align:center">
+            <div style="display:flex; justify-content:center; margin-bottom:14px"><div class="tag-glyph" style="width:40px;height:40px;font-size:16px;border-radius:8px">A</div></div>
+            <h3 style="font-size:20px; font-weight:500">Agenda Sacramental</h3>
+          </div>
+          <div class="auth-tabs"><span class="on">Entrar</span><span>Juntar-me</span></div>
+          <div>
+            <div class="field"><label>E-mail</label><input value="ana.ferreira@exemplo.pt" readonly></div>
+            <div class="field" style="margin-bottom:8px"><label>Palavra-passe</label><input type="password" value="••••••••••"></div>
+            <a href="#" style="font-size:12px; color:var(--ink-faint)">Esqueci-me da palavra-passe</a>
+          </div>
+          <button class="primary" style="width:100%">Entrar</button>
+          <div class="divider-t">ou juntar-se a uma ala</div>
+          <div class="field" style="margin-bottom:10px"><label>Código de convite</label><input class="mono" value="7F2A9K1C" style="letter-spacing:.12em; text-align:center; font-size:16px"></div>
+          <button class="ghost" style="width:100%">Juntar-me à ala</button>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Agenda Sacramental · v2 · proposta Fase 3, 2.ª versão. Depois de aprovada: migrações (meeting_speakers.topic + invite_status, meetings.kind, agenda.absences, ward settings), depois <span class="mono">views/plano.js · domingo.js · pulpito.js · ausencias.js · membros.js · admin.js</span> + um só <span class="mono">render-agenda.js</span> partilhado com <span class="mono">simple.html</span>.
+</footer>
+
+<script>
+(function(){
+  try{
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.tabs a'));
+    var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    links.forEach(function(a){ a.addEventListener('click', function(e){ e.preventDefault(); var t=document.querySelector(a.getAttribute('href')); if(t) t.scrollIntoView({behavior: reduced?'auto':'smooth', block:'start'}); }); });
+    var io = new IntersectionObserver(function(entries){ entries.forEach(function(en){ if(en.isIntersecting){ var i=sections.indexOf(en.target); links.forEach(function(a){a.classList.remove('active')}); if(i>-1) links[i].classList.add('active'); } }); }, {rootMargin:'-40% 0px -55% 0px'});
+    sections.forEach(function(s){ if(s) io.observe(s); });
+  }catch(e){}
+  try{
+    var toggle = document.getElementById('themeToggle');
+    var bs = Array.prototype.slice.call(toggle.querySelectorAll('button'));
+    bs.forEach(function(b){ b.addEventListener('click', function(){ bs.forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); var m=b.getAttribute('data-mode'); if(m==='system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', m); }); });
+  }catch(e){}
+})();
+</script>
+
+</body></html>
