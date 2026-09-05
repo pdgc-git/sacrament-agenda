@@ -56,7 +56,7 @@ function draw() {
         <div class="domingo">
             <div>
                 ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? `<div class="alert info">${escapeHtml(MEETING_KINDS[m.kind])} — sem reunião sacramental na ala. <a href="#plano/${d}">Mudar no Plano</a></div>` : ''}
-                <div class="card" style="margin-bottom:16px">
+                <div class="card">
                     <div class="group">
                         <div class="g-head"><b>Presidência e música</b><span>das definições da ala</span></div>
                         ${kv('Preside', 'presiding', editable)}
@@ -64,19 +64,31 @@ function draw() {
                         ${kv('Pianista / Organista', 'organist', editable)}
                         ${kv('Regente', 'chorister', editable)}
                     </div>
-                    <div class="group">
-                        <div class="g-head"><b>Programa</b><span>${editable ? `<select class="kind-select" data-f="kind">${Object.entries(MEETING_KINDS).map(([k, label]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${label}</option>`).join('')}</select>` : escapeHtml(MEETING_KINDS[m.kind])} · <a href="#plano/${d.slice(0, 7)}">ver o mês</a></span></div>
-                        ${planRows(editable)}
-                    </div>
-                </div>
-                <div class="card">
                     ${listGroup('recognitions', 'Reconhecimentos', 'Adicionar reconhecimento', editable)}
                     ${listGroup('announcements', 'Anúncios', 'Adicionar anúncio', editable)}
+                    <div class="group">
+                        <div class="g-head"><b>Abertura</b><span>${editable ? `<select class="kind-select" data-f="kind">${Object.entries(MEETING_KINDS).map(([k, label]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${label}</option>`).join('')}</select>` : escapeHtml(MEETING_KINDS[m.kind])} · <a href="#plano/${d.slice(0, 7)}">ver o mês</a></span></div>
+                        ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? '<div class="empty-note">Sem programa.</div>' : hymnRow('opening_hymn', editable) + prayerRow('Primeira Oração', 'invocation', editable)}
+                    </div>
                     <div class="group">
                         <div class="g-head"><b>Assuntos da Ala</b><span>da reunião de bispado</span></div>
                         ${pairList('releases', 'Desobrigações', 'Desobrigação', editable)}
                         ${pairList('callings', 'Chamados (Apoios)', 'Chamado', editable)}
                     </div>
+                    ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? '' : `
+                    <div class="group">
+                        <div class="g-head"><b>Sacramento</b></div>
+                        ${hymnRow('sacrament_hymn', editable)}
+                    </div>
+                    <div class="group">
+                        <div class="g-head"><b>Programa</b></div>
+                        ${programRows(editable)}
+                    </div>
+                    <div class="group">
+                        <div class="g-head"><b>Encerramento</b></div>
+                        ${hymnRow('closing_hymn', editable)}
+                        ${prayerRow('Última Oração', 'benediction', editable)}
+                    </div>`}
                 </div>
                 ${done ? '' : `<p class="small muted" style="margin-top:10px">Guarda automaticamente. Tudo o que está aqui também se edita no Plano, mês a mês. A reunião marca-se como feita no Modo púlpito, em "Terminar reunião".</p>`}
             </div>
@@ -97,41 +109,45 @@ function kv(label, field, editable) {
             : `<span class="v ${m[field] ? '' : 'empty'}">${escapeHtml(m[field] || '—')}</span>`}</div>`;
 }
 
-function planRows(editable) {
-    if (KINDS_WITHOUT_PROGRAM.has(m.kind)) return '<div class="empty-note">Sem programa.</div>';
-    const pickBtn = (act, extra, cls, inner) => editable
+function pickBtn(editable, act, extra, cls, inner) {
+    return editable
         ? `<button type="button" class="assign ${cls}" data-act="${act}" ${extra}><span class="n">${inner}</span></button>`
         : `<span class="v ${cls}">${inner}</span>`;
-    const hymn = (key) => {
-        const v = m[key];
-        const inner = v ? `<span class="hymn-plain ${hymnRepeats(v) ? 'warn' : ''}">${escapeHtml(v)}${hymnRepeats(v) ? ' · cantado há pouco ↺' : ''}</span>` : `<span class="muted">por escolher</span>`;
-        return `<div class="row-kv"><span class="k">${HYMN_LABELS[key]}${key === 'intermediate_hymn' ? ' <span class="muted">(opc.)</span>' : ''}</span>${pickBtn('pick-hymn', `data-k="${key}"`, v ? '' : 'empty', inner)}</div>`;
+}
+
+function hymnRow(key, editable) {
+    const v = m[key];
+    const inner = v ? `<span class="hymn-plain ${hymnRepeats(v) ? 'warn' : ''}">${escapeHtml(v)}${hymnRepeats(v) ? ' · cantado há pouco ↺' : ''}</span>` : `<span class="muted">por escolher</span>`;
+    return `<div class="row-kv"><span class="k">${HYMN_LABELS[key]}${key === 'intermediate_hymn' ? ' <span class="muted">(opc.)</span>' : ''}</span>${pickBtn(editable, 'pick-hymn', `data-k="${key}"`, v ? '' : 'empty', inner)}</div>`;
+}
+
+function prayerRow(label, key, editable) {
+    const name = m[key] || state.membersById.get(m[`${key}_member_id`])?.name || '';
+    return `<div class="row-kv"><span class="k">${label}</span>${pickBtn(editable, 'pick-prayer', `data-k="${key}"`, name ? '' : 'warn', name ? escapeHtml(name) : 'por atribuir')}</div>`;
+}
+
+// Speakers in meeting order: before the intermediate hymn, the hymn, after.
+function programRows(editable) {
+    if (m.kind === 'fast') return `<div class="row-kv"><span class="k">Programa</span><span class="v">Testemunhos da Congregação</span></div>`;
+    const sp = speakers(m.program);
+    const row = (s) => {
+        const i = sp.indexOf(s);
+        const st = s.invite_status || 'to_ask';
+        return `<div class="row-kv speaker-row" data-i="${i}"><span class="k">Orador ${i + 1}</span>
+            <span class="v" style="display:flex; flex-direction:column; gap:3px">
+                ${pickBtn(editable, 'pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || 'por atribuir')}`)}
+                ${editable && s.name ? `<input class="topic-input" data-f="topic" data-i="${i}" value="${escapeHtml(s.topic || '')}" placeholder="tema">
+                    <div class="status-menu"><span class="muted small">${INVITE_STATUS[st]}</span>${Object.entries(INVITE_STATUS).map(([k, label]) =>
+                        `<button type="button" class="${st === k ? 'on' : ''}" data-act="status" data-i="${i}" data-v="${k}" title="${label}" aria-label="${label}"><i class="st ${k}"></i></button>`).join('')}
+                        <button type="button" class="link-btn" data-act="move" data-i="${i}">${s.position === 'after' ? '↑ antes do hino' : '↓ depois do hino'}</button>
+                        <button type="button" class="x" data-act="rm-spk" data-i="${i}" aria-label="Remover orador">✕</button></div>`
+                    : (s.topic ? `<span class="topic">${escapeHtml(s.topic)}</span>` : '')}
+            </span></div>`;
     };
-    const prayer = (label, key) => {
-        const name = m[key] || state.membersById.get(m[`${key}_member_id`])?.name || '';
-        return `<div class="row-kv"><span class="k">${label}</span>${pickBtn('pick-prayer', `data-k="${key}"`, name ? '' : 'warn', name ? escapeHtml(name) : 'por atribuir')}</div>`;
-    };
-    let html = hymn('opening_hymn') + prayer('Primeira Oração', 'invocation') + hymn('sacrament_hymn');
-    if (m.kind === 'fast') {
-        html += `<div class="row-kv"><span class="k">Programa</span><span class="v">Testemunhos da Congregação</span></div>`;
-    } else {
-        speakers(m.program).forEach((s, i) => {
-            const st = s.invite_status || 'to_ask';
-            html += `<div class="row-kv speaker-row" data-i="${i}"><span class="k">${i === 0 ? 'Oradores' : ''}</span>
-                <span class="v" style="display:flex; flex-direction:column; gap:3px">
-                    ${pickBtn('pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || `${i + 1}.º por atribuir`)}${s.position === 'after' ? ' <span class="topic">· depois do hino</span>' : ''}`)}
-                    ${editable && s.name ? `<input class="topic-input" data-f="topic" data-i="${i}" value="${escapeHtml(s.topic || '')}" placeholder="tema">
-                        <div class="status-menu"><span class="muted small">${INVITE_STATUS[st]}</span>${Object.entries(INVITE_STATUS).map(([k, label]) =>
-                            `<button type="button" class="${st === k ? 'on' : ''}" data-act="status" data-i="${i}" data-v="${k}" title="${label}" aria-label="${label}"><i class="st ${k}"></i></button>`).join('')}
-                            <button type="button" class="link-btn small" data-act="move" data-i="${i}" style="margin-left:8px">${s.position === 'after' ? '↑ antes do hino' : '↓ depois do hino'}</button>
-                            <button type="button" class="x" data-act="rm-spk" data-i="${i}" aria-label="Remover orador">✕</button></div>`
-                        : (s.topic ? `<span class="topic">${escapeHtml(s.topic)}</span>` : '')}
-                </span></div>`;
-        });
-        if (editable) html += `<div class="row-kv"><span class="k"></span><button type="button" class="btn tiny" data-act="add-spk">+ Orador</button></div>`;
-        html += hymn('intermediate_hymn');
-    }
-    html += hymn('closing_hymn') + prayer('Última Oração', 'benediction');
+    let html = sp.filter(s => (s.position || 'before') === 'before').map(row).join('');
+    html += hymnRow('intermediate_hymn', editable);
+    html += sp.filter(s => s.position === 'after').map(row).join('');
+    if (editable) html += `<div class="row-kv"><span class="k"></span><button type="button" class="btn tiny" data-act="add-spk">+ Orador</button></div>`;
     return html;
 }
 
