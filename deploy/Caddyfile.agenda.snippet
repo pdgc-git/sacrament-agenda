@@ -1,0 +1,68 @@
+# Sacrament Agenda v2 -- Caddy site block, appended to /etc/caddy/Caddyfile on forwartrans-vps.
+#
+# Same-origin proxy pattern (copied from the `app.89-58-18-212.nip.io` block that serves
+# forwartrans-hr): the static frontend and the Supabase gateway share one origin, so the CSP can
+# stay `default-src 'self'` with no host allow-list once the pinned-CDN assets are vendored in
+# Phase 3. Studio and pg-meta are NOT proxied here -- they stay behind the allow-list on
+# `supabase.89-58-18-212.nip.io` (shared across projects on this stack).
+#
+# nip.io for now (no DNS yet for this project); a real domain can alias later, same swap as
+# documented for forwartrans-hr.
+
+agenda.89-58-18-212.nip.io {
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 20mb
+			roll_keep 10
+		}
+		# Same redaction as every other site on this host: fail2ban reads this file, and Supabase's
+		# own `apikey` header is not redacted by Caddy's defaults.
+		format filter {
+			wrap json
+			fields {
+				request>headers>Apikey delete
+				request>headers>Authorization delete
+				request>headers>Cookie delete
+				resp_headers>Set-Cookie delete
+			}
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		-Server
+
+		# CSP is loosened relative to fwhr's `default-src 'self'` only for the pinned CDN hosts the
+		# app already uses pre-migration (cdnjs for html2pdf/pdf.js, unpkg for Phosphor icons,
+		# Google Fonts) -- see PLAN.md Phase 3/4 for vendoring these in to tighten this further.
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+	}
+
+	# The Supabase API surfaces the app uses -- reachable, protected by apikey + JWT + RLS.
+	# Kong keys its rate-limiting on X-Forwarded-For, so it is OVERWRITTEN (not appended) with the
+	# real peer address, same as every other site on this host.
+	handle /auth/* {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+	handle /rest/* {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+	handle /storage/* {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	# Everything else: the static app (Phase 4 deploys the real build here).
+	root * /var/www/sacrament-agenda
+	file_server
+}
