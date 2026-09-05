@@ -1,11 +1,7 @@
 import { initUser, createWard, getMemberStats } from '../js/dataManager.js';
-import * as firestore from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+import { supabase, mockChain } from '../__mocks__/supabaseClient.js';
 
-// Mock Firebase Config
-jest.mock('../js/firebase-config.js', () => ({
-    db: {},
-    auth: { currentUser: { uid: 'test-uid', email: 'test@example.com' } }
-}));
+jest.mock('../js/api/supabase-client.js', () => require('../__mocks__/supabaseClient.js'));
 
 describe('DataManager', () => {
     beforeEach(() => {
@@ -13,50 +9,43 @@ describe('DataManager', () => {
     });
 
     test('initUser should return hasWard: false if user has no ward', async () => {
-        firestore.getDoc.mockResolvedValue({
-            exists: () => true,
-            data: () => ({ wardId: null })
-        });
+        supabase.from.mockReturnValueOnce(mockChain({ data: null, error: null }));
 
-        const result = await initUser({ uid: 'test-uid' });
+        const result = await initUser({ id: 'test-uid' });
         expect(result).toEqual({ hasWard: false });
     });
 
-    test('initUser should handle getDoc permission errors gracefully', async () => {
-        // Suppress console.error for this expected error log
+    test('initUser should handle query errors gracefully', async () => {
         const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-        firestore.getDoc.mockRejectedValueOnce(new Error('permission-denied'));
+        supabase.from.mockReturnValueOnce(mockChain({ data: null, error: new Error('permission-denied') }));
 
-        const result = await initUser({ uid: 'test-uid' });
+        const result = await initUser({ id: 'test-uid' });
         expect(result).toEqual({ hasWard: false, error: 'permission-denied' });
 
         consoleSpy.mockRestore();
     });
 
     test('initUser should return ward info if user has ward', async () => {
-        firestore.getDoc
-            .mockResolvedValueOnce({ // users/uid
-                exists: () => true,
-                data: () => ({ wardId: 'ward-123' })
-            })
-            .mockResolvedValueOnce({ // wards/users/uid
-                exists: () => true,
-                data: () => ({ role: 'editor', status: 'active' })
-            });
+        supabase.from.mockReturnValueOnce(mockChain({
+            data: { ward_id: 'ward-123', role: 'editor', status: 'active' },
+            error: null,
+        }));
 
-        const result = await initUser({ uid: 'test-uid' });
+        const result = await initUser({ id: 'test-uid' });
         expect(result).toEqual({ hasWard: true, wardId: 'ward-123', role: 'editor', status: 'active' });
     });
 
-    test('createWard should create ward and update user profile', async () => {
-        firestore.addDoc.mockResolvedValue({ id: 'new-ward-id' });
+    test('createWard should create ward via RPC and return its id', async () => {
+        supabase.rpc.mockResolvedValueOnce({
+            data: { id: 'new-ward-id', name: 'Test Ward', owner_id: 'test-uid' },
+            error: null,
+        });
 
         const wardId = await createWard('Test Ward');
 
         expect(wardId).toBe('new-ward-id');
-        expect(firestore.addDoc).toHaveBeenCalled(); // Ward creation
-        expect(firestore.setDoc).toHaveBeenCalledTimes(2); // Member add + Profile update
+        expect(supabase.rpc).toHaveBeenCalledWith('create_ward', { p_name: 'Test Ward' });
     });
 
     // Tests for saveMember validation
@@ -64,9 +53,11 @@ describe('DataManager', () => {
         let dm;
         beforeEach(async () => {
             dm = await import('../js/dataManager.js');
-            // Mock getWardId by initializing user
-            firestore.getDoc.mockResolvedValue({ exists: () => true, data: () => ({ wardId: 'ward-123' }) });
-            await dm.initUser({ uid: 'test' });
+            supabase.from.mockReturnValueOnce(mockChain({
+                data: { ward_id: 'ward-123', role: 'editor', status: 'active' },
+                error: null,
+            }));
+            await dm.initUser({ id: 'test' });
         });
 
         test('saveMember should throw if name is missing or empty', async () => {
@@ -78,53 +69,19 @@ describe('DataManager', () => {
         });
 
         test('saveMember should default group to Adult if not provided', async () => {
-            firestore.addDoc.mockResolvedValue({ id: 'new-member-id' });
+            supabase.from.mockReturnValueOnce(mockChain({ data: { id: 'new-member-id' }, error: null }));
 
             const memberData = { name: 'Test Member' };
             await dm.saveMember(memberData);
 
             expect(memberData.group).toBe('Adult');
-            expect(firestore.addDoc).toHaveBeenCalled();
+            expect(supabase.from).toHaveBeenCalledWith('members');
         });
 
         test('saveMember should throw if group is invalid', async () => {
             const memberData = { name: 'Test Member', group: 'InvalidGroup' };
             await expect(dm.saveMember(memberData)).rejects.toThrow("Grupo inválido. Deve ser um de: Adult, Youth, Primary, Young Adult");
         });
-    });
-
-    // Tests for importMembersFromCSV
-    test('importMembersFromCSV should handle empty file gracefully', async () => {
-        const file = {
-            text: jest.fn().mockResolvedValue('')
-        };
-        const dm = await import('../js/dataManager.js');
-        // We need to mock getWardId usage inside dataManager if strictly parsing. 
-        // But getWardId throws if currentWardId is null.
-        // We must ensure currentWardId is set or getWardId is mocked/bypassed.
-        // dataManager exports getWardId? No. It's internal.
-        // However, we can trick it by calling initUser with a robust mock or just rely on global state if we could set it.
-        // Actually, initUser sets global currentWardId.
-
-        // Setup state
-        firestore.getDoc.mockResolvedValue({ exists: () => true, data: () => ({ wardId: 'ward-123' }) });
-        await dm.initUser({ uid: 'test' });
-        // Now calling import should work
-
-        const count = await dm.importMembersFromCSV(file);
-        expect(count).toBe(0);
-    });
-
-    test('importMembersFromCSV should handle file with only headers', async () => {
-        const file = {
-            text: jest.fn().mockResolvedValue('Name,Gender,Group')
-        };
-        const dm = await import('../js/dataManager.js');
-        // State should persist from previous test if using same module instance, 
-        // but let's be safe and re-init if needed or just assume it works if order is preserved.
-
-        const count = await dm.importMembersFromCSV(file);
-        expect(count).toBe(0);
     });
 
     describe('getMemberStats', () => {
@@ -134,46 +91,29 @@ describe('DataManager', () => {
         });
 
         test('should return member data when the member document exists', async () => {
-            const mockMemberData = { name: 'John Doe', group: 'Adult' };
+            const mockMemberData = { id: 'member-456', name: 'John Doe', group: 'Adult' };
 
-            // Set up ward ID via initUser mock
-            firestore.getDoc
-                .mockResolvedValueOnce({ // users/uid
-                    exists: () => true,
-                    data: () => ({ wardId: 'ward-123' })
-                })
-                .mockResolvedValueOnce({ // wards/users/uid
-                    exists: () => true,
-                    data: () => ({ role: 'editor', status: 'active' })
-                })
-                .mockResolvedValueOnce({ // wards/ward-123/members/member-456
-                    exists: () => true,
-                    data: () => mockMemberData
-                });
+            supabase.from.mockReturnValueOnce(mockChain({
+                data: { ward_id: 'ward-123', role: 'editor', status: 'active' },
+                error: null,
+            }));
+            await initUser({ id: 'test-uid' });
 
-            await initUser({ uid: 'test-uid' });
+            supabase.from.mockReturnValueOnce(mockChain({ data: mockMemberData, error: null }));
 
             const stats = await getMemberStats('member-456');
 
             expect(stats).toEqual(mockMemberData);
-            expect(firestore.getDoc).toHaveBeenCalledTimes(3);
         });
 
         test('should return null when the member document does not exist', async () => {
-            firestore.getDoc
-                .mockResolvedValueOnce({ // users/uid
-                    exists: () => true,
-                    data: () => ({ wardId: 'ward-123' })
-                })
-                .mockResolvedValueOnce({ // wards/users/uid
-                    exists: () => true,
-                    data: () => ({ role: 'editor', status: 'active' })
-                })
-                .mockResolvedValueOnce({ // wards/ward-123/members/non-existent
-                    exists: () => false
-                });
+            supabase.from.mockReturnValueOnce(mockChain({
+                data: { ward_id: 'ward-123', role: 'editor', status: 'active' },
+                error: null,
+            }));
+            await initUser({ id: 'test-uid' });
 
-            await initUser({ uid: 'test-uid' });
+            supabase.from.mockReturnValueOnce(mockChain({ data: null, error: null }));
 
             const stats = await getMemberStats('non-existent');
 

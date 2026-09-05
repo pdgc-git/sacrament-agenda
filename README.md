@@ -2,6 +2,8 @@
 
 A web-based tool to easily create, preview, and print agendas for LDS (Church of Jesus Christ of Latter-day Saints) Sacrament Meetings.
 
+**Status (2026-09-05):** v2 rebuild in progress on branch `v2-supabase`, see `PLAN.md`. Phase 1 (Supabase foundation on the VPS) and Phase 2 (data layer port, `js/dataManager.js` Firestore→Supabase) both done and live-verified; `npx jest` 78/78 green. Phase 2 changes are uncommitted. **Next:** Phase 3 — full UI redesign (`planner-ui.js` rewrite).
+
 ## Features
 
 - **Live Preview:** See changes instantly as you type.
