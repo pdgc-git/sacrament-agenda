@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 
 HOST="forwartrans-vps"
 DEST="/var/www/sacrament-agenda/"
+URL="${URL:-https://agenda.89-58-18-212.nip.io}"
 DRY="${1:-}"
 
 rsync -az --delete ${DRY:+--dry-run -v} \
@@ -21,6 +22,6 @@ rsync -az --delete ${DRY:+--dry-run -v} \
 if [ -z "$DRY" ]; then
   ssh "$HOST" "chown -R root:root ${DEST} && find ${DEST} -type f -exec chmod 644 {} + && find ${DEST} -type d -exec chmod 755 {} +"
   echo "Deployed. Verifying…"
-  curl -sS -o /dev/null -w "planner.html %{http_code}\n" https://agenda.89-58-18-212.nip.io/planner.html
-  curl -sS -o /dev/null -w "js/vendor/supabase.js %{http_code}\n" https://agenda.89-58-18-212.nip.io/js/vendor/supabase.js
+  curl -sS -o /dev/null -w "planner.html %{http_code}\n" ${URL}/planner.html
+  curl -sS -o /dev/null -w "js/vendor/supabase.js %{http_code}\n" ${URL}/js/vendor/supabase.js
 fi

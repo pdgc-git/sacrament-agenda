@@ -6,7 +6,11 @@
 // supabase-js is vendored as a UMD build (js/vendor/supabase.js, loaded by a <script> tag before
 // this module) because the production CSP only allows scripts from 'self' + cdnjs + unpkg, and
 // there is no bundler in this project by design.
-const SUPABASE_URL = 'https://agenda.89-58-18-212.nip.io';
+// Same-origin in production (Caddy proxies /auth, /rest, /storage on whatever hostname serves the
+// app), so a domain change needs no code edit. Local dev (npx serve / file://) talks to the VPS.
+const PROD_FALLBACK = 'https://agenda.89-58-18-212.nip.io';
+const isLocal = !window.location.protocol.startsWith('http') || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+const SUPABASE_URL = isLocal ? PROD_FALLBACK : window.location.origin;
 const SUPABASE_ANON_KEY =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg3NjY4NTE5LCJleHAiOjE5NDUzNDg1MTl9.NvsqXwSFADIQe84sM0rfaZE1WVKb-0AtpKudJApfa7U';
 
