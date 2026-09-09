@@ -2,7 +2,7 @@
 
 A web-based tool to easily create, preview, and print agendas for LDS (Church of Jesus Christ of Latter-day Saints) Sacrament Meetings.
 
-**Status (2026-09-06):** v2 rebuild on branch `v2-supabase`, see `PLAN.md`. Phases 1–3 built. **Phase 3 (UI redesign) is deployed to https://agenda.89-58-18-212.nip.io** and smoke-tested end-to-end in a real browser (login → Plano picker → Domingo → Púlpito → Ausências → Membros → Administração; 89 Jest tests green). Screens: Plano · Domingo · Púlpito · Ausências · Membros · Administração. **Next (Phase 4):** Paulo logs in, creates his ward, imports the LCR roster; then Firestore data export (if anything is worth keeping), Netlify shutdown, README refresh.
+**Status (2026-09-09):** v2 on branch `v2-supabase`, see `PLAN.md`. **Phase 3 is live at https://agenda.89-58-18-212.nip.io** (Plano · Domingo · Púlpito · Ausências · Membros · Administração), 90 Jest tests green, browser smoke test clean. **Next:** real use by the bishopric (create ward, Administração defaults, import LCR roster), domain decision, then Phase 4 cleanup (remove Firebase files, Netlify shutdown, README refresh).
 
 ## Features
 
