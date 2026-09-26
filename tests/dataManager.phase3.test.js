@@ -1,5 +1,5 @@
 import {
-    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember,
+    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember, saveFuturePlan,
 } from '../js/dataManager.js';
 import { supabase, mockChain } from '../__mocks__/supabaseClient.js';
 
@@ -85,5 +85,14 @@ describe('dataManager — Phase 3', () => {
         expect(supabase.rpc).toHaveBeenCalledWith('unregister_member', { p_member_id: 'm1' });
         supabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'not allowed' } });
         await expect(unregisterMember('m1')).rejects.toEqual({ message: 'not allowed' });
+    });
+
+    test('saveFuturePlan keeps a completed meeting completed and saves others as draft', async () => {
+        const chain = mockChain();
+        supabase.from.mockReturnValue(chain);
+        await saveFuturePlan({ date: '2025-06-01', status: 'completed', program: [] });
+        expect(chain.upsert.mock.calls[0][0].status).toBe('completed');
+        await saveFuturePlan({ date: '2026-10-11', program: [] });
+        expect(chain.upsert.mock.calls[1][0].status).toBe('draft');
     });
 });

@@ -2,7 +2,7 @@
 // Editable here: presidência/música overrides, reconhecimentos, anúncios, assuntos da ala.
 // Right pane: the real A4 agenda (render-agenda.js). Actions: PDF, Partilhar, Modo púlpito.
 import * as DM from '../dataManager.js';
-import { state, canEdit } from '../app-state.js';
+import { state, canEdit, canEditMeeting, isLocked, unlockMeeting, reloadStats } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { renderAgendaHtml } from '../render-agenda.js';
@@ -38,16 +38,17 @@ function draw() {
     const next = toIsoDate(shiftDays(parseIsoDate(d), 7));
     const missing = missingItems(m);
     const done = m.status === 'completed';
-    const editable = canEdit() && !done;
+    const editable = canEditMeeting(m);
 
     root.innerHTML = `<div id="domingo-root">
         <div class="view-head">
             <div>
                 <h2>${escapeHtml(formatDateHeading(d))}</h2>
-                <div class="sub">${done ? 'Reunião terminada' : (missing.length ? `Falta ${missing.length}: ${escapeHtml(missing.join(', '))}` : 'Tudo atribuído')}
+                <div class="sub">${done ? (isLocked(m) ? 'Reunião terminada' : 'Reunião terminada, a editar. As alterações guardam-se sozinhas.') : (missing.length ? `Falta ${missing.length}: ${escapeHtml(missing.join(', '))}` : 'Tudo atribuído')}
                     &nbsp;·&nbsp; <a href="#domingo/${prev}">‹ ${formatDateShort(prev)}</a> &nbsp; <a href="#domingo/${next}">${formatDateShort(next)} ›</a></div>
             </div>
             <div class="actions">
+                ${isLocked(m) && canEdit() ? '<button type="button" class="btn" id="btn-unlock">Editar reunião</button>' : ''}
                 <button type="button" class="btn" id="btn-pdf">PDF</button>
                 <button type="button" class="btn" id="btn-share">Partilhar</button>
                 <a class="btn primary" href="#pulpito/${d}">Modo púlpito</a>
@@ -211,6 +212,7 @@ function onClick(ev) {
         redrawLists(); refreshPreview(); save();
         return;
     }
+    if (ev.target.id === 'btn-unlock') { unlockMeeting(m.date); draw(); return; }
     if (ev.target.id === 'btn-pdf') { exportPdf(false); return; }
     if (ev.target.id === 'btn-share') { exportPdf(true); return; }
 
@@ -242,10 +244,13 @@ function refreshPreview() {
 }
 
 function save() {
-    if (!canEdit() || m.status === 'completed') return;
+    if (!canEditMeeting(m)) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
-        try { await DM.saveFuturePlan(m); state.meetingsCache.set(m.date, m); }
+        try {
+            await DM.saveFuturePlan(m); state.meetingsCache.set(m.date, m);
+            if (m.status === 'completed') await reloadStats(); // past talks feed the rotation stats
+        }
         catch (e) { console.error(e); showToast('Não foi possível guardar: ' + e.message, 'error'); }
     }, 600);
 }

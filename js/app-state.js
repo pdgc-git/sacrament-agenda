@@ -16,6 +16,7 @@ export const state = {
     hymnLastSung: new Map(), // hymn number -> iso date
     activity: { talks: new Map(), prayers: new Map() }, // member_id -> {count12, last, lastTopic?}
     meetingsCache: new Map(), // date -> meeting row
+    unlockedPast: new Set(),  // dates of completed meetings opened for editing this session
 };
 
 export function canEdit() {
@@ -26,6 +27,20 @@ export function canAdmin() {
 }
 export function canEditHymns() {
     return canEdit() || state.role === 'music';
+}
+
+// Completed meetings are read-only until someone chooses "Editar" on them (this session only).
+export function isLocked(m) {
+    return m?.status === 'completed' && !state.unlockedPast.has(m.date);
+}
+export function unlockMeeting(date) {
+    state.unlockedPast.add(date);
+}
+export function canEditMeeting(m) {
+    return canEdit() && !isLocked(m);
+}
+export function canEditMeetingHymns(m) {
+    return canEditHymns() && !isLocked(m);
 }
 
 export async function loadWard() {
@@ -64,4 +79,5 @@ export function reset() {
     state.lastTalk = new Map(); state.lastPrayer = new Map(); state.hymnLastSung = new Map();
     state.activity = { talks: new Map(), prayers: new Map() };
     state.meetingsCache = new Map();
+    state.unlockedPast = new Set();
 }

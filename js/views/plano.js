@@ -1,7 +1,7 @@
 // Plano: the month as one column per Sunday (kind + dirige, then Abertura, Sacramento, Oradores
 // added or removed per Sunday, Encerramento). Every slot opens the ranked/filtered picker. Saves per Sunday (debounced).
 import * as DM from '../dataManager.js';
-import { state, canEdit, canEditHymns, cacheMeetings } from '../app-state.js';
+import { state, canEdit, canEditMeeting, canEditMeetingHymns, isLocked, unlockMeeting, cacheMeetings, reloadStats } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats } from '../components/assign.js';
@@ -51,7 +51,7 @@ function draw() {
     const today = new Date();
     const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     const options = [];
-    for (let k = -6; k <= 12; k++) options.push(shiftMonth(thisMonth, k));
+    for (let k = -24; k <= 12; k++) options.push(shiftMonth(thisMonth, k));
     if (!options.includes(month)) options.push(month);
     options.sort();
     const [monthName, year] = formatMonth(dates[0]).split(' ');
@@ -103,7 +103,7 @@ function balanceHtml() {
 function weekHtml(m) {
     const d = m.date;
     const done = m.status === 'completed';
-    const editable = canEdit() && !done;
+    const editable = canEditMeeting(m);
     const noProgram = KINDS_WITHOUT_PROGRAM.has(m.kind);
     const cls = noProgram ? 'off' : m.kind === 'fast' ? 'fast' : '';
     const header = `<header>
@@ -120,12 +120,12 @@ function weekHtml(m) {
             <div class="wk-off">${escapeHtml(MEETING_KINDS[m.kind])}. Sem reunião sacramental na ala.</div></article>`;
     }
     const missing = missingItems(m);
-    const status = done ? '<b>Feita</b>'
+    const status = done ? `<b>Feita</b>${isLocked(m) && canEdit() ? ` <button type="button" class="link-btn" data-d="${d}" data-act="unlock">Editar</button>` : ''}`
         : missing.length === 0 ? '<b class="ready">Pronta</b>'
             : `<b class="miss" title="${escapeHtml(missing.join(', '))}">Falta ${missing.length}</b>`;
     const bal = balance(speakers(m.program), state.membersById);
     const balTxt = m.kind === 'fast' ? '' : `${bal.men} H, ${bal.women} M${bal.youth ? `, ${bal.youth} ${bal.youth === 1 ? 'jovem' : 'jovens'}` : ''}`;
-    return `<article class="wk ${cls} ${done ? 'done' : ''}" data-d="${d}">${header}
+    return `<article class="wk ${cls} ${isLocked(m) ? 'done' : ''}" data-d="${d}">${header}
         <div class="sec"><h3>Abertura</h3>${hymnRow(m, 'opening_hymn', 'Hino de abertura')}${prayerRow(m, 'invocation', 'Primeira oração')}</div>
         <div class="sec"><h3>${CUP}Sacramento</h3>${hymnRow(m, 'sacrament_hymn', 'Hino sacramental')}</div>
         <div class="sec"><h3>${m.kind === 'fast' ? 'Programa' : 'Oradores'}</h3>${speakersHtml(m, editable)}${hymnRow(m, 'intermediate_hymn', 'Hino intermédio (opcional)')}</div>
@@ -180,7 +180,7 @@ function speakerHtml(m, s, i, editable) {
 }
 
 function prayerRow(m, key, label) {
-    const editable = canEdit() && m.status !== 'completed';
+    const editable = canEditMeeting(m);
     const name = m[key] || state.membersById.get(m[`${key}_member_id`])?.name || '';
     const inner = name
         ? `<i class="st confirmed" title="atribuída"></i><span class="n">${escapeHtml(name)}</span>`
@@ -192,7 +192,7 @@ function prayerRow(m, key, label) {
 }
 
 function hymnRow(m, key, emptyLabel) {
-    const editable = canEditHymns() && m.status !== 'completed';
+    const editable = canEditMeetingHymns(m);
     const v = m[key];
     if (!v && key === 'intermediate_hymn' && !editable) return '';
     const recent = hymnRepeats(v);
@@ -229,6 +229,11 @@ function onGridClick(ev) {
     const changed = () => { redrawRow(m); save(m); };
     const mb = () => monthBalances().get(month);
 
+    if (act === 'unlock') {
+        unlockMeeting(m.date);
+        redrawRow(m);
+        return;
+    }
     if (act === 'rm-spk') {
         removeSpeaker(m, i);
         changed();
@@ -282,13 +287,14 @@ function redrawRow(m) {
 }
 
 function save(m, delay = 250) {
-    if (!canEditHymns()) return;
+    if (!canEditMeetingHymns(m)) return;
     clearTimeout(saveTimers.get(m.date));
     saveTimers.set(m.date, setTimeout(async () => {
         try {
             await DM.saveFuturePlan(m);
             delete m._new;
             state.meetingsCache.set(m.date, m);
+            if (m.status === 'completed') await reloadStats(); // past talks feed the rotation stats
         } catch (e) {
             console.error(e);
             showToast('Não foi possível guardar ' + formatDateShort(m.date) + ': ' + e.message, 'error');

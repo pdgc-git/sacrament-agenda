@@ -318,7 +318,8 @@ export async function saveFuturePlan(planData) {
     const payload = buildMeetingPayload(planData, wardId);
     const { error } = await supabase
         .from('meetings')
-        .upsert({ ...payload, status: 'draft' }, { onConflict: 'ward_id,date' });
+        // A completed meeting opened for editing stays completed (it keeps counting for rotation).
+        .upsert({ ...payload, status: planData.status === 'completed' ? 'completed' : 'draft' }, { onConflict: 'ward_id,date' });
     if (error) throw error;
     return planData.date;
 }
