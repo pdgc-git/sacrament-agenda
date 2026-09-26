@@ -1,5 +1,5 @@
 import {
-    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember, saveFuturePlan,
+    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember, saveFuturePlan, getWardUsers,
 } from '../js/dataManager.js';
 import { supabase, mockChain } from '../__mocks__/supabaseClient.js';
 
@@ -94,5 +94,12 @@ describe('dataManager — Phase 3', () => {
         expect(chain.upsert.mock.calls[0][0].status).toBe('completed');
         await saveFuturePlan({ date: '2026-10-11', program: [] });
         expect(chain.upsert.mock.calls[1][0].status).toBe('draft');
+    });
+
+    test('getWardUsers reads accesses through the ward_access RPC', async () => {
+        supabase.rpc.mockResolvedValueOnce({ data: [{ user_id: 'u1', email: 'a@b.pt', role: 'owner' }], error: null });
+        const rows = await getWardUsers();
+        expect(supabase.rpc).toHaveBeenCalledWith('ward_access', { p_ward_id: 'ward-1' });
+        expect(rows[0].email).toBe('a@b.pt');
     });
 });

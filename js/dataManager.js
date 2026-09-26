@@ -43,14 +43,12 @@ export async function joinWard(inviteCode) {
     return data.ward_id;
 }
 
+// Accesses to the ward with each person's current login e-mail (RPC reads auth.users).
 export async function getWardUsers() {
     const wardId = getWardId();
-    const { data, error } = await supabase
-        .from('ward_users')
-        .select('*')
-        .eq('ward_id', wardId);
+    const { data, error } = await supabase.rpc('ward_access', { p_ward_id: wardId });
     if (error) throw error;
-    return data;
+    return data || [];
 }
 
 export async function updateUserRole(targetUserId, newRole, newStatus) {
