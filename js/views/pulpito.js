@@ -8,7 +8,7 @@ import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { agendaSequence } from '../render-agenda.js';
 import { openMemberPicker } from '../components/picker.js';
-import { nextSunday, toIsoDate, formatDateHeading, speakers, newSpeaker, hymnNumber } from '../utils/meeting.js';
+import { nextSunday, toIsoDate, formatDateHeading, speakers, newSpeaker, hymnNumber, weekIndex, applyWardDefaults } from '../utils/meeting.js';
 
 let m = null;
 let root = null;
@@ -39,7 +39,7 @@ export function destroy() { closeSheet(); document.body.classList.remove('pulpit
 
 function normalize(row) {
     row.program = (row.program || []).map(it => it.type === 'speaker' ? { ...newSpeaker(), ...it } : it);
-    return row;
+    return applyWardDefaults(row, state.settings, weekIndex(row.date));
 }
 
 function draw() {

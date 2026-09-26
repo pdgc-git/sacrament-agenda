@@ -9,7 +9,7 @@ import { renderAgendaHtml } from '../render-agenda.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats, HYMN_LABELS } from '../components/assign.js';
 import {
     nextSunday, toIsoDate, formatDateHeading, formatDateShort, blankMeeting, missingItems, speakers,
-    newSpeaker, INVITE_STATUS, KINDS_WITHOUT_PROGRAM, MEETING_KINDS, parseIsoDate, weekIndex,
+    newSpeaker, INVITE_STATUS, KINDS_WITHOUT_PROGRAM, MEETING_KINDS, parseIsoDate, weekIndex, applyWardDefaults,
 } from '../utils/meeting.js';
 
 let m = null;
@@ -29,7 +29,7 @@ export function destroy() { clearTimeout(saveTimer); }
 function normalize(row) {
     row.program = (row.program || []).map(it => it.type === 'speaker' ? { ...newSpeaker(), ...it } : it);
     ['recognitions', 'announcements', 'releases', 'callings'].forEach(k => { row[k] = row[k] || []; });
-    return row;
+    return applyWardDefaults(row, state.settings, weekIndex(row.date));
 }
 
 function draw() {

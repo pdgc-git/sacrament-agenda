@@ -165,6 +165,16 @@ export function blankMeeting(date, settings = {}, conductingIndex = 0) {
     };
 }
 
+// Fills presiding / conducting / organist / chorister that are still empty on a meeting that isn't
+// finished yet, from the ward settings. Meetings saved before the settings existed pick them up too;
+// anything already written stays. Returns the same object.
+export function applyWardDefaults(m, settings = {}, conductingIndex = 0) {
+    if (!m || m.status === 'completed') return m;
+    const d = blankMeeting(m.date, settings, conductingIndex);
+    ['presiding', 'conducting', 'organist', 'chorister'].forEach(k => { if (!m[k]) m[k] = d[k]; });
+    return m;
+}
+
 // ── Readiness ("Falta N") ────────────────────────────────────────────────────
 // Counts what is still missing for the meeting to be ready: unassigned or unconfirmed speakers,
 // missing prayers, missing hymns. Kinds without a ward program have nothing to plan.

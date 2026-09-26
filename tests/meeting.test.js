@@ -1,6 +1,6 @@
 import {
     toIsoDate, parseIsoDate, nextSunday, sundaysFrom, formatDateLong, formatAgo, speakersBefore, speakersAfter,
-    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, memberAvailability, newSpeaker,
+    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, memberAvailability, applyWardDefaults, newSpeaker,
 } from '../js/utils/meeting.js';
 
 describe('meeting utils — dates', () => {
@@ -133,5 +133,17 @@ describe('meeting utils — member availability', () => {
     test('away ends by itself after away_until', () => {
         expect(memberAvailability({ status: 'away', away_until: '2026-09-26' }, today)).toBe('away');
         expect(memberAvailability({ status: 'away', away_until: '2026-09-25' }, today)).toBe('active');
+    });
+});
+
+describe('meeting utils — ward defaults on saved meetings', () => {
+    const settings = { presiding: 'Paulo Costa', conducting_rotation: ['Francisco Tavares', 'Wilson Pires'], organist: 'Elder Mosley', chorister: 'Lucília Soares' };
+    test('fills only the empty fields of a draft, conducting from the rotation', () => {
+        const m = applyWardDefaults({ date: '2026-10-11', status: 'draft', presiding: '', conducting: null, organist: 'Outra Pessoa' }, settings, 1);
+        expect(m).toMatchObject({ presiding: 'Paulo Costa', conducting: 'Wilson Pires', organist: 'Outra Pessoa', chorister: 'Lucília Soares' });
+    });
+    test('leaves finished meetings alone', () => {
+        const m = applyWardDefaults({ date: '2026-09-20', status: 'completed', presiding: '' }, settings, 0);
+        expect(m.presiding).toBe('');
     });
 });

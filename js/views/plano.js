@@ -7,7 +7,7 @@ import { showToast } from '../components/Toast.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats } from '../components/assign.js';
 import {
     MEETING_KINDS, KINDS_WITHOUT_PROGRAM, INVITE_STATUS, sundaysInMonth, formatDateShort, formatMonth,
-    blankMeeting, missingItems, speakers, newSpeaker, balance, hymnNumber, hymnTitle, weekIndex, shiftMonth,
+    blankMeeting, missingItems, speakers, newSpeaker, balance, hymnNumber, hymnTitle, weekIndex, shiftMonth, applyWardDefaults,
 } from '../utils/meeting.js';
 
 let month = ''; // 'YYYY-MM'
@@ -38,7 +38,7 @@ export function destroy() {
 
 function normalize(m) {
     m.program = (m.program || []).map(it => it.type === 'speaker' ? { ...newSpeaker(), ...it } : it);
-    return m;
+    return applyWardDefaults(m, state.settings, weekIndex(m.date));
 }
 
 // ── Drawing ──────────────────────────────────────────────────────────────────
