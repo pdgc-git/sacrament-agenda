@@ -72,7 +72,7 @@ function draw() {
                 <div class="card">
                     <div class="section-label" style="margin-bottom:10px">Aspeto</div>
                     <div class="theme-toggle" id="theme-toggle">
-                        ${['light', 'system', 'dark'].map(t => `<button type="button" class="${theme === t ? 'on' : ''}" data-theme="${t}">${{ light: 'Claro', system: 'Auto', dark: 'Escuro' }[t]}</button>`).join('')}
+                        ${['light', 'system', 'dark'].map(t => `<button type="button" class="${theme === t ? 'on' : ''}" data-theme-choice="${t}">${{ light: 'Claro', system: 'Auto', dark: 'Escuro' }[t]}</button>`).join('')}
                     </div>
                 </div>
             </div>
@@ -124,8 +124,9 @@ async function onClick(ev) {
         catch (e) { showToast(e.message, 'error'); }
         return;
     }
-    const t = ev.target.closest('[data-theme]');
-    if (t) { setTheme(t.dataset.theme); draw(); return; }
+    // Not [data-theme]: <html> carries that attribute once a theme is chosen, so every click would match.
+    const t = ev.target.closest('[data-theme-choice]');
+    if (t) { setTheme(t.dataset.themeChoice); draw(); return; }
 
     const act = ev.target.closest('[data-act]');
     if (!act) return;
