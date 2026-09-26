@@ -5,7 +5,7 @@ import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { setTheme } from '../utils/theme.js';
 
-const ROLE_LABELS = { owner: 'Proprietário', admin: 'Bispado', editor: 'Editor', music: 'Música', viewer: 'Leitor' };
+const ROLE_LABELS = { owner: 'Proprietário', admin: 'Bispado', editor: 'Editor', music: 'Música (só hinos)', viewer: 'Leitor (só ver)' };
 let root = null;
 let users = [];
 

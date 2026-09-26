@@ -2,7 +2,7 @@
 // Editable here: presidência/música overrides, reconhecimentos, anúncios, assuntos da ala.
 // Right pane: the real A4 agenda (render-agenda.js). Actions: PDF, Partilhar, Modo púlpito.
 import * as DM from '../dataManager.js';
-import { state, canEdit, canEditMeeting, isLocked, unlockMeeting, reloadStats } from '../app-state.js';
+import { state, canEdit, canEditMeeting, canEditMeetingHymns, isLocked, isMusicOnly, unlockMeeting, reloadStats } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { renderAgendaHtml } from '../render-agenda.js';
@@ -20,7 +20,7 @@ export async function render(container, params) {
     root = container;
     const date = params[0] || toIsoDate(nextSunday(new Date()));
     const row = await DM.getPlanByDate(date);
-    m = row ? normalize(row) : blankMeeting(date, state.settings, weekIndex(date));
+    m = row ? normalize(row) : { ...blankMeeting(date, state.settings, weekIndex(date)), _new: true };
     draw();
 }
 
@@ -39,6 +39,7 @@ function draw() {
     const missing = missingItems(m);
     const done = m.status === 'completed';
     const editable = canEditMeeting(m);
+    const hymnsEditable = canEditMeetingHymns(m);
 
     if (KINDS_WITHOUT_PROGRAM.has(m.kind)) { drawNoMeeting(prev, next, editable); return; }
 
@@ -70,7 +71,7 @@ function draw() {
                     ${listGroup('announcements', 'Anúncios', 'Adicionar anúncio', editable)}
                     <div class="group">
                         <div class="g-head"><b>Abertura</b><span>${editable ? `<select class="kind-select" data-f="kind">${Object.entries(MEETING_KINDS).map(([k, label]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${label}</option>`).join('')}</select>` : escapeHtml(MEETING_KINDS[m.kind])} · <a href="#plano/${d.slice(0, 7)}">ver o mês</a></span></div>
-                        ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? '<div class="empty-note">Sem programa.</div>' : hymnRow('opening_hymn', editable) + prayerRow('Primeira Oração', 'invocation', editable)}
+                        ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? '<div class="empty-note">Sem programa.</div>' : hymnRow('opening_hymn', hymnsEditable) + prayerRow('Primeira Oração', 'invocation', editable)}
                     </div>
                     <div class="group">
                         <div class="g-head"><b>Assuntos da Ala</b></div>
@@ -80,15 +81,15 @@ function draw() {
                     ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? '' : `
                     <div class="group">
                         <div class="g-head"><b>Sacramento</b></div>
-                        ${hymnRow('sacrament_hymn', editable)}
+                        ${hymnRow('sacrament_hymn', hymnsEditable)}
                     </div>
                     <div class="group">
                         <div class="g-head"><b>Programa</b></div>
-                        ${programRows(editable)}
+                        ${programRows(editable, hymnsEditable)}
                     </div>
                     <div class="group">
                         <div class="g-head"><b>Encerramento</b></div>
-                        ${hymnRow('closing_hymn', editable)}
+                        ${hymnRow('closing_hymn', hymnsEditable)}
                         ${prayerRow('Última Oração', 'benediction', editable)}
                     </div>`}
                 </div>
@@ -156,7 +157,7 @@ function prayerRow(label, key, editable) {
 }
 
 // Speakers in meeting order: before the intermediate hymn, the hymn, after.
-function programRows(editable) {
+function programRows(editable, hymnsEditable = editable) {
     if (m.kind === 'fast') return `<div class="row-kv"><span class="k">Programa</span><span class="v">Testemunhos da Congregação</span></div>`;
     const sp = speakers(m.program);
     const shown = [...sp.filter(s => (s.position || 'before') === 'before'), ...sp.filter(s => s.position === 'after')];
@@ -177,7 +178,7 @@ function programRows(editable) {
             </span></div>`;
     };
     let html = sp.filter(s => (s.position || 'before') === 'before').map(row).join('');
-    html += hymnRow('intermediate_hymn', editable);
+    html += hymnRow('intermediate_hymn', hymnsEditable);
     html += sp.filter(s => s.position === 'after').map(row).join('');
     if (editable) html += `<div class="row-kv"><span class="k"></span><button type="button" class="btn tiny" data-act="add-spk">+ Orador</button></div>`;
     return html;
@@ -275,11 +276,14 @@ function refreshPreview() {
 }
 
 function save() {
-    if (!canEditMeeting(m)) return;
+    if (!canEditMeetingHymns(m)) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
         try {
-            await DM.saveFuturePlan(m); state.meetingsCache.set(m.date, m);
+            if (isMusicOnly()) await DM.saveHymns(m.date, m);
+            else await DM.saveFuturePlan(m);
+            delete m._new;
+            state.meetingsCache.set(m.date, m);
             if (m.status === 'completed') await reloadStats(); // past talks feed the rotation stats
         }
         catch (e) { console.error(e); showToast('Não foi possível guardar: ' + e.message, 'error'); }

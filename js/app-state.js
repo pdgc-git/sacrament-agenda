@@ -39,8 +39,13 @@ export function unlockMeeting(date) {
 export function canEditMeeting(m) {
     return canEdit() && !isLocked(m);
 }
+// Música can only change hymns of a meeting that already exists (the bishopric creates meetings).
 export function canEditMeetingHymns(m) {
+    if (state.role === 'music' && m?._new) return false;
     return canEditHymns() && !isLocked(m);
+}
+export function isMusicOnly() {
+    return state.role === 'music';
 }
 
 export async function loadWard() {

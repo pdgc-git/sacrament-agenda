@@ -1,7 +1,7 @@
 // Plano: the month as one column per Sunday (kind + dirige, then Abertura, Sacramento, Oradores
 // added or removed per Sunday, Encerramento). Every slot opens the ranked/filtered picker. Saves per Sunday (debounced).
 import * as DM from '../dataManager.js';
-import { state, canEdit, canEditMeeting, canEditMeetingHymns, isLocked, unlockMeeting, cacheMeetings, reloadStats } from '../app-state.js';
+import { state, canEdit, canEditMeeting, canEditMeetingHymns, isLocked, isMusicOnly, unlockMeeting, cacheMeetings, reloadStats } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats } from '../components/assign.js';
@@ -291,7 +291,8 @@ function save(m, delay = 250) {
     clearTimeout(saveTimers.get(m.date));
     saveTimers.set(m.date, setTimeout(async () => {
         try {
-            await DM.saveFuturePlan(m);
+            if (isMusicOnly()) await DM.saveHymns(m.date, m);
+            else await DM.saveFuturePlan(m);
             delete m._new;
             state.meetingsCache.set(m.date, m);
             if (m.status === 'completed') await reloadStats(); // past talks feed the rotation stats

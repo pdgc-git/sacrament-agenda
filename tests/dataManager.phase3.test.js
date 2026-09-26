@@ -1,5 +1,5 @@
 import {
-    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember, saveFuturePlan, getWardUsers,
+    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember, saveFuturePlan, getWardUsers, saveHymns,
 } from '../js/dataManager.js';
 import { supabase, mockChain } from '../__mocks__/supabaseClient.js';
 
@@ -101,5 +101,18 @@ describe('dataManager — Phase 3', () => {
         const rows = await getWardUsers();
         expect(supabase.rpc).toHaveBeenCalledWith('ward_access', { p_ward_id: 'ward-1' });
         expect(rows[0].email).toBe('a@b.pt');
+    });
+
+    test('saveHymns updates only the four hymn columns of an existing meeting', async () => {
+        const chain = mockChain({ data: [{ date: '2026-10-11' }], error: null });
+        supabase.from.mockReturnValue(chain);
+        await saveHymns('2026-10-11', { opening_hymn: '2 - Tal Como um Facho', presiding: 'X', program: [] });
+        expect(chain.update).toHaveBeenCalledWith({ opening_hymn: '2 - Tal Como um Facho', sacrament_hymn: null, intermediate_hymn: null, closing_hymn: null });
+        expect(chain.upsert).not.toHaveBeenCalled();
+    });
+
+    test('saveHymns says so when the meeting was not planned yet', async () => {
+        supabase.from.mockReturnValue(mockChain({ data: [], error: null }));
+        await expect(saveHymns('2026-10-18', {})).rejects.toThrow('ainda não foi planeada');
     });
 });

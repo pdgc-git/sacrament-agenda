@@ -322,6 +322,19 @@ export async function saveFuturePlan(planData) {
     return planData.date;
 }
 
+// Música role: only the four hymn columns of a meeting the bishopric already planned. (An upsert
+// can't work for this role: it has no insert right, and the other columns are locked by a trigger.)
+export async function saveHymns(dateStr, hymns) {
+    const wardId = getWardId();
+    const fields = {};
+    ['opening_hymn', 'sacrament_hymn', 'intermediate_hymn', 'closing_hymn'].forEach(k => { fields[k] = hymns[k] || null; });
+    const { data, error } = await supabase.from('meetings').update(fields)
+        .eq('ward_id', wardId).eq('date', dateStr).select('date');
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Esta reunião ainda não foi planeada pelo bispado.');
+    return dateStr;
+}
+
 export async function getPlanByDate(dateStr) {
     const wardId = getWardId();
     const { data, error } = await supabase
