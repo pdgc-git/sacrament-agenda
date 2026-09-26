@@ -248,3 +248,17 @@ export function buildActivity(rows = [], today = new Date()) {
     });
     return { talks, prayers };
 }
+
+// ── Member availability ─────────────────────────────────────────────────────
+// 'moved' (no longer in the ward), 'away' (not able to speak / away; ends by itself after
+// away_until), or 'active'.
+
+export function memberAvailability(m, today = new Date()) {
+    if (!m) return 'active';
+    if (m.status === 'moved') return 'moved';
+    if (m.status === 'away') {
+        if (m.away_until && parseIsoDate(m.away_until) < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return 'active';
+        return 'away';
+    }
+    return 'active';
+}

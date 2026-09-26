@@ -1,6 +1,6 @@
 import {
     toIsoDate, parseIsoDate, nextSunday, sundaysFrom, formatDateLong, formatAgo, speakersBefore, speakersAfter,
-    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, newSpeaker,
+    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, memberAvailability, newSpeaker,
 } from '../js/utils/meeting.js';
 
 describe('meeting utils — dates', () => {
@@ -120,5 +120,18 @@ describe('meeting utils — activity', () => {
     test('counts prayers from both prayer slots', () => {
         const { prayers } = buildActivity(rows, today);
         expect(prayers.get('b')).toEqual({ count12: 1, last: '2026-03-08' });
+    });
+});
+
+describe('meeting utils — member availability', () => {
+    const today = new Date(2026, 8, 26);
+    test('moved and away are reported, active is the default', () => {
+        expect(memberAvailability({ status: 'moved' }, today)).toBe('moved');
+        expect(memberAvailability({ status: 'away' }, today)).toBe('away');
+        expect(memberAvailability({}, today)).toBe('active');
+    });
+    test('away ends by itself after away_until', () => {
+        expect(memberAvailability({ status: 'away', away_until: '2026-09-26' }, today)).toBe('away');
+        expect(memberAvailability({ status: 'away', away_until: '2026-09-25' }, today)).toBe('active');
     });
 });

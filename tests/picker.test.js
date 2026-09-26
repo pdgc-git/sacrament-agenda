@@ -69,3 +69,19 @@ describe('guestName', () => {
         expect(guestName('ana ferreira', members)).toBeNull();
     });
 });
+
+describe('rankMembers — availability', () => {
+    const today = new Date(2026, 8, 26);
+    const members = [
+        { id: 'a', name: 'A', status: 'away', away_until: '2026-12-01' },
+        { id: 'b', name: 'B' },
+        { id: 'c', name: 'C', status: 'moved' },
+        { id: 'd', name: 'D', status: 'away', away_until: '2026-01-01' },
+    ];
+    test('leaves out who moved, puts who is away after everyone available', () => {
+        const ranked = rankMembers(members, new Map(), {}, { today });
+        expect(ranked.map(r => r.member.id)).toEqual(['b', 'd', 'a']);
+        expect(ranked.find(r => r.member.id === 'a').away).toBe(true);
+        expect(ranked.find(r => r.member.id === 'd').away).toBe(false);
+    });
+});

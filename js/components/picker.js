@@ -1,13 +1,14 @@
 // Ranked, filterable candidate picker used by Plano/Domingo for speakers, prayers and hymns.
 // Ranking + filtering are pure functions (tested); `openPicker` is the DOM part.
 import { escapeHtml } from '../utils/security.js';
-import { formatAgo, formatBalance } from '../utils/meeting.js';
+import { formatAgo, formatBalance, formatDateShort, memberAvailability } from '../utils/meeting.js';
 
 export const GROUP_LABELS = { Youth: 'Jovens', 'Young Adult': 'Jovens Adultos', Adult: 'Adultos', Primary: 'Primária' };
 
 /**
  * Rank members for a role. Never-did-it first, then oldest last date. Members currently booked
- * for the same date are excluded; a member who declined this same meeting is shown last, flagged.
+ * for the same date and members who left the ward are excluded; members who are away go after
+ * everyone available, and a member who declined this same meeting is shown last, flagged.
  * @param {Array} members  roster rows {id,name,gender,group}
  * @param {Map} lastDates  member_id -> iso date of last talk/prayer (missing = never)
  * @param {object} filters { gender: 'M'|'F'|null, groups: Set<string>|null, search: '' }
@@ -20,17 +21,19 @@ export function rankMembers(members, lastDates, filters = {}, ctx = {}) {
     const search = (filters.search || '').trim().toLowerCase();
 
     return members
-        .filter(m => !exclude.has(m.id))
+        .filter(m => !exclude.has(m.id) && memberAvailability(m, today) !== 'moved')
         .filter(m => !filters.gender || m.gender === filters.gender)
         .filter(m => !filters.groups || filters.groups.size === 0 || filters.groups.has(m.group))
         .filter(m => !search || m.name.toLowerCase().includes(search))
         .map(m => {
             const last = lastDates.get(m.id) || null;
             const days = last ? Math.round((today - new Date(last)) / 86400000) : Infinity;
-            return { member: m, last, days, declined: declined.has(m.id), recent: days < (ctx.recentDays || 90) };
+            const away = memberAvailability(m, today) === 'away';
+            return { member: m, last, days, away, declined: declined.has(m.id), recent: days < (ctx.recentDays || 90) };
         })
         .sort((a, b) => {
             if (a.declined !== b.declined) return a.declined ? 1 : -1;
+            if (a.away !== b.away) return a.away ? 1 : -1;
             return b.days - a.days; // Infinity (never) first
         });
 }
@@ -158,10 +161,12 @@ export function openMemberPicker(_anchor, cfg) {
                 ${ranked.length === 0 && !guest ? `<div class="picker-empty">Ninguém com estes filtros.${cfg.onGuest ? ' Escreva o nome de quem não é membro da ala.' : ''}</div>` : ''}
                 ${ranked.map((r, i) => {
                     const st = cfg.stats?.get(r.member.id);
+                    const top = i === 0 && !r.declined && !r.away;
+                    const awayTxt = r.away ? `indisponível${r.member.away_until ? ' até ' + formatDateShort(r.member.away_until) : ''}${r.member.status_note ? ': ' + r.member.status_note : ''}` : '';
                     const meta = [r.member.gender === 'F' ? 'Mulher' : r.member.gender === 'M' ? 'Homem' : '', GROUP_LABELS[r.member.group] || ''].filter(Boolean).join(', ');
                     return `
-                    <button type="button" class="picker-option ${talks ? '' : 'no-topic'}${i === 0 && !r.declined ? ' top' : ''}${r.recent ? ' risk' : ''}${r.declined ? ' declined' : ''}" data-id="${r.member.id}">
-                        <span class="who"><b>${escapeHtml(r.member.name)}</b>${i === 0 && !r.declined ? '<span class="badge-sugerido">Sugerido</span>' : ''}<small>${escapeHtml(meta)}</small></span>
+                    <button type="button" class="picker-option ${talks ? '' : 'no-topic'}${top ? ' top' : ''}${r.recent ? ' risk' : ''}${r.declined ? ' declined' : ''}${r.away ? ' away' : ''}" data-id="${r.member.id}">
+                        <span class="who"><b>${escapeHtml(r.member.name)}</b>${top ? '<span class="badge-sugerido">Sugerido</span>' : ''}<small>${escapeHtml(awayTxt || meta)}</small></span>
                         <span class="when">${r.declined ? '<b>recusou este domingo</b>' : r.last ? `<b>há ${escapeHtml(formatAgo(r.last).replace(/^há /, ''))}</b><small>${shortDate(r.last)}</small>` : `<b>nunca ${talks ? 'falou' : 'orou'}</b>`}</span>
                         <span class="count">${st?.count12 ? `${st.count12}×` : '—'}</span>
                         ${talks ? `<span class="topic-col">${escapeHtml(st?.lastTopic || '')}</span>` : ''}

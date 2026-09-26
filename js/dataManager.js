@@ -148,6 +148,9 @@ export async function saveMember(memberData) {
     } else if (!validGroups.includes(memberData.group)) {
         throw new Error(`Grupo inválido. Deve ser um de: ${validGroups.join(', ')}`);
     }
+    if (memberData.status && !['active', 'away', 'moved'].includes(memberData.status)) {
+        throw new Error('Situação inválida.');
+    }
     // ==================
 
     const wardId = getWardId();

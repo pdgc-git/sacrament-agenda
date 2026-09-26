@@ -55,12 +55,13 @@ function draw() {
     const threshold = state.settings?.absence_alert_after || 3;
     const prev = toIsoDate(new Date(parseIsoDate(date).getTime() - 7 * 86400000));
     const next = toIsoDate(new Date(parseIsoDate(date).getTime() + 7 * 86400000));
-    const rows = state.members
+    const inWard = state.members.filter(mb => mb.status !== 'moved');
+    const rows = inWard
         .map(mb => ({ mb, s: streak(mb.id), isAbsent: absent.has(mb.id), lastWeek: history.dates[1] ? history.byMember.get(mb.id)?.has(history.dates[1]) : false }))
         .filter(r => filter === 'all' || (filter === 'marked' && r.isAbsent) || (filter === 'lastweek' && r.lastWeek) || (filter === 'streak' && r.s >= 2))
         .filter(r => !search || r.mb.name.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => (filter === 'streak' ? b.s - a.s : a.mb.name.localeCompare(b.mb.name)));
-    const alerts = state.members.filter(mb => streak(mb.id) >= threshold).length;
+    const alerts = inWard.filter(mb => streak(mb.id) >= threshold).length;
 
     root.innerHTML = `<div id="abs-root">
         <div class="view-head">
@@ -72,7 +73,7 @@ function draw() {
         <div class="actions" style="margin-bottom:12px">
             <input class="input" id="abs-search" type="search" placeholder="Pesquisar nome…" value="${escapeHtml(search)}" style="max-width:260px">
             <div class="chips">
-                ${chip('all', `Todos · ${state.members.length}`)}${chip('lastweek', 'Faltaram a semana passada')}${chip('marked', `Marcados · ${absent.size}`)}${chip('streak', 'Seguidas 2+')}
+                ${chip('all', `Todos · ${inWard.length}`)}${chip('lastweek', 'Faltaram a semana passada')}${chip('marked', `Marcados · ${absent.size}`)}${chip('streak', 'Seguidas 2+')}
             </div>
         </div>
         <div class="card tight" style="padding:0 14px">

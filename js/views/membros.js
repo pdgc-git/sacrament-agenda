@@ -4,12 +4,13 @@ import { state, canEdit, reloadMembers } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { extractVisualLines, parseMemberLines, normalizeName, parseCallingUpdates } from '../utils/pdfParser.js';
-import { formatAgo, formatDateLong } from '../utils/meeting.js';
+import { formatAgo, formatDateLong, formatDateShort, memberAvailability } from '../utils/meeting.js';
 import { GROUP_LABELS } from '../components/picker.js';
 
 let root = null;
 let search = '';
 let group = null;
+let showMoved = false;
 let modal = null;
 
 export async function render(container) {
@@ -20,14 +21,16 @@ export async function render(container) {
 export function destroy() { closeModal(); }
 
 function draw() {
+    const moved = state.members.filter(m => m.status === 'moved').length;
     const rows = state.members
+        .filter(m => showMoved ? m.status === 'moved' : m.status !== 'moved')
         .filter(m => !group || m.group === group)
         .filter(m => !search || m.name.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => a.name.localeCompare(b.name));
 
     root.innerHTML = `<div id="mem-root">
         <div class="view-head">
-            <div><h2>Membros</h2><div class="sub">${state.members.length} no rol</div></div>
+            <div><h2>Membros</h2><div class="sub">${state.members.length - moved} no rol${moved ? `, ${moved} ${moved === 1 ? 'saiu' : 'saíram'} da ala` : ''}</div></div>
             <div class="actions">
                 ${canEdit() ? `<button type="button" class="btn" id="btn-import">Importar do LCR</button><button type="button" class="btn primary" id="btn-add">+ Membro</button>` : ''}
             </div>
@@ -37,6 +40,7 @@ function draw() {
             <div class="chips">
                 <button type="button" class="chip ${!group ? 'on' : ''}" data-g="">Todos</button>
                 ${Object.entries(GROUP_LABELS).map(([g, label]) => `<button type="button" class="chip ${group === g ? 'on' : ''}" data-g="${g}">${label}</button>`).join('')}
+                ${moved ? `<button type="button" class="chip ${showMoved ? 'on' : ''}" id="chip-moved">Saíram da ala · ${moved}</button>` : ''}
             </div>
         </div>
         <div class="card tight scroll-x">
@@ -45,7 +49,7 @@ function draw() {
                 <tbody>
                 ${rows.length === 0 ? '<tr><td colspan="6" class="empty-note">Ninguém.</td></tr>' : ''}
                 ${rows.map(m => `<tr data-id="${m.id}">
-                    <td><b>${escapeHtml(m.name)}</b> <span class="muted small">${m.gender || ''}</span></td>
+                    <td><b>${escapeHtml(m.name)}</b> <span class="muted small">${m.gender || ''}</span>${statusTag(m)}</td>
                     <td class="small">${escapeHtml(m.calling || '—')}</td>
                     <td class="small">${escapeHtml(GROUP_LABELS[m.group] || m.group)}</td>
                     <td class="small">${formatAgo(state.lastTalk.get(m.id))}</td>
@@ -69,7 +73,15 @@ function draw() {
     });
 }
 
+function statusTag(m) {
+    const a = memberAvailability(m);
+    if (a === 'moved') return ' <span class="pill">saiu da ala</span>';
+    if (a === 'away') return ` <span class="pill" title="${escapeHtml(m.status_note || '')}">indisponível${m.away_until ? ' até ' + formatDateShort(m.away_until) : ''}</span>`;
+    return '';
+}
+
 function onClick(ev) {
+    if (ev.target.id === 'chip-moved') { showMoved = !showMoved; draw(); return; }
     const g = ev.target.closest('[data-g]');
     if (g) { group = g.dataset.g || null; draw(); return; }
     if (ev.target.id === 'btn-add') { openMemberModal(null); return; }
@@ -96,7 +108,8 @@ function showModal(html, cls = '') {
 function closeModal() { if (modal) { modal.remove(); modal = null; } }
 
 function openMemberModal(member) {
-    const m = member || { name: '', gender: 'M', group: 'Adult', calling: '' };
+    const m = member || { name: '', gender: 'M', group: 'Adult', calling: '', status: 'active' };
+    const st = m.status || 'active';
     const box = showModal(`
         <h3>${member ? 'Editar membro' : 'Novo membro'}</h3>
         <form id="mem-form">
@@ -107,16 +120,33 @@ function openMemberModal(member) {
             <div class="field"><label for="f-group">Grupo</label><select class="input" id="f-group" name="group">
                 ${Object.entries(GROUP_LABELS).map(([g, label]) => `<option value="${g}" ${m.group === g ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
             <div class="field"><label for="f-calling">Chamado</label><input class="input" id="f-calling" name="calling" value="${escapeHtml(m.calling || '')}"></div>
+            <div class="field"><label for="f-status">Situação</label><select class="input" id="f-status" name="status">
+                <option value="active" ${st === 'active' ? 'selected' : ''}>Disponível</option>
+                <option value="away" ${st === 'away' ? 'selected' : ''}>Indisponível para discursar / ausente</option>
+                <option value="moved" ${st === 'moved' ? 'selected' : ''}>Já não está na ala</option></select></div>
+            <div class="status-extra" ${st === 'away' ? '' : 'hidden'}>
+                <div class="field"><label for="f-until">Até (opcional)</label><input class="input" type="date" id="f-until" name="away_until" value="${escapeHtml(m.away_until || '')}"></div>
+            </div>
+            <div class="field status-note" ${st === 'active' ? 'hidden' : ''}><label for="f-note">Nota (opcional)</label><input class="input" id="f-note" name="status_note" value="${escapeHtml(m.status_note || '')}" placeholder="ex.: doente, a estudar fora, mudou-se para o Porto"></div>
             <div class="foot">
                 ${member ? '<button type="button" class="btn danger" id="btn-del">Apagar</button><button type="button" class="btn" id="btn-unreg">Não é da ala</button>' : ''}
                 <button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Guardar</button>
             </div>
         </form>`);
     const form = box.querySelector('#mem-form');
+    form.status.addEventListener('change', () => {
+        box.querySelector('.status-extra').hidden = form.status.value !== 'away';
+        box.querySelector('.status-note').hidden = form.status.value === 'active';
+    });
     form.addEventListener('submit', async ev => {
         ev.preventDefault();
+        const status = form.status.value;
         try {
-            await DM.saveMember({ id: member?.id, name: form.name.value.trim(), gender: form.gender.value, group: form.group.value, calling: form.calling.value.trim() || null });
+            await DM.saveMember({
+                id: member?.id, name: form.name.value.trim(), gender: form.gender.value, group: form.group.value, calling: form.calling.value.trim() || null,
+                status, status_note: status === 'active' ? null : (form.status_note.value.trim() || null),
+                away_until: status === 'away' ? (form.away_until.value || null) : null,
+            });
             await reloadMembers(); closeModal(); draw();
             showToast('Membro guardado.', 'success');
         } catch (e) { showToast(e.message, 'error'); }
