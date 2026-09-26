@@ -72,7 +72,7 @@ function draw() {
                         ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? '<div class="empty-note">Sem programa.</div>' : hymnRow('opening_hymn', editable) + prayerRow('Primeira Oração', 'invocation', editable)}
                     </div>
                     <div class="group">
-                        <div class="g-head"><b>Assuntos da Ala</b><span>da reunião de bispado</span></div>
+                        <div class="g-head"><b>Assuntos da Ala</b></div>
                         ${pairList('releases', 'Desobrigações', 'Desobrigação', editable)}
                         ${pairList('callings', 'Chamados (Apoios)', 'Chamado', editable)}
                     </div>

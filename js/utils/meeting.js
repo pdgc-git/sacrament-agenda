@@ -3,7 +3,7 @@
 export const MEETING_KINDS = {
     normal: 'Normal',
     fast: 'Jejum e Testemunho',
-    conference: 'Conferência',
+    conference: 'Conferência Geral',
     primary: 'Programa da Primária',
     stake: 'Conferência de Estaca',
 };
