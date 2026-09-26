@@ -426,7 +426,8 @@ select.month-select { width: auto; max-width: 260px; padding: 7px 10px; font-siz
 
 .domingo { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr); gap: 24px; align-items: start; }
 .preview-pane { background: color-mix(in srgb, var(--ink) 5%, var(--paper)); border-radius: var(--radius); padding: 22px; display: flex; justify-content: center; position: sticky; top: 16px; }
-.preview-pane .agenda-paper { width: 100%; max-width: 520px; aspect-ratio: 210 / 297; padding: 8%; font-size: 9pt; }
+/* A4 proportions as the minimum; a long agenda makes the sheet taller instead of spilling out. */
+.preview-pane .agenda-paper { width: 100%; max-width: 520px; aspect-ratio: 210 / 297; min-height: auto; padding: 8%; font-size: 9pt; }
 .preview-pane .agenda-paper h1 { font-size: 16pt; }
 .preview-pane .agenda-paper .agenda-header h2 { font-size: 11pt; }
 @media (max-width: 1000px) {

@@ -89,10 +89,12 @@ export function pickHymn(m, key, anchor, onChange) {
     });
 }
 
-// True when the hymn stored in `m[key]` was sung within the ward's repeat window.
-export function hymnRepeats(value) {
+// True when the hymn was sung within the ward's repeat window before `meetingDate`. Only the
+// latest use is known, so a use on or after the meeting (e.g. that meeting itself) can't warn.
+export function hymnRepeats(value, meetingDate = toIsoDate(new Date())) {
     const n = String(value || '').match(/^\s*(\d+)/)?.[1];
-    if (!n || !state.hymnLastSung.has(n)) return false;
-    const days = Math.round((new Date() - new Date(state.hymnLastSung.get(n))) / 86400000);
+    const last = n && state.hymnLastSung.get(n);
+    if (!last || last >= meetingDate) return false;
+    const days = Math.round((new Date(meetingDate) - new Date(last)) / 86400000);
     return days < (state.settings?.hymn_repeat_months || 3) * 30;
 }

@@ -195,7 +195,7 @@ function hymnRow(m, key, emptyLabel) {
     const editable = canEditMeetingHymns(m);
     const v = m[key];
     if (!v && key === 'intermediate_hymn' && !editable) return '';
-    const recent = hymnRepeats(v);
+    const recent = hymnRepeats(v, m.date);
     const body = v
         ? `<span class="num ${recent ? 'warn' : ''}" ${recent ? 'title="Cantado recentemente"' : ''}>${escapeHtml(hymnNumber(v) || '')}</span><span class="n hy">${escapeHtml(hymnTitle(v))}</span>`
         : `<span class="num">·</span><span class="n">${emptyLabel}</span>`;

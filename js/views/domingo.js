@@ -118,7 +118,8 @@ function pickBtn(editable, act, extra, cls, inner) {
 
 function hymnRow(key, editable) {
     const v = m[key];
-    const inner = v ? `<span class="hymn-plain ${hymnRepeats(v) ? 'warn' : ''}">${escapeHtml(v)}${hymnRepeats(v) ? ' · cantado há pouco ↺' : ''}</span>` : `<span class="muted">por escolher</span>`;
+    const recent = hymnRepeats(v, m.date);
+    const inner = v ? `<span class="hymn-plain ${recent ? 'warn' : ''}">${escapeHtml(v)}${recent ? ' · cantado há pouco ↺' : ''}</span>` : `<span class="muted">por escolher</span>`;
     return `<div class="row-kv"><span class="k">${HYMN_LABELS[key]}${key === 'intermediate_hymn' ? ' <span class="muted">(opc.)</span>' : ''}</span>${pickBtn(editable, 'pick-hymn', `data-k="${key}"`, v ? '' : 'empty', inner)}</div>`;
 }
 
@@ -131,10 +132,11 @@ function prayerRow(label, key, editable) {
 function programRows(editable) {
     if (m.kind === 'fast') return `<div class="row-kv"><span class="k">Programa</span><span class="v">Testemunhos da Congregação</span></div>`;
     const sp = speakers(m.program);
+    const shown = [...sp.filter(s => (s.position || 'before') === 'before'), ...sp.filter(s => s.position === 'after')];
     const row = (s) => {
         const i = sp.indexOf(s);
         const st = s.invite_status || 'to_ask';
-        return `<div class="row-kv speaker-row" data-i="${i}"><span class="k">Orador ${i + 1}</span>
+        return `<div class="row-kv speaker-row" data-i="${i}"><span class="k">Orador ${shown.indexOf(s) + 1}</span>
             <span class="v" style="display:flex; flex-direction:column; gap:3px">
                 <span class="spk-line">
                     ${pickBtn(editable, 'pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || 'por atribuir')}`)}
