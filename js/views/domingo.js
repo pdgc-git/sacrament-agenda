@@ -136,12 +136,14 @@ function programRows(editable) {
         const st = s.invite_status || 'to_ask';
         return `<div class="row-kv speaker-row" data-i="${i}"><span class="k">Orador ${i + 1}</span>
             <span class="v" style="display:flex; flex-direction:column; gap:3px">
-                ${pickBtn(editable, 'pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || 'por atribuir')}`)}
+                <span class="spk-line">
+                    ${pickBtn(editable, 'pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || 'por atribuir')}`)}
+                    ${editable ? `<button type="button" class="x" data-act="rm-spk" data-i="${i}" title="Remover orador" aria-label="Remover orador">✕</button>` : ''}
+                </span>
                 ${editable && s.name ? `<input class="topic-input" data-f="topic" data-i="${i}" value="${escapeHtml(s.topic || '')}" placeholder="tema">
                     <div class="status-menu"><span class="muted small">${INVITE_STATUS[st]}</span>${Object.entries(INVITE_STATUS).map(([k, label]) =>
                         `<button type="button" class="${st === k ? 'on' : ''}" data-act="status" data-i="${i}" data-v="${k}" title="${label}" aria-label="${label}"><i class="st ${k}"></i></button>`).join('')}
-                        <button type="button" class="link-btn" data-act="move" data-i="${i}">${s.position === 'after' ? '↑ antes do hino' : '↓ depois do hino'}</button>
-                        <button type="button" class="x" data-act="rm-spk" data-i="${i}" aria-label="Remover orador">✕</button></div>`
+                        <button type="button" class="link-btn" data-act="move" data-i="${i}">${s.position === 'after' ? '↑ antes do hino' : '↓ depois do hino'}</button></div>`
                     : (s.topic ? `<span class="topic">${escapeHtml(s.topic)}</span>` : '')}
             </span></div>`;
     };
