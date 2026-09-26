@@ -40,6 +40,8 @@ function draw() {
     const done = m.status === 'completed';
     const editable = canEditMeeting(m);
 
+    if (KINDS_WITHOUT_PROGRAM.has(m.kind)) { drawNoMeeting(prev, next, editable); return; }
+
     root.innerHTML = `<div id="domingo-root">
         <div class="view-head">
             <div>
@@ -56,7 +58,6 @@ function draw() {
         </div>
         <div class="domingo">
             <div>
-                ${KINDS_WITHOUT_PROGRAM.has(m.kind) ? `<div class="alert info">${escapeHtml(MEETING_KINDS[m.kind])} — sem reunião sacramental na ala. <a href="#plano/${d}">Mudar no Plano</a></div>` : ''}
                 <div class="card">
                     <div class="group">
                         <div class="g-head"><b>Presidência e música</b><span>das definições da ala</span></div>
@@ -96,6 +97,32 @@ function draw() {
             <div class="preview-pane"><div id="agenda-paper" class="agenda-paper">${renderAgendaHtml(m, { wardName: state.ward?.name, membersById: state.membersById })}</div></div>
         </div></div>`;
 
+    wire();
+}
+
+// Conferência Geral / de Estaca: nothing to plan, so the whole page says so (like the column in Plano).
+// The kind stays changeable in case the Sunday was set by mistake.
+function drawNoMeeting(prev, next, editable) {
+    const d = m.date;
+    root.innerHTML = `<div id="domingo-root">
+        <div class="view-head">
+            <div>
+                <h2>${escapeHtml(formatDateHeading(d))}</h2>
+                <div class="sub"><a href="#domingo/${prev}">‹ ${formatDateShort(prev)}</a> &nbsp; <a href="#domingo/${next}">${formatDateShort(next)} ›</a></div>
+            </div>
+        </div>
+        <div class="no-meeting">
+            <p class="kind">${escapeHtml(MEETING_KINDS[m.kind])}</p>
+            <p>Sem reunião sacramental na ala neste domingo.</p>
+            ${editable ? `<label class="lbl" for="nm-kind">Tipo de domingo</label>
+                <select class="input kind-select" id="nm-kind" data-f="kind">${Object.entries(MEETING_KINDS).map(([k, label]) => `<option value="${k}" ${m.kind === k ? 'selected' : ''}>${label}</option>`).join('')}</select>` : ''}
+            <a class="link-btn" href="#plano/${d.slice(0, 7)}">Ver o mês no Plano</a>
+        </div>
+    </div>`;
+    wire();
+}
+
+function wire() {
     const wrap = root.querySelector('#domingo-root');
     wrap.addEventListener('input', onInput);
     wrap.addEventListener('change', ev => { if (ev.target.dataset.f === 'kind') { m.kind = ev.target.value; redrawLists(); refreshPreview(); save(); } });
