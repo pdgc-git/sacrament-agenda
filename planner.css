@@ -25,12 +25,14 @@
     --accent-wash: #E9EEF6;
     --hatch: #E7EAEF;
 
-    --pulpit-bg: #111318;
-    --pulpit-ink: #EEF0F4;
-    --pulpit-soft: #9AA3B2;
-    --pulpit-rule: #262B35;
-    --pulpit-accent: #8FB4F0;
-    --pulpit-on-accent: #0E1A33;
+    /* Púlpito follows the theme: light for a lit chapel, dark to keep the glow down. */
+    --pulpit-bg: #FFFFFF;
+    --pulpit-ink: #11151C;
+    --pulpit-soft: #4A5364;
+    --pulpit-rule: #DDE1E8;
+    --pulpit-accent: #1E3A8A;
+    --pulpit-on-accent: #FFFFFF;
+    --pulpit-sheet: #F5F6F8;
 
     --font-display: 'Mulish', system-ui, sans-serif;
     --font-body: 'Mulish', system-ui, sans-serif;
@@ -44,7 +46,7 @@
         --paper: #15171B; --card: #1D2026; --ink: #E8EAEE; --ink-soft: #B0B6C1; --ink-faint: #737B89;
         --accent: #8FB4F0; --on-accent: #0E1A33; --link: #8FB4F0; --rule: #2A2E36; --rule-strong: #3A3F49;
         --ok: #7FC48F; --ok-bg: #1B2B21; --warn: #E2B266; --warn-bg: #2E2717; --bad: #E5847F; --bad-bg: #37201F;
-        --shadow: 0 16px 40px -20px rgba(0, 0, 0, .7); --focus: #8FB4F0; --accent-wash: #182030; --hatch: #22262D;
+        --shadow: 0 16px 40px -20px rgba(0, 0, 0, .7); --focus: #8FB4F0; --accent-wash: #182030; --hatch: #22262D; --pulpit-bg: #111318; --pulpit-ink: #EEF0F4; --pulpit-soft: #9AA3B2; --pulpit-rule: #262B35; --pulpit-accent: #8FB4F0; --pulpit-on-accent: #0E1A33; --pulpit-sheet: #1B1F27;
     }
 }
 
@@ -52,7 +54,7 @@
     --paper: #15171B; --card: #1D2026; --ink: #E8EAEE; --ink-soft: #B0B6C1; --ink-faint: #737B89;
     --accent: #8FB4F0; --on-accent: #0E1A33; --link: #8FB4F0; --rule: #2A2E36; --rule-strong: #3A3F49;
     --ok: #7FC48F; --ok-bg: #1B2B21; --warn: #E2B266; --warn-bg: #2E2717; --bad: #E5847F; --bad-bg: #37201F;
-    --shadow: 0 16px 40px -20px rgba(0, 0, 0, .7); --focus: #8FB4F0; --accent-wash: #182030; --hatch: #22262D;
+    --shadow: 0 16px 40px -20px rgba(0, 0, 0, .7); --focus: #8FB4F0; --accent-wash: #182030; --hatch: #22262D; --pulpit-bg: #111318; --pulpit-ink: #EEF0F4; --pulpit-soft: #9AA3B2; --pulpit-rule: #262B35; --pulpit-accent: #8FB4F0; --pulpit-on-accent: #0E1A33; --pulpit-sheet: #1B1F27;
 }
 
 * { box-sizing: border-box; }
@@ -454,6 +456,7 @@ body.pulpit-mode main#view { padding: 0; }
 .pulpit .p-head { padding: 16px 22px 14px; border-bottom: 1px solid var(--pulpit-rule); display: flex; justify-content: space-between; align-items: flex-end; position: sticky; top: 0; background: var(--pulpit-bg); z-index: 5; }
 .pulpit .p-head .d { font-family: var(--font-display); font-size: 21px; font-weight: 700; }
 .pulpit .p-head .s { font-size: 13px; color: var(--pulpit-soft); }
+.pulpit .p-actions { display: flex; gap: 16px; align-items: baseline; white-space: nowrap; }
 .pulpit .p-head .exit { font-size: 13px; color: var(--pulpit-accent); font-weight: 600; background: none; border: none; }
 .pulpit .p-body { padding: 6px 22px 24px; flex: 1; }
 .p-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; padding: 12px 0 6px; font-size: 13.5px; color: var(--pulpit-soft); }
@@ -475,7 +478,7 @@ body.pulpit-mode main#view { padding: 0; }
 .p-foot .pb, .p-sheet .pb { flex: 1; font-weight: 600; font-size: 14px; border-radius: var(--radius); padding: 12px; }
 .pb.gold { background: var(--pulpit-accent); color: var(--pulpit-on-accent); border: none; }
 .pb.dim { background: transparent; color: var(--pulpit-ink); border: 1px solid var(--pulpit-rule); }
-.p-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #1B1F27; border-top: 1px solid var(--pulpit-rule); padding: 16px 22px 24px; max-width: 720px; margin: 0 auto; color: var(--pulpit-ink); border-radius: var(--radius) var(--radius) 0 0; }
+.p-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--pulpit-sheet); border-top: 1px solid var(--pulpit-rule); padding: 16px 22px 24px; max-width: 720px; margin: 0 auto; color: var(--pulpit-ink); border-radius: var(--radius) var(--radius) 0 0; }
 .p-sheet .t { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
 .p-sheet .p-act { display: flex; gap: 8px; margin-top: 8px; }
 .p-sheet .hint { font-size: 12.5px; color: var(--pulpit-soft); margin: 12px 0 0; }

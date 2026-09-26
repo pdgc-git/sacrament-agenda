@@ -8,6 +8,7 @@ import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { agendaSequence } from '../render-agenda.js';
 import { openMemberPicker } from '../components/picker.js';
+import { isDark, toggleTheme } from '../utils/theme.js';
 import { nextSunday, toIsoDate, formatDateHeading, speakers, newSpeaker, hymnNumber, weekIndex, applyWardDefaults } from '../utils/meeting.js';
 
 let m = null;
@@ -50,7 +51,10 @@ function draw() {
       <div class="pulpit" id="pulpit-root">
         <div class="p-head">
           <div><div class="d">${escapeHtml(formatDateHeading(m.date))}</div><div class="s">${escapeHtml(state.ward?.name || '')} · dirige ${escapeHtml(m.conducting || '—')}</div></div>
-          <a class="exit" href="#domingo/${m.date}">Sair</a>
+          <div class="p-actions">
+            <button type="button" class="exit" id="p-theme">${isDark() ? 'Modo claro' : 'Modo escuro'}</button>
+            <a class="exit" href="#domingo/${m.date}">Sair</a>
+          </div>
         </div>
         <div class="p-body">
           <div class="p-meta">
@@ -86,6 +90,7 @@ function draw() {
 
 function onClick(ev) {
     if (ev.target.id === 'btn-finish') { openFinish(); return; }
+    if (ev.target.id === 'p-theme') { toggleTheme(); ev.target.textContent = isDark() ? 'Modo claro' : 'Modo escuro'; return; }
     const item = ev.target.closest('.p-item');
     if (!item) return;
     const idx = Number(item.dataset.idx);
