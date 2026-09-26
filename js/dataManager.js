@@ -43,6 +43,33 @@ export async function joinWard(inviteCode) {
     return data.ward_id;
 }
 
+// ── Accounts service (server/agenda-accounts): logins are created and reset by the ward's
+// bishopric from Administração; the service holds the key that browsers can't have.
+
+async function accountsCall(path, body) {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) throw new Error('Sessão expirada. Entre de novo.');
+    const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ward_id: getWardId(), ...body }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.message || 'Erro no servidor.');
+    return out;
+}
+
+// -> {user_id, email, created, password}; password is null when the e-mail already had a login.
+export function createAccount({ email, name, role }) {
+    return accountsCall('/api/accounts', { email, name, role });
+}
+
+// -> {user_id, email, password}; only for logins created from this app.
+export function resetAccountPassword(userId) {
+    return accountsCall('/api/accounts/reset', { user_id: userId });
+}
+
 // Accesses to the ward with each person's current login e-mail (RPC reads auth.users).
 export async function getWardUsers() {
     const wardId = getWardId();

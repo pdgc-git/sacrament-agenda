@@ -1,0 +1,29 @@
+# Accounts service for Agenda Sacramental (see agenda_accounts.py). Listens on 127.0.0.1 only;
+# Caddy's agenda site proxies /api/accounts* to it. Keys come from /etc/agenda-accounts.env (root 0600).
+[Unit]
+Description=Agenda Sacramental accounts service
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/agenda-accounts/agenda_accounts.py
+EnvironmentFile=/etc/agenda-accounts.env
+Environment=PYTHONUNBUFFERED=1
+DynamicUser=yes
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryMax=100M
+
+[Install]
+WantedBy=multi-user.target

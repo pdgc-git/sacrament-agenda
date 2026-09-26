@@ -1,4 +1,5 @@
-// Administração: ward settings (what prefills Domingo), pending approvals, invite code, roles, theme.
+// Administração: ward settings (what prefills Domingo), create accounts / reset passwords (accounts
+// service), pending approvals, invite code, roles, theme.
 import * as DM from '../dataManager.js';
 import { state, canAdmin, reloadSettings } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
@@ -8,6 +9,7 @@ import { setTheme } from '../utils/theme.js';
 const ROLE_LABELS = { owner: 'Proprietário', admin: 'Bispado', editor: 'Editor', music: 'Música (só hinos)', viewer: 'Leitor (só ver)' };
 let root = null;
 let users = [];
+let lastCredentials = null; // {name, email, password, created, reset} shown once after create/reset
 
 export async function render(container) {
     root = container;
@@ -53,11 +55,21 @@ function draw() {
                 </div>
             </div>
             <div style="display:flex; flex-direction:column; gap:18px">
+                ${canAdmin() ? `<form class="card" id="account-form">
+                    <div class="section-label" style="margin-bottom:10px">Criar conta</div>
+                    <div class="field"><label for="a-name">Nome</label><input class="input" id="a-name" name="name" autocomplete="off" required></div>
+                    <div class="field"><label for="a-email">E-mail</label><input class="input" id="a-email" name="email" type="email" autocomplete="off" required></div>
+                    <div class="field"><label for="a-role">Papel</label><select class="input" id="a-role" name="role">
+                        ${['editor', 'admin', 'music', 'viewer'].map(r => `<option value="${r}">${ROLE_LABELS[r]}</option>`).join('')}</select></div>
+                    <div class="actions" style="justify-content:flex-end"><button type="submit" class="btn primary">Criar conta</button></div>
+                    <p class="small muted" style="margin-top:8px">A pessoa fica logo com acesso à ala. Recebe uma palavra-passe temporária e escolhe a sua na primeira entrada.</p>
+                </form>` : ''}
+                ${lastCredentials ? credentialsHtml(lastCredentials) : ''}
                 <div class="card">
                     <div class="section-label" style="margin-bottom:10px">Código de convite</div>
                     <div class="invite-code"><span class="code" id="invite-code">${escapeHtml(state.ward?.invite_code || '')}</span>
                         <span class="actions"><button type="button" class="btn tiny" id="btn-copy">Copiar</button><button type="button" class="btn tiny" id="btn-regen">Regenerar</button></span></div>
-                    <p class="small muted" style="margin-top:8px">Sem registo público: a conta é criada pelo bispado, a pessoa entra e junta-se com este código. Regenerar invalida o código antigo.</p>
+                    <p class="small muted" style="margin-top:8px">Para quem já tem conta noutra ala ou noutra aplicação deste servidor: entra e junta-se com este código, e aprova-se em Pedidos pendentes. Regenerar invalida o código antigo.</p>
                 </div>
                 <div class="card">
                     <div class="section-label" style="margin-bottom:6px">Acessos</div>
@@ -66,6 +78,7 @@ function draw() {
                         ${u.role === 'owner' || !canAdmin()
                             ? `<span class="badge ${u.role === 'owner' ? 'owner' : ''}">${ROLE_LABELS[u.role]}</span>`
                             : `<select class="input" style="width:auto; padding:4px 8px" data-setrole>${['admin', 'editor', 'music', 'viewer'].map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}</select>
+                               ${u.managed && u.user_id !== state.user?.id ? '<button type="button" class="btn tiny" data-act="reset">Repor palavra-passe</button>' : ''}
                                <button type="button" class="x" data-act="remove" title="Remover acesso">✕</button>`}
                     </div>`).join('')}
                 </div>
@@ -81,8 +94,41 @@ function draw() {
 
     const wrap = root.querySelector('#adm-root');
     wrap.querySelector('#settings-form').addEventListener('submit', saveSettings);
+    wrap.querySelector('#account-form')?.addEventListener('submit', createAccount);
     wrap.addEventListener('click', onClick);
     wrap.addEventListener('change', onChange);
+}
+
+function credentialsHtml(c) {
+    return `<div class="card creds">
+        <div class="section-label" style="margin-bottom:8px">${c.reset ? 'Palavra-passe reposta' : c.created ? 'Conta criada' : 'Acesso dado'}</div>
+        <p class="small" style="margin:0 0 10px">${c.password
+            ? 'Envie esta mensagem à pessoa (WhatsApp, SMS…). A palavra-passe só aparece agora.'
+            : `${escapeHtml(c.email)} já tinha conta: entra com a palavra-passe que já usa.`}</p>
+        <pre class="creds-msg" id="creds-msg">${escapeHtml(credentialsMessage(c))}</pre>
+        <div class="actions" style="justify-content:flex-end"><button type="button" class="btn tiny" id="btn-creds-close">Fechar</button><button type="button" class="btn primary tiny" id="btn-creds-copy">Copiar mensagem</button></div>
+    </div>`;
+}
+
+export function credentialsMessage(c, url = location.origin + '/planner.html', ward = state.ward?.name || '') {
+    const lines = [`Olá, ${c.name}. Já tem acesso à Agenda Sacramental da ${ward}.`, '', `Entre em: ${url}`, `E-mail: ${c.email}`];
+    if (c.password) lines.push(`Palavra-passe temporária: ${c.password}`, '', 'Na primeira entrada vai escolher a sua palavra-passe.');
+    else lines.push('Use a palavra-passe que já tem.');
+    return lines.join('\n');
+}
+
+async function createAccount(ev) {
+    ev.preventDefault();
+    const f = ev.target;
+    const btn = f.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try {
+        const name = f.name.value.trim();
+        const out = await DM.createAccount({ name, email: f.email.value.trim(), role: f.role.value });
+        lastCredentials = { name, email: out.email, password: out.password, created: out.created };
+        users = await DM.getWardUsers(); draw();
+        showToast(out.created ? 'Conta criada.' : 'Acesso dado.', 'success');
+    } catch (e) { showToast(e.message, 'error'); btn.disabled = false; }
 }
 
 function initials(s = '') { return s.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join(''); }
@@ -114,6 +160,11 @@ async function saveSettings(ev) {
 }
 
 async function onClick(ev) {
+    if (ev.target.id === 'btn-creds-copy') {
+        try { await navigator.clipboard.writeText(credentialsMessage(lastCredentials)); showToast('Mensagem copiada.', 'success'); } catch { showToast('Não foi possível copiar; selecione o texto.', 'warning'); }
+        return;
+    }
+    if (ev.target.id === 'btn-creds-close') { lastCredentials = null; draw(); return; }
     if (ev.target.id === 'btn-copy') {
         try { await navigator.clipboard.writeText(state.ward.invite_code); showToast('Código copiado.', 'success'); } catch { showToast('Não foi possível copiar.', 'warning'); }
         return;
@@ -132,6 +183,17 @@ async function onClick(ev) {
     if (!act) return;
     const row = act.closest('[data-uid]');
     const uid = row.dataset.uid;
+    if (act.dataset.act === 'reset') {
+        const u = users.find(x => x.user_id === uid);
+        if (!confirm(`Repor a palavra-passe de ${u?.name || u?.email}? A atual deixa de funcionar.`)) return;
+        try {
+            const out = await DM.resetAccountPassword(uid);
+            lastCredentials = { name: u?.name || out.email, email: out.email, password: out.password, reset: true };
+            draw(); window.scrollTo(0, 0);
+            showToast('Palavra-passe reposta.', 'success');
+        } catch (e) { showToast(e.message, 'error'); }
+        return;
+    }
     try {
         if (act.dataset.act === 'approve') await DM.approveMember(uid, row.querySelector('[data-role]').value);
         if (act.dataset.act === 'reject' || act.dataset.act === 'remove') {

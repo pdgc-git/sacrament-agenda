@@ -1,4 +1,5 @@
-// Entrada: sign in, or join a ward by invite code. No self-signup on this stack.
+// Entrada: sign in, choose your own password after a temporary one, or join a ward by invite code.
+// No self-signup on this stack: the bishopric creates accounts in Administração.
 import * as Auth from '../api/auth.js';
 import * as DM from '../dataManager.js';
 import { escapeHtml } from '../utils/security.js';
@@ -6,13 +7,13 @@ import { showToast } from '../components/Toast.js';
 import { CHAPEL_MARK, NOT_OFFICIAL } from '../components/mark.js';
 
 export function render(container, { mode = 'login', user, onJoined, onSignOut }) {
-    const tab = mode === 'pending' ? 'pending' : (user ? 'join' : 'login');
+    const tab = mode === 'pending' ? 'pending' : mode === 'setpw' ? 'setpw' : (user ? 'join' : 'login');
     container.innerHTML = `
         <div class="auth-box">
             <div class="auth-mark">${CHAPEL_MARK}</div>
             <h1>Agenda Sacramental</h1>
             <p class="tagline">Planeamento da reunião sacramental</p>
-            ${tab === 'pending' ? pendingHtml(user) : (tab === 'join' ? joinHtml(user) : loginHtml())}
+            ${tab === 'pending' ? pendingHtml(user) : tab === 'setpw' ? setPasswordHtml(user) : (tab === 'join' ? joinHtml(user) : loginHtml())}
             <p class="auth-notice">${NOT_OFFICIAL}</p>
         </div>`;
 
@@ -27,6 +28,12 @@ export function render(container, { mode = 'login', user, onJoined, onSignOut })
         try {
             if (tab === 'login') {
                 await Auth.signIn(form.email.value.trim(), form.password.value);
+            } else if (tab === 'setpw') {
+                const pw = form.password.value;
+                if (pw.length < 8) throw new Error('Use pelo menos 8 carateres.');
+                if (pw !== form.password2.value) throw new Error('As duas palavras-passe não são iguais.');
+                await Auth.setOwnPassword(pw); // the auth change event carries on into the app
+                showToast('Palavra-passe guardada.', 'success');
             } else if (tab === 'join') {
                 const code = form.code.value.trim().toLowerCase();
                 if (code.length < 6) throw new Error('Código de convite incompleto.');
@@ -41,13 +48,6 @@ export function render(container, { mode = 'login', user, onJoined, onSignOut })
         }
     });
 
-    container.querySelector('#btn-forgot')?.addEventListener('click', async ev => {
-        ev.preventDefault();
-        const email = form.email.value.trim();
-        if (!email) { err.textContent = 'Escreva o e-mail primeiro.'; return; }
-        try { await Auth.resetPassword(email); showToast('E-mail de recuperação enviado.', 'success'); }
-        catch (e) { err.textContent = e.message; }
-    });
 
     container.querySelector('#create-form')?.addEventListener('submit', async ev => {
         ev.preventDefault();
@@ -67,8 +67,19 @@ function loginHtml() {
             <div class="field"><label for="password">Palavra-passe</label><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
             <div class="auth-error" role="alert"></div>
             <button class="btn primary block" type="submit">Entrar</button>
-            <p class="center small" style="margin-top:14px"><a href="#" id="btn-forgot" class="muted">Esqueci-me da palavra-passe</a></p>
-            <p class="center small muted" style="margin-top:22px">Não há registo público. A conta é criada pelo bispado da sua ala.</p>
+            <p class="center small muted" style="margin-top:22px">Não há registo público: a conta é criada pelo bispado da sua ala. Esqueceu-se da palavra-passe? Peça ao bispado para a repor.</p>
+        </form>`;
+}
+
+function setPasswordHtml(user) {
+    return `
+        <p class="center small muted">Sessão: ${escapeHtml(user?.email || '')} · <button type="button" class="link-btn" id="btn-signout">Sair</button></p>
+        <form novalidate>
+            <p class="center" style="margin:14px 0 18px">Entrou com uma palavra-passe temporária. Escolha agora a sua.</p>
+            <div class="field"><label for="password">Nova palavra-passe</label><input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
+            <div class="field"><label for="password2">Repetir</label><input class="input" id="password2" name="password2" type="password" autocomplete="new-password" required></div>
+            <div class="auth-error" role="alert"></div>
+            <button class="btn primary block" type="submit">Guardar e entrar</button>
         </form>`;
 }
 

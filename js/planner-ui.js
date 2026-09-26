@@ -56,6 +56,7 @@ async function onUser(user) {
     }
     if (wasUser && wasUser.id === user.id && ready) return; // token refresh, nothing to do
     state.user = user;
+    if (user.user_metadata?.must_change_password) { showAuth('setpw'); return; }
     try {
         const membership = await DM.initUser(user);
         state.membership = membership;
