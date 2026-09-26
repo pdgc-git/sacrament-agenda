@@ -487,7 +487,9 @@ export async function setAbsence(dateStr, memberId, absent) {
     if (absent) {
         const { error } = await supabase
             .from('absences')
-            .upsert({ ward_id: wardId, meeting_date: dateStr, member_id: memberId }, { onConflict: 'ward_id,meeting_date,member_id' });
+            .upsert({ ward_id: wardId, meeting_date: dateStr, member_id: memberId },
+                // DO NOTHING on a repeat mark: authenticated has insert but not update on absences
+                { onConflict: 'ward_id,meeting_date,member_id', ignoreDuplicates: true });
         if (error) throw error;
     } else {
         const { error } = await supabase

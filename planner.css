@@ -120,7 +120,7 @@ main#view { flex: 1; min-width: 0; padding: 28px 32px 32px; }
 body.pulpit-mode .theme-btn { display: none; }
 .notice { margin: auto 32px 0; padding: 14px 0 90px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--ink-faint); max-width: 72ch; }
 @media (min-width: 761px) { .notice { padding-bottom: 28px; } }
-.view-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.view-head { padding-right: 48px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
 .view-head h2 { font-size: 30px; font-weight: 900; letter-spacing: -.03em; }
 .view-head .sub { color: var(--ink-faint); font-size: 13.5px; margin-top: 3px; }
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

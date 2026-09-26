@@ -48,7 +48,7 @@ describe('dataManager — Phase 3', () => {
         const up = mockChain({ data: null, error: null });
         supabase.from.mockReturnValueOnce(up);
         await setAbsence('2026-09-14', 'm1', true);
-        expect(up.upsert).toHaveBeenCalledWith({ ward_id: 'ward-1', meeting_date: '2026-09-14', member_id: 'm1' }, { onConflict: 'ward_id,meeting_date,member_id' });
+        expect(up.upsert).toHaveBeenCalledWith({ ward_id: 'ward-1', meeting_date: '2026-09-14', member_id: 'm1' }, { onConflict: 'ward_id,meeting_date,member_id', ignoreDuplicates: true });
 
         const del = mockChain({ data: null, error: null });
         supabase.from.mockReturnValueOnce(del);
