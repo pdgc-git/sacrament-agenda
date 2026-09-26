@@ -23,3 +23,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Ward exports with member names stay local
+/*.csv

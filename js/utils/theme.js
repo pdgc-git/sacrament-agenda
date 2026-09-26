@@ -15,3 +15,17 @@ export function setTheme(mode) {
     } catch { /* storage unavailable */ }
     applyStoredTheme();
 }
+
+// The theme actually showing: an explicit choice wins, otherwise the system setting.
+export function isDark() {
+    const t = document.documentElement.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+}
+
+// One-tap switch between light and dark. Returns the new mode.
+export function toggleTheme() {
+    const next = isDark() ? 'light' : 'dark';
+    setTheme(next);
+    return next;
+}

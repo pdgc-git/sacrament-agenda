@@ -1,6 +1,7 @@
 // Shared in-memory state for the planner views. Views read from here and call `reload*` after
 // writes; nothing here touches the DOM.
 import * as DM from './dataManager.js';
+import { buildActivity } from './utils/meeting.js';
 
 export const state = {
     user: null,
@@ -13,6 +14,7 @@ export const state = {
     lastTalk: new Map(),   // member_id -> iso date
     lastPrayer: new Map(),
     hymnLastSung: new Map(), // hymn number -> iso date
+    activity: { talks: new Map(), prayers: new Map() }, // member_id -> {count12, last, lastTopic?}
     meetingsCache: new Map(), // date -> meeting row
 };
 
@@ -39,9 +41,10 @@ export async function reloadMembers() {
 }
 
 export async function reloadStats() {
-    const [lastTalk, lastPrayer, hymnLastSung] = await Promise.all([
-        DM.getLastTalkDates(), DM.getLastPrayerDates(), DM.getHymnLastSung(),
+    const [lastTalk, lastPrayer, hymnLastSung, activityRows] = await Promise.all([
+        DM.getLastTalkDates(), DM.getLastPrayerDates(), DM.getHymnLastSung(), DM.getActivityRows(),
     ]);
+    state.activity = buildActivity(activityRows);
     state.lastTalk = lastTalk;
     state.lastPrayer = lastPrayer;
     state.hymnLastSung = hymnLastSung;
@@ -59,5 +62,6 @@ export function reset() {
     state.user = null; state.ward = null; state.role = null; state.membership = null; state.settings = null;
     state.members = []; state.membersById = new Map();
     state.lastTalk = new Map(); state.lastPrayer = new Map(); state.hymnLastSung = new Map();
+    state.activity = { talks: new Map(), prayers: new Map() };
     state.meetingsCache = new Map();
 }

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estilos do Plano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* Three style directions for the planner, shown on the Plano screen with the same data.
+   Shared rules: Mulish only, the shipped navy as the accent, cool neutrals, radius ≤ 2px. */
+:root {
+  --navy: #1E3A8A; --navy-deep: #14285F; --navy-wash: #EAEFF8;
+  --ground: #F3F4F6; --sheet: #FFFFFF; --ink: #161C28; --ink-2: #4A5364; --ink-3: #8A93A3;
+  --rule: #DDE1E8; --rule-2: #B9C0CC;
+  --ok: #2F7A4A; --bad: #B3383A; --warn: #A86A12; --warn-bg: #FBF1DC;
+  --hatch: #E7EAEF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --navy: #8FB4F0; --navy-deep: #1A2B52; --navy-wash: #1C2536;
+    --ground: #121418; --sheet: #1A1D23; --ink: #E8EAEE; --ink-2: #B0B6C1; --ink-3: #737B89;
+    --rule: #2A2E36; --rule-2: #3E4450;
+    --ok: #7FC48F; --bad: #E5847F; --warn: #E2B266; --warn-bg: #2E2717; --hatch: #22262D;
+  }
+}
+:root[data-theme="dark"] {
+  --navy: #8FB4F0; --navy-deep: #1A2B52; --navy-wash: #1C2536;
+  --ground: #121418; --sheet: #1A1D23; --ink: #E8EAEE; --ink-2: #B0B6C1; --ink-3: #737B89;
+  --rule: #2A2E36; --rule-2: #3E4450;
+  --ok: #7FC48F; --bad: #E5847F; --warn: #E2B266; --warn-bg: #2E2717; --hatch: #22262D;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.45 'Mulish', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+/* Mockup chrome (not part of the design) */
+.switch { position: sticky; top: 0; z-index: 10; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  padding: 10px 16px; background: #0F1115; color: #D8DCE3; font-size: 13px; }
+.switch .seg { display: flex; border: 1px solid #3A3F49; }
+.switch button { background: none; border: 0; padding: 6px 14px; color: #D8DCE3; }
+.switch button[aria-pressed="true"] { background: #D8DCE3; color: #0F1115; font-weight: 700; }
+.switch .note { color: #8A93A3; }
+
+.stage { min-height: calc(100vh - 46px); }
+.dir:not(.on) { display: none !important; }
+
+
+/* Shared marks */
+.st { display: inline-block; width: 9px; height: 9px; flex: none; }
+.st.confirmado { background: var(--ok); }
+.st.convidado { border: 2px solid var(--navy); }
+.st.recusou { background: var(--bad); }
+.st.porconvidar { border: 1.5px dashed var(--ink-3); }
+.warn { color: var(--warn); font-weight: 700; }
+.num { font-weight: 800; }
+
+/* ─────────── A · Folha ─────────── */
+/* The printed agenda, extended to a month: a single sheet, the navy rule from the paper,
+   Sundays as large light numerals, roles set like the program itself. */
+.A { max-width: 1240px; margin: 0 auto; padding: 32px 40px 64px; }
+.A .top { display: flex; align-items: baseline; gap: 36px; border-bottom: 1px solid var(--rule); }
+.A .ward { font-weight: 800; letter-spacing: -.01em; padding: 12px 0; }
+.A nav { display: flex; gap: 26px; }
+.A nav a { color: var(--ink-2); text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.A nav a.on { color: var(--ink); font-weight: 700; border-color: var(--navy); }
+.A .who { margin-left: auto; color: var(--ink-3); font-size: 13px; }
+.A .sheet { background: var(--sheet); margin-top: 28px; border-top: 6px solid var(--navy); padding: 32px 48px 40px;
+  box-shadow: 0 1px 0 var(--rule), 0 24px 48px -32px rgba(20,28,40,.35); }
+.A .head { display: flex; align-items: flex-end; gap: 24px; }
+.A h1 { font-size: 56px; line-height: .95; font-weight: 900; letter-spacing: -.035em; margin: 0; }
+.A h1 small { display: block; font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--ink-3); margin-bottom: 8px; }
+.A .monthnav { display: flex; gap: 0; margin-bottom: 6px; }
+.A .monthnav button { background: none; border: 1px solid var(--rule-2); padding: 6px 12px; margin-left: -1px; }
+.A .bal { margin-left: auto; text-align: right; font-size: 13px; color: var(--ink-2); }
+.A .bal b { font-size: 22px; font-weight: 800; color: var(--ink); margin-left: 4px; }
+.A .bal span { margin-left: 18px; }
+.A .week { display: grid; grid-template-columns: 130px 1.1fr .9fr 1.2fr; gap: 0 40px; padding: 26px 0; border-top: 1px solid var(--rule); }
+.A .week:first-of-type { margin-top: 28px; border-top: 2px solid var(--ink); }
+.A .date { font-size: 64px; line-height: .8; font-weight: 300; letter-spacing: -.04em; color: var(--navy); }
+.A .date small { display: block; font-size: 13px; font-weight: 700; letter-spacing: 0; line-height: 1.3; color: var(--ink); margin-top: 14px; }
+.A .date em { display: block; font-style: normal; font-size: 12.5px; font-weight: 500; color: var(--ink-3); letter-spacing: 0; line-height: 1.35; margin-top: 2px; }
+.A .col h3 { font-size: 12.5px; font-weight: 700; color: var(--ink-3); margin: 0 0 8px; }
+.A .line { display: flex; gap: 10px; align-items: baseline; padding: 5px 0; border-bottom: 1px dotted var(--rule-2); }
+.A .line .st { transform: translateY(-1px); }
+.A .line .n { font-weight: 700; }
+.A .line .t { color: var(--ink-3); font-size: 13px; margin-left: auto; text-align: right; }
+.A .line.empty .n { font-weight: 500; color: var(--ink-3); }
+.A .line .k { color: var(--ink-3); font-size: 13px; width: 96px; flex: none; }
+.A .hy .num { width: 32px; display: inline-block; }
+.A .off { grid-column: 2 / -1; display: flex; align-items: center; color: var(--ink-2);
+  background: repeating-linear-gradient(135deg, transparent 0 8px, var(--hatch) 8px 9px); padding: 0 20px; font-weight: 600; }
+.A .foot { margin-top: 20px; font-size: 13px; color: var(--ink-3); display: flex; gap: 22px; }
+.A .foot span { display: inline-flex; gap: 7px; align-items: center; }
+
+/* ─────────── B · Quadro ─────────── */
+/* The Excel sheet Paulo plans with, made properly: a navy rail, hard cell grid,
+   invite status as a bar on the cell edge, numbers aligned like a ledger. */
+.B { display: grid; grid-template-columns: 64px 1fr; min-height: calc(100vh - 46px); }
+.B .rail { background: var(--navy-deep); color: #fff; display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 4px; }
+.B .rail .logo { width: 36px; height: 36px; border: 2px solid #fff; display: grid; place-items: center; font-weight: 900; margin-bottom: 18px; }
+.B .rail a { width: 100%; text-align: center; padding: 10px 0; font-size: 10.5px; font-weight: 700; color: #B8C6E6; text-decoration: none; border-left: 3px solid transparent; }
+.B .rail a.on { color: #fff; border-color: #fff; background: rgba(255,255,255,.08); }
+.B main { padding: 0; min-width: 0; }
+.B .bar { display: flex; align-items: center; gap: 20px; padding: 18px 28px; background: var(--sheet); border-bottom: 1px solid var(--rule-2); }
+.B h1 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+.B .monthnav { display: flex; }
+.B .monthnav button { background: var(--sheet); border: 1px solid var(--rule-2); padding: 5px 11px; margin-left: -1px; }
+.B .kpis { display: flex; margin-left: auto; border: 1px solid var(--rule-2); }
+.B .kpi { padding: 6px 16px; border-left: 1px solid var(--rule-2); }
+.B .kpi:first-child { border-left: 0; }
+.B .kpi b { display: block; font-size: 20px; font-weight: 900; line-height: 1.1; }
+.B .kpi span { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.B .kpi.todo b { color: var(--bad); }
+.B .wrap { padding: 24px 28px; overflow-x: auto; }
+.B table { border-collapse: collapse; width: 100%; min-width: 1100px; background: var(--sheet); }
+.B th { background: var(--navy); color: #fff; font-size: 12px; font-weight: 700; text-align: left; padding: 9px 10px; border: 1px solid var(--navy); }
+:root[data-theme="dark"] .B th { color: #0E1A33; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .B th { color: #0E1A33; } }
+.B th.grp { text-align: center; border-bottom-color: rgba(255,255,255,.35); }
+.B td { border: 1px solid var(--rule-2); padding: 0; vertical-align: top; height: 58px; }
+.B td .c { padding: 8px 10px; border-left: 4px solid transparent; height: 100%; }
+.B td .c.confirmado { border-color: var(--ok); }
+.B td .c.convidado { border-color: var(--navy); }
+.B td .c.recusou { border-color: var(--bad); }
+.B td .c.recusou .n { text-decoration: line-through; color: var(--ink-3); }
+.B td .n { font-weight: 700; display: block; }
+.B td .t { font-size: 12px; color: var(--ink-3); }
+.B td .add { color: var(--ink-3); font-weight: 600; }
+.B td.date { background: var(--navy-wash); width: 96px; }
+.B td.date .c { padding: 8px 12px; }
+.B td.date b { font-size: 26px; font-weight: 900; line-height: 1; display: block; letter-spacing: -.02em; }
+.B td.date span { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.B td.kind .c { font-size: 13px; }
+.B td.kind b { display: block; }
+.B td.hy { width: 64px; text-align: center; }
+.B td.hy .c { padding: 10px 4px; border: 0; }
+.B td.hy .num { font-size: 20px; display: block; line-height: 1.1; }
+.B td.hy .t { display: block; font-size: 10.5px; line-height: 1.2; }
+.B td.hy.rep { background: var(--warn-bg); }
+.B td.hy.rep .num { color: var(--warn); }
+.B tr.off td:not(.date) { background: repeating-linear-gradient(135deg, var(--sheet) 0 8px, var(--hatch) 8px 9px); }
+.B tr.off .offtxt { padding: 18px 12px; font-weight: 700; color: var(--ink-2); }
+.B .legend { display: flex; gap: 20px; font-size: 12.5px; color: var(--ink-2); margin-top: 12px; }
+.B .legend span { display: inline-flex; align-items: center; gap: 7px; }
+.B .legend i { width: 4px; height: 16px; display: inline-block; }
+
+/* ─────────── C · Semanas ─────────── */
+/* The chapel notice board: each Sunday is a column read top to bottom in meeting order,
+   headed by a solid date block. The month reads left to right like a pinned schedule. */
+.C { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 46px); }
+.C aside { border-right: 1px solid var(--rule-2); padding: 28px 22px; background: var(--sheet); display: flex; flex-direction: column; }
+.C .ward { font-weight: 900; font-size: 17px; letter-spacing: -.01em; }
+.C .ward small { display: block; font-weight: 600; font-size: 12.5px; color: var(--ink-3); }
+.C nav { margin-top: 34px; display: flex; flex-direction: column; }
+.C nav a { padding: 9px 0 9px 14px; color: var(--ink-2); text-decoration: none; border-left: 2px solid var(--rule); font-weight: 600; }
+.C nav a.on { color: var(--ink); border-color: var(--navy); font-weight: 800; }
+.C .mini { margin-top: auto; font-size: 13px; color: var(--ink-2); }
+.C .mini h4 { margin: 0 0 10px; font-size: 13px; }
+.C .meter { display: flex; height: 8px; margin: 6px 0 4px; background: var(--rule); }
+.C .meter i { display: block; height: 100%; }
+.C main { padding: 28px 32px 48px; min-width: 0; }
+.C .head { display: flex; align-items: center; gap: 18px; }
+.C h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -.03em; }
+.C .monthnav { display: flex; }
+.C .monthnav button { background: var(--sheet); border: 1px solid var(--rule-2); padding: 6px 12px; margin-left: -1px; }
+.C .todo { margin-left: auto; font-size: 14px; color: var(--ink-2); }
+.C .todo b { color: var(--ink); }
+.C .cols { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 16px; margin-top: 24px; overflow-x: auto; }
+.C .wk { background: var(--sheet); border: 1px solid var(--rule-2); display: flex; flex-direction: column; min-width: 0; }
+.C .wk header { background: var(--navy); color: #fff; padding: 14px 16px 12px; display: flex; align-items: flex-end; gap: 12px; }
+:root[data-theme="dark"] .C .wk header { color: #0E1A33; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .C .wk header { color: #0E1A33; } }
+.C .wk header b { font-size: 46px; font-weight: 900; line-height: .8; letter-spacing: -.04em; }
+.C .wk header span { font-size: 13px; font-weight: 700; line-height: 1.25; }
+.C .wk header span em { display: block; font-style: normal; font-weight: 500; opacity: .8; }
+.C .wk.fast header { background: var(--navy-wash); color: var(--navy) !important; border-bottom: 2px solid var(--navy); }
+.C .wk.off header { background: var(--hatch); color: var(--ink-2) !important; }
+.C .sec { padding: 12px 16px; border-top: 1px solid var(--rule); }
+.C .sec:first-of-type { border-top: 0; }
+.C .sec h3 { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.C .row { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 14px; }
+.C .row .n { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.C .row .t { display: block; font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.C .row.empty .n { color: var(--ink-3); font-weight: 600; }
+.C .row .num { width: 30px; flex: none; }
+.C .row .k { color: var(--ink-3); font-size: 12px; margin-left: auto; flex: none; }
+.C .spk { display: flex; gap: 9px; align-items: flex-start; padding: 4px 0; }
+.C .spk .st { margin-top: 6px; }
+.C .wk.off .offbody { flex: 1; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--ink-2); font-weight: 600;
+  background: repeating-linear-gradient(135deg, transparent 0 8px, var(--hatch) 8px 9px); }
+.C .wk footer { margin-top: auto; padding: 10px 16px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--ink-2); display: flex; justify-content: space-between; }
+.C .wk footer b.miss { color: var(--bad); }
+
+/* ─────────── D · Semanas, capela ─────────── */
+/* C with a chapel feel: an original steeple mark, a quiet hero band with a line drawing
+   of a chapel, a cup mark on the Sacramento section, and the not-affiliated notice. */
+:root { --hero: #E9EEF6; --hero-line: #1E3A8A; }
+:root[data-theme="dark"] { --hero: #182030; --hero-line: #8FB4F0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --hero: #182030; --hero-line: #8FB4F0; } }
+.D .brand { display: flex; gap: 12px; align-items: center; }
+.D .brand svg { width: 40px; height: 40px; flex: none; }
+.D .brand .ward { font-size: 15px; }
+.D main { padding: 0 32px 32px; }
+.D .hero { position: relative; margin: 0 -32px; padding: 34px 32px 30px; background: var(--hero); border-bottom: 1px solid var(--rule-2); overflow: hidden; }
+.D .hero .kick { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 4px; }
+.D .hero h1 { font-size: 44px; font-weight: 300; letter-spacing: -.03em; }
+.D .hero h1 b { font-weight: 900; }
+.D .hero .head { position: relative; z-index: 1; margin-top: 16px; }
+.D .hero .todo { margin-left: 0; }
+.D .hero svg.chapel { position: absolute; right: 24px; bottom: 0; width: 460px; height: auto; color: var(--hero-line); opacity: .55; }
+.D .sec h3 { display: flex; align-items: center; gap: 6px; }
+.D .sec h3 svg { width: 13px; height: 13px; color: var(--navy); }
+.D .notice { margin-top: 36px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--ink-3); max-width: 72ch; }
+
+.D .hero { min-height: 230px; }
+.D .hero .art { position: absolute; top: 0; right: 0; bottom: 0; width: 58%; margin: 0; }
+.D .hero .art img { width: 100%; height: 100%; object-fit: cover; display: block;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 45%); mask-image: linear-gradient(to right, transparent 0, #000 45%); }
+.D .hero .art figcaption { position: absolute; right: 10px; bottom: 8px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.D .hero.has-art svg.chapel { display: none; }
+.D .hero:not(.has-art) .art { display: none; }
+.switch select { background: #0F1115; color: #D8DCE3; border: 1px solid #3A3F49; padding: 5px 8px; font: inherit; }
+</style>
+</head>
+<body>
+<div class="switch" role="toolbar" aria-label="Maquete">
+  <strong>Estilo</strong>
+  <div class="seg" id="dirs">
+    <button type="button" data-d="A" aria-pressed="true">A · Folha</button>
+    <button type="button" data-d="B" aria-pressed="false">B · Quadro</button>
+    <button type="button" data-d="C" aria-pressed="false">C · Semanas</button>
+    <button type="button" data-d="D" aria-pressed="false">D · Semanas, capela</button>
+  </div>
+  <div class="seg" id="themes">
+    <button type="button" data-t="light" aria-pressed="false">Claro</button>
+    <button type="button" data-t="dark" aria-pressed="false">Escuro</button>
+  </div>
+  <label id="artpick">Imagem <select id="art">
+    <option value="">Desenho da capela</option>
+    <option value="bloch-sermao-montanha|65% 22%|Carl Bloch, Sermão da Montanha (1877)">Bloch: Sermão da Montanha</option>
+    <option value="bloch-consolator|50% 12%|Carl Bloch, Consolator (c. 1880)">Bloch: Consolator</option>
+    <option value="hofmann-getsemani|45% 28%|Heinrich Hofmann, Cristo no Getsémani (1886)">Hofmann: Getsémani</option>
+    <option value="hofmann-templo|40% 25%|Heinrich Hofmann, Cristo no templo (1884)">Hofmann: Jesus no templo</option>
+  </select></label>
+  <span class="note" id="note"></span>
+</div>
+<div class="stage">
+  <section class="dir A on" id="A"></section>
+  <section class="dir B" id="B"></section>
+  <section class="dir C" id="C"></section>
+  <section class="dir C D" id="D"></section>
+</div>
+
+<script>
+const NAV = ['Plano', 'Domingo', 'Púlpito', 'Ausências', 'Membros', 'Administração'];
+const NOTES = {
+  A: 'O programa impresso estendido ao mês: uma folha, domingos em números grandes, papéis escritos como no programa.',
+  B: 'A tua folha de Excel, bem feita: grelha densa, estado do convite na margem da célula, hinos alinhados como números.',
+  C: 'Um quadro de avisos: cada domingo é uma coluna lida de cima para baixo, pela ordem da reunião.',
+  D: 'Semanas com ambiente de capela: marca própria, desenho de uma capela, cálice no Sacramento e aviso de que não é um site da Igreja.'
+};
+const S = { c: 'confirmado', a: 'convidado', r: 'recusou', p: 'porconvidar' };
+const weeks = [
+  { d: 4, dow: 'domingo', kind: 'conf', label: 'Conferência Geral', off: 'Sem reunião sacramental. Transmissão da Conferência Geral.' },
+  { d: 11, kind: 'fast', label: 'Jejum e testemunhos', dirige: 'Bispo Ricardo Alves',
+    speakers: [], prayers: [['Marta Sousa', S.c], ['Luís Carvalho', S.a]],
+    hymns: [['2', 'Tal Como um Facho'], ['169', 'Eis os Teus Filhos, Ó Senhor'], null, ['85', 'Deus Vos Guarde']] },
+  { d: 18, kind: 'normal', label: 'Normal', dirige: 'Cons. Tiago Nunes',
+    speakers: [['Beatriz Rocha', 'Servir ao próximo', S.c, 'jovem'], ['Carlos Mendes', 'O dízimo', S.c], ['Helena Duarte', 'O templo', S.a]],
+    prayers: [['Rui Martins', S.c], ['Inês Faria', S.p]],
+    hymns: [['26', 'O Mundo Desperta'], ['101', 'Deus, Escuta-nos Orar', 'repetido há 6 semanas'], ['134', 'Sim, Eu Te Seguirei'], ['140', 'Ama o Pastor Seu Rebanho']] },
+  { d: 25, kind: 'normal', label: 'Normal', dirige: 'Cons. Pedro Lopes',
+    speakers: [['Miguel Teixeira', 'Oração', S.a], ['Ana Ferreira', 'Arrependimento', S.r], null],
+    prayers: [null, null],
+    hymns: [['105', 'Cantemos Todos a Jesus'], null, null, ['193', 'Sou um Filho de Deus']] },
+];
+const HYK = ['Abertura', 'Sacramental', 'Intermédio', 'Encerramento'];
+const missing = w => w.off ? 0 :
+  w.prayers.filter(p => !p || p[1] !== S.c).length +
+  (w.kind === 'fast' ? 0 : w.speakers.filter(s => !s || s[2] !== S.c).length + (3 - w.speakers.length)) +
+  w.hymns.filter((h, i) => !h && i !== 2).length;
+const totalMissing = weeks.reduce((a, w) => a + missing(w), 0);
+const st = s => `<i class="st ${s}" title="${s === 'porconvidar' ? 'por convidar' : s}"></i>`;
+
+/* A · Folha */
+function renderA() {
+  const nav = NAV.map(n => `<a href="#" class="${n === 'Plano' ? 'on' : ''}">${n}</a>`).join('');
+  const body = weeks.map(w => {
+    const date = `<div class="date">${String(w.d).padStart(2, '0')}<small>${w.label}</small>${w.dirige ? `<em>Dirige ${w.dirige}</em>` : ''}</div>`;
+    if (w.off) return `<div class="week">${date}<div class="off">${w.off}</div></div>`;
+    const spk = w.kind === 'fast'
+      ? `<div class="line"><span class="n">Testemunhos da congregação</span></div>`
+      : [0, 1, 2].map(i => { const s = w.speakers[i];
+          return s ? `<div class="line">${st(s[2])}<span class="n">${s[0]}</span><span class="t">${s[1]}</span></div>`
+                   : `<div class="line empty">${st('porconvidar')}<span class="n">Atribuir orador</span></div>`; }).join('');
+    const pr = ['Primeira Oração', 'Última Oração'].map((k, i) => { const p = w.prayers[i];
+      return `<div class="line ${p ? '' : 'empty'}"><span class="k">${k}</span>${p ? st(p[1]) + `<span class="n">${p[0]}</span>` : '<span class="n">Atribuir</span>'}</div>`; }).join('');
+    const hy = w.hymns.map((h, i) => (i === 2 && !h) ? '' :
+      `<div class="line hy ${h ? '' : 'empty'}"><span class="k">${HYK[i]}</span>${h ? `<span class="num ${h[2] ? 'warn' : ''}">${h[0]}</span><span class="n" style="font-weight:500">${h[1]}</span>` : '<span class="n">Escolher</span>'}</div>`).join('');
+    return `<div class="week">${date}<div class="col"><h3>Oradores</h3>${spk}</div><div class="col"><h3>Orações</h3>${pr}</div><div class="col"><h3>Hinos</h3>${hy}</div></div>`;
+  }).join('');
+  document.getElementById('A').innerHTML = `
+    <div class="top"><div class="ward">Ala de Teste</div><nav>${nav}</nav><div class="who">paulo@ffconsulting.pt</div></div>
+    <div class="sheet">
+      <div class="head">
+        <h1><small>Plano do mês</small>Outubro 2026</h1>
+        <div class="monthnav"><button aria-label="Mês anterior">‹</button><button>Este mês</button><button aria-label="Mês seguinte">›</button></div>
+        <div class="bal">Por fechar<b>${totalMissing}</b><span>Homens<b>2</b></span><span>Mulheres<b>3</b></span><span>Jovens<b>1</b></span></div>
+      </div>
+      ${body}
+      <div class="foot"><span>${st('confirmado')} confirmado</span><span>${st('convidado')} convidado</span><span>${st('recusou')} recusou</span><span>${st('porconvidar')} por convidar</span><span class="warn">101 hino repetido recentemente</span></div>
+    </div>`;
+}
+
+/* B · Quadro */
+function renderB() {
+  const rail = NAV.map(n => `<a href="#" class="${n === 'Plano' ? 'on' : ''}">${n === 'Administração' ? 'Admin' : n}</a>`).join('');
+  const cell = (x, emptyTxt = '+') => x ? `<div class="c ${x[x.length - 1] === 'jovem' ? x[2] : (x[2] || x[1])}"><span class="n">${x[0]}</span>${x[1] && x.length > 2 ? `<span class="t">${x[1]}${x[3] ? ', jovem' : ''}</span>` : ''}</div>` : `<div class="c"><span class="add">${emptyTxt}</span></div>`;
+  const rows = weeks.map(w => {
+    const date = `<td class="date"><div class="c"><b>${w.d}</b><span>out</span></div></td>`;
+    if (w.off) return `<tr class="off">${date}<td colspan="10"><div class="offtxt">${w.label}. ${w.off.split('. ')[0]}.</div></td></tr>`;
+    const spk = w.kind === 'fast'
+      ? `<td colspan="3"><div class="c"><span class="n">Testemunhos da congregação</span></div></td>`
+      : [0, 1, 2].map(i => `<td>${cell(w.speakers[i])}</td>`).join('');
+    const pr = [0, 1].map(i => `<td>${cell(w.prayers[i])}</td>`).join('');
+    const hy = w.hymns.map((h, i) => `<td class="hy ${h && h[2] ? 'rep' : ''}" title="${h ? h[1] + (h[2] ? ' (' + h[2] + ')' : '') : ''}"><div class="c">${h ? `<span class="num">${h[0]}</span><span class="t">${h[1]}</span>` : `<span class="add">${i === 2 ? '·' : '+'}</span>`}</div></td>`).join('');
+    return `<tr>${date}<td class="kind"><div class="c"><b>${w.label}</b><span class="t">${w.dirige}</span></div></td>${spk}${pr}${hy}</tr>`;
+  }).join('');
+  document.getElementById('B').innerHTML = `
+    <nav class="rail"><div class="logo">A</div>${rail}</nav>
+    <main>
+      <div class="bar">
+        <h1>Outubro 2026</h1>
+        <div class="monthnav"><button aria-label="Mês anterior">‹</button><button>Este mês</button><button aria-label="Mês seguinte">›</button></div>
+        <div class="kpis">
+          <div class="kpi todo"><b>${totalMissing}</b><span>por fechar</span></div>
+          <div class="kpi"><b>2</b><span>homens</span></div>
+          <div class="kpi"><b>3</b><span>mulheres</span></div>
+          <div class="kpi"><b>1</b><span>jovens</span></div>
+        </div>
+      </div>
+      <div class="wrap">
+        <table>
+          <thead>
+            <tr><th rowspan="2">Domingo</th><th rowspan="2">Tipo e quem dirige</th><th colspan="3" class="grp">Oradores</th><th colspan="2" class="grp">Orações</th><th colspan="4" class="grp">Hinos</th></tr>
+            <tr><th>1.º</th><th>2.º</th><th>3.º</th><th>Primeira</th><th>Última</th><th>Abert.</th><th>Sacr.</th><th>Interm.</th><th>Encerr.</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="legend"><span><i style="background:var(--ok)"></i>confirmado</span><span><i style="background:var(--navy)"></i>convidado</span><span><i style="background:var(--bad)"></i>recusou</span><span><i style="background:var(--rule-2)"></i>por convidar</span><span class="warn">célula amarela: hino repetido recentemente</span></div>
+      </div>
+    </main>`;
+}
+
+/* C · Semanas */
+const MARK = `<svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" fill="var(--navy)"/><g fill="none" stroke="var(--sheet)" stroke-width="1.8" stroke-linejoin="round"><path d="M20 5 L24 14 V18 H16 V14 Z"/><path d="M9 34 V21 L20 16 L31 21 V34 Z"/><path d="M17.5 34 V28 a2.5 2.5 0 0 1 5 0 V34"/><path d="M6 34 H34"/></g></svg>`;
+const CUP = `<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 2.5 H12 L11 8 a3 3 0 0 1 -6 0 Z"/><path d="M8 11 V14 M5.5 14 H10.5"/></svg>`;
+const CHAPEL = `<svg class="chapel" viewBox="0 0 460 160" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M0 159 H460"/>
+  <path d="M120 159 V66 H164 V159"/><path d="M120 66 L142 6 L164 66"/><path d="M142 6 V0"/>
+  <path d="M133 108 V94 a9 9 0 0 1 18 0 V108 Z"/><path d="M136 66 V58 H148 V66"/>
+  <path d="M164 159 V86 H352 V159"/><path d="M158 86 L258 50 L358 86"/>
+  <path d="M188 138 V112 a11 11 0 0 1 22 0 V138 Z"/><path d="M247 138 V112 a11 11 0 0 1 22 0 V138 Z"/><path d="M306 138 V112 a11 11 0 0 1 22 0 V138 Z"/>
+  <path d="M136 159 V134 a6 6 0 0 1 12 0 V159"/>
+  <circle cx="400" cy="118" r="24"/><path d="M400 142 V159"/><circle cx="436" cy="130" r="15"/><path d="M436 145 V159"/>
+  <path d="M60 159 C 70 150, 90 150, 100 159"/>
+</svg>`;
+function renderC(id = 'C', chapel = false) {
+  const nav = NAV.map(n => `<a href="#" class="${n === 'Plano' ? 'on' : ''}">${n}</a>`).join('');
+  const cols = weeks.map(w => {
+    const cls = w.off ? 'off' : w.kind === 'fast' ? 'fast' : '';
+    const head = `<header><b>${w.d}</b><span>${w.label}${w.dirige ? `<em>Dirige ${w.dirige.replace('Bispo ', 'Bp. ')}</em>` : ''}</span></header>`;
+    if (w.off) return `<article class="wk ${cls}">${head}<div class="offbody">${w.off}</div></article>`;
+    const hy = (i) => { const h = w.hymns[i]; return h ? `<div class="row"><span class="num ${h[2] ? 'warn' : ''}">${h[0]}</span><span class="n" style="font-weight:600">${h[1]}</span></div>`
+      : `<div class="row empty"><span class="num">·</span><span class="n">Escolher hino</span></div>`; };
+    const pr = (i, k) => { const p = w.prayers[i]; return `<div class="row ${p ? '' : 'empty'}">${p ? st(p[1]) : st('porconvidar')}<span class="n">${p ? p[0] : 'Atribuir'}</span><span class="k">${k}</span></div>`; };
+    const spk = w.kind === 'fast' ? `<div class="row"><span class="n">Testemunhos da congregação</span></div>`
+      : [0, 1, 2].map(i => { const s = w.speakers[i]; return s
+          ? `<div class="spk">${st(s[2])}<div style="min-width:0"><span class="n" style="font-weight:700">${s[0]}</span><span class="row t" style="padding:0">${s[1]}${s[3] ? ', jovem' : ''}</span></div></div>`
+          : `<div class="row empty">${st('porconvidar')}<span class="n">Atribuir orador</span></div>`; }).join('');
+    const m = missing(w);
+    return `<article class="wk ${cls}">${head}
+      <div class="sec"><h3>Abertura</h3>${hy(0)}${pr(0, 'oração')}</div>
+      <div class="sec"><h3>${chapel ? CUP : ''}Sacramento</h3>${hy(1)}</div>
+      <div class="sec"><h3>${w.kind === 'fast' ? 'Programa' : 'Oradores'}</h3>${spk}${w.hymns[2] ? `<div class="row" style="margin-top:4px"><span class="num">${w.hymns[2][0]}</span><span class="n" style="font-weight:600">${w.hymns[2][1]}</span><span class="k">interm.</span></div>` : ''}</div>
+      <div class="sec"><h3>Encerramento</h3>${hy(3)}${pr(1, 'oração')}</div>
+      <footer><span>${m ? `<b class="miss">Falta ${m}</b>` : '<b>Pronto</b>'}</span><span>${w.kind === 'fast' ? '' : '2 H, 1 M'}</span></footer>
+    </article>`;
+  }).join('');
+  const head = `<div class="head"><h1>Outubro 2026</h1>
+        <div class="monthnav"><button aria-label="Mês anterior">‹</button><button>Este mês</button><button aria-label="Mês seguinte">›</button></div>
+        <div class="todo"><b>${totalMissing}</b> por fechar este mês</div></div>`;
+  const hero = `<div class="hero">${CHAPEL}<figure class="art"><img alt=""><figcaption></figcaption></figure><p class="kick">Reuniões sacramentais</p><h1><b>Outubro</b> 2026</h1>
+        <div class="head"><div class="monthnav"><button aria-label="Mês anterior">‹</button><button>Este mês</button><button aria-label="Mês seguinte">›</button></div>
+        <div class="todo"><b>${totalMissing}</b> por fechar este mês</div></div></div>`;
+  document.getElementById(id).innerHTML = `
+    <aside>
+      ${chapel ? `<div class="brand">${MARK}<div class="ward">Agenda Sacramental<small>Ala de Teste, bispado</small></div></div>` : '<div class="ward">Ala de Teste<small>Bispado</small></div>'}
+      <nav>${nav}</nav>
+      <div class="mini"><h4>Equilíbrio do mês</h4>
+        <div class="meter"><i style="width:40%;background:var(--navy)"></i><i style="width:60%;background:var(--ink-3)"></i></div>
+        2 homens, 3 mulheres<br>1 jovem entre 5 oradores</div>
+    </aside>
+    <main>
+      ${chapel ? hero : head}
+      <div class="cols">${cols}</div>
+      ${chapel ? '<p class="notice">Esta aplicação não é um site oficial de A Igreja de Jesus Cristo dos Santos dos Últimos Dias e não é gerida nem aprovada pela Igreja. É uma ferramenta de planeamento para uso interno da ala.</p>' : ''}
+    </main>`;
+}
+
+renderA(); renderB(); renderC(); renderC('D', true);
+const note = document.getElementById('note');
+function setDir(d) {
+  document.querySelectorAll('.dir').forEach(s => s.classList.toggle('on', s.id === d));
+  document.querySelectorAll('#dirs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.d === d));
+  note.textContent = NOTES[d];
+  try { localStorage.setItem('styleDir', d); } catch {}
+}
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.querySelectorAll('#themes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === t));
+}
+document.getElementById('dirs').onclick = e => e.target.dataset.d && setDir(e.target.dataset.d);
+document.getElementById('themes').onclick = e => e.target.dataset.t && setTheme(e.target.dataset.t);
+let start = new URLSearchParams(location.search).get('d');
+try { start = start || localStorage.getItem('styleDir'); } catch {}
+setDir(start || 'A');
+const artSel = document.getElementById('art');
+function setArt(v) {
+  const hero = document.querySelector('#D .hero'); const [f, pos, cap] = v.split('|');
+  hero.classList.toggle('has-art', !!f);
+  if (f) { const img = hero.querySelector('img'); img.src = `img/${f}.jpg`; img.style.objectPosition = pos;
+    hero.querySelector('figcaption').textContent = `${cap}. Domínio público.`; }
+  try { localStorage.setItem('styleArt', v); } catch {}
+}
+artSel.onchange = () => setArt(artSel.value);
+let a0 = new URLSearchParams(location.search).get('a');
+if (a0 !== null) a0 = artSel.options[+a0]?.value ?? '';
+else { try { a0 = localStorage.getItem('styleArt'); } catch {} }
+if (a0) { artSel.value = a0; setArt(a0); }
+const qt = new URLSearchParams(location.search).get('t');
+if (qt) setTheme(qt);
+</script>
+</body>
+</html>

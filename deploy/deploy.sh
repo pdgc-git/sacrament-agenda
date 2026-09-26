@@ -13,7 +13,7 @@ DRY="${1:-}"
 rsync -az --delete ${DRY:+--dry-run -v} \
   --include='/index.html' --include='/simple.html' --include='/planner.html' \
   --include='/style.css' --include='/planner.css' --include='/agenda-paper.css' \
-  --include='/hymns.js' \
+  --include='/hymns.js' --include='/img/***' \
   --exclude='/js/firebase-config.js' \
   --include='/js/***' \
   --exclude='*' \

@@ -1,4 +1,4 @@
-import { rankMembers, rankHymns } from '../js/components/picker.js';
+import { rankMembers, rankHymns, guestName } from '../js/components/picker.js';
 
 const members = [
     { id: 'a', name: 'Ana Ferreira', gender: 'F', group: 'Adult' },
@@ -55,5 +55,17 @@ describe('rankHymns', () => {
     test('search by number prefix or title keeps hymnal order', () => {
         expect(rankHymns(hymns, lastSung, { today, search: '1' }).map(x => x.hymn.number)).toEqual(['1', '112']);
         expect(rankHymns(hymns, lastSung, { today, search: 'facho' }).map(x => x.hymn.number)).toEqual(['2']);
+    });
+});
+
+describe('guestName', () => {
+    const members = [{ id: '1', name: 'Ana Ferreira' }];
+    test('offers the typed name, tidied, for someone outside the roster', () => {
+        expect(guestName('  Presidente   Duarte ', members)).toBe('Presidente Duarte');
+    });
+    test('offers nothing for empty/one-letter input or an exact roster match', () => {
+        expect(guestName('', members)).toBeNull();
+        expect(guestName('a', members)).toBeNull();
+        expect(guestName('ana ferreira', members)).toBeNull();
     });
 });

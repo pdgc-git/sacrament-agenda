@@ -108,7 +108,7 @@ function openMemberModal(member) {
                 ${Object.entries(GROUP_LABELS).map(([g, label]) => `<option value="${g}" ${m.group === g ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
             <div class="field"><label for="f-calling">Chamado</label><input class="input" id="f-calling" name="calling" value="${escapeHtml(m.calling || '')}"></div>
             <div class="foot">
-                ${member ? '<button type="button" class="btn danger" id="btn-del">Apagar</button>' : ''}
+                ${member ? '<button type="button" class="btn danger" id="btn-del">Apagar</button><button type="button" class="btn" id="btn-unreg">Não é da ala</button>' : ''}
                 <button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Guardar</button>
             </div>
         </form>`);
@@ -126,6 +126,15 @@ function openMemberModal(member) {
         try { await DM.deleteMember(member.id); await reloadMembers(); closeModal(); draw(); showToast('Membro apagado.', 'success'); }
         catch (e) { showToast(e.message, 'error'); }
     });
+    box.querySelector('#btn-unreg')?.addEventListener('click', onUnregister(member));
+}
+
+function onUnregister(member) {
+    return async () => {
+        if (!confirm(`Tirar ${member.name} do rol? Os discursos e orações passados ficam registados só com o nome, como visitante.`)) return;
+        try { await DM.unregisterMember(member.id); await reloadMembers(); closeModal(); draw(); showToast(`${member.name} saiu do rol.`, 'success'); }
+        catch (e) { showToast(e.message, 'error'); }
+    };
 }
 
 async function openHistory(member) {

@@ -176,6 +176,12 @@ export async function deleteMember(id) {
     if (error) throw error;
 }
 
+// Takes someone off the roster; their past talks and prayers stay on the meetings by name only.
+export async function unregisterMember(id) {
+    const { error } = await supabase.rpc('unregister_member', { p_member_id: id });
+    if (error) throw error;
+}
+
 export async function getMemberHistory(memberId) {
     const wardId = getWardId();
     const talks = [];
@@ -413,6 +419,17 @@ async function viewAsMap(view, keyCol, valCol) {
 export function getLastTalkDates() { return viewAsMap('member_last_talk', 'member_id', 'last_talk_date'); }
 // member_id -> iso date of the last completed prayer
 export function getLastPrayerDates() { return viewAsMap('member_last_prayer', 'member_id', 'last_prayer_date'); }
+
+// Completed meetings of the last two years, only the columns the pickers' activity stats need.
+export async function getActivityRows(today = new Date()) {
+    const wardId = getWardId();
+    const from = new Date(today); from.setFullYear(from.getFullYear() - 2);
+    const { data, error } = await supabase.from('meetings')
+        .select('date, program, invocation_member_id, benediction_member_id')
+        .eq('ward_id', wardId).eq('status', 'completed').gte('date', from.toISOString().slice(0, 10));
+    if (error) throw error;
+    return data || [];
+}
 
 // hymn number -> iso date it was last sung (completed meetings only)
 export async function getHymnLastSung() {

@@ -1,5 +1,5 @@
 import {
-    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember,
+    initUser, getWardSettings, saveWardSettings, finalizeMeeting, setAbsence, getAbsences, getHymnLastSung, approveMember, unregisterMember,
 } from '../js/dataManager.js';
 import { supabase, mockChain } from '../__mocks__/supabaseClient.js';
 
@@ -77,5 +77,13 @@ describe('dataManager — Phase 3', () => {
         supabase.rpc.mockResolvedValueOnce({ data: { role: 'editor' }, error: null });
         await approveMember('u2', 'editor');
         expect(supabase.rpc).toHaveBeenCalledWith('approve_member', { p_ward_id: 'ward-1', p_user_id: 'u2', p_role: 'editor' });
+    });
+
+    test('unregisterMember calls the RPC and surfaces its error', async () => {
+        supabase.rpc.mockResolvedValueOnce({ data: null, error: null });
+        await unregisterMember('m1');
+        expect(supabase.rpc).toHaveBeenCalledWith('unregister_member', { p_member_id: 'm1' });
+        supabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'not allowed' } });
+        await expect(unregisterMember('m1')).rejects.toEqual({ message: 'not allowed' });
     });
 });

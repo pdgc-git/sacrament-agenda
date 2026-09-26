@@ -22,11 +22,16 @@ export function pickSpeaker(m, i, anchor, onChange, monthBalance) {
         verb: 'falou',
         members: state.members,
         lastDates: state.lastTalk,
+        stats: state.activity.talks,
         excludeIds, declinedIds,
         recentDays: 90,
         balance: { sunday: balance(sp, state.membersById), month: monthBalance || balance(sp, state.membersById) },
         onPick: member => {
             Object.assign(s, { name: member.name, member_id: member.id, invite_status: 'to_ask', asked_at: null });
+            onChange();
+        },
+        onGuest: name => {
+            Object.assign(s, { name, member_id: null, invite_status: 'to_ask', asked_at: null });
             onChange();
         },
         onClear: () => {
@@ -41,6 +46,12 @@ export function addSpeaker(m, position = 'before') {
     const s = newSpeaker({ position });
     m.program.push(s);
     return speakers(m.program).indexOf(s);
+}
+
+// Drops the i-th speaker slot (named or empty) from the program.
+export function removeSpeaker(m, i) {
+    const s = speakers(m.program)[i];
+    if (s) m.program.splice(m.program.indexOf(s), 1);
 }
 
 export function setInviteStatus(m, i, status) {
@@ -58,9 +69,11 @@ export function pickPrayer(m, key, anchor, onChange) {
         verb: 'orou',
         members: state.members,
         lastDates: state.lastPrayer,
+        stats: state.activity.prayers,
         excludeIds,
         recentDays: 60,
         onPick: member => { m[`${key}_member_id`] = member.id; m[key] = member.name; onChange(); },
+        onGuest: name => { m[`${key}_member_id`] = null; m[key] = name; onChange(); },
         onClear: () => { m[`${key}_member_id`] = null; m[key] = ''; onChange(); },
     });
 }

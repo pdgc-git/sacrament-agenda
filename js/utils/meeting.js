@@ -219,3 +219,32 @@ export function hymnNumber(str) {
     const m = String(str).match(/^\s*(\d+)/);
     return m ? m[1] : null;
 }
+
+// "112 - Sim, Eu Te Sigo" → "Sim, Eu Te Sigo". A value without a number is returned as is.
+export function hymnTitle(str) {
+    if (!str) return '';
+    return String(str).replace(/^\s*\d+\s*[-–—.:]?\s*/, '').trim();
+}
+
+// ── Activity (for the pickers) ──────────────────────────────────────────────
+// From completed meetings, per member: how many talks / prayers in the last 12 months and the
+// topic of the most recent talk. rows: [{date, program, invocation_member_id, benediction_member_id}]
+
+export function buildActivity(rows = [], today = new Date()) {
+    const since = new Date(today); since.setFullYear(since.getFullYear() - 1);
+    const talks = new Map();
+    const prayers = new Map();
+    const bump = (map, id, date, extra = {}) => {
+        if (!id) return;
+        const cur = map.get(id) || { count12: 0, last: null };
+        if (parseIsoDate(date) >= since) cur.count12++;
+        if (!cur.last || date > cur.last) Object.assign(cur, { last: date }, extra);
+        map.set(id, cur);
+    };
+    rows.forEach(r => {
+        (r.program || []).filter(it => it.type === 'speaker').forEach(it => bump(talks, it.member_id, r.date, { lastTopic: it.topic || '' }));
+        bump(prayers, r.invocation_member_id, r.date);
+        bump(prayers, r.benediction_member_id, r.date);
+    });
+    return { talks, prayers };
+}

@@ -1,6 +1,6 @@
 import {
     toIsoDate, parseIsoDate, nextSunday, sundaysFrom, formatDateLong, formatAgo, speakersBefore, speakersAfter,
-    blankMeeting, missingItems, balance, formatBalance, hymnNumber, newSpeaker,
+    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, newSpeaker,
 } from '../js/utils/meeting.js';
 
 describe('meeting utils — dates', () => {
@@ -86,6 +86,13 @@ describe('meeting utils — program', () => {
         expect(hymnNumber('')).toBeNull();
         expect(hymnNumber('Sem número')).toBeNull();
     });
+
+    test('hymnTitle drops the leading number and separator', () => {
+        expect(hymnTitle('112 - Sim, Eu Te Sigo')).toBe('Sim, Eu Te Sigo');
+        expect(hymnTitle('101 Deus, Escuta-nos Orar')).toBe('Deus, Escuta-nos Orar');
+        expect(hymnTitle('Sem número')).toBe('Sem número');
+        expect(hymnTitle('')).toBe('');
+    });
 });
 
 describe('meeting utils — months', () => {
@@ -95,5 +102,23 @@ describe('meeting utils — months', () => {
         expect(sundaysInMonth('2026-11')).toEqual(['2026-11-01', '2026-11-08', '2026-11-15', '2026-11-22', '2026-11-29']);
         expect(shiftMonth('2026-12', 1)).toBe('2027-01');
         expect(shiftMonth('2026-01', -1)).toBe('2025-12');
+    });
+});
+
+describe('meeting utils — activity', () => {
+    const today = new Date(2026, 8, 26);
+    const rows = [
+        { date: '2025-06-01', program: [{ type: 'speaker', member_id: 'a', topic: 'Fé' }], invocation_member_id: 'b' },
+        { date: '2026-03-08', program: [{ type: 'speaker', member_id: 'a', topic: 'Oração' }, { type: 'hymn', name: '134' }], benediction_member_id: 'b' },
+        { date: '2026-09-20', program: [{ type: 'speaker', member_id: 'a', topic: 'Dízimo' }, { type: 'speaker', member_id: null, name: 'Elder X' }] },
+    ];
+    test('counts talks in the last 12 months and keeps the latest topic', () => {
+        const { talks } = buildActivity(rows, today);
+        expect(talks.get('a')).toEqual({ count12: 2, last: '2026-09-20', lastTopic: 'Dízimo' });
+        expect(talks.size).toBe(1); // visitors (no member_id) are not counted
+    });
+    test('counts prayers from both prayer slots', () => {
+        const { prayers } = buildActivity(rows, today);
+        expect(prayers.get('b')).toEqual({ count12: 1, last: '2026-03-08' });
     });
 });

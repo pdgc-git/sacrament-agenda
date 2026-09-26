@@ -6,7 +6,7 @@ import { state, loadWard, reset } from './app-state.js';
 import { showToast } from './components/Toast.js';
 import { escapeHtml } from './utils/security.js';
 import { closePicker } from './components/picker.js';
-import { applyStoredTheme } from './utils/theme.js';
+import { applyStoredTheme, isDark, toggleTheme } from './utils/theme.js';
 import * as entrada from './views/entrada.js';
 import * as plano from './views/plano.js';
 import * as domingo from './views/domingo.js';
@@ -34,7 +34,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('hashchange', route);
     document.getElementById('nav')?.addEventListener('click', onNavClick);
     document.getElementById('tabbar')?.addEventListener('click', onNavClick);
+    document.getElementById('theme-btn')?.addEventListener('click', () => { toggleTheme(); labelThemeButton(); });
+    labelThemeButton();
 });
+
+function labelThemeButton() {
+    const btn = document.getElementById('theme-btn');
+    if (!btn) return;
+    const label = isDark() ? 'Modo claro' : 'Modo escuro';
+    btn.title = label;
+    btn.setAttribute('aria-label', 'Mudar para ' + label.toLowerCase());
+}
 
 async function onUser(user) {
     const wasUser = state.user;

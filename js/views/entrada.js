@@ -3,15 +3,17 @@ import * as Auth from '../api/auth.js';
 import * as DM from '../dataManager.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
+import { CHAPEL_MARK, NOT_OFFICIAL } from '../components/mark.js';
 
 export function render(container, { mode = 'login', user, onJoined, onSignOut }) {
     const tab = mode === 'pending' ? 'pending' : (user ? 'join' : 'login');
     container.innerHTML = `
         <div class="auth-box">
-            <div class="center"><div class="glyph" style="width:40px;height:40px;font-size:16px;border-radius:8px;margin:0 auto">A</div></div>
+            <div class="auth-mark">${CHAPEL_MARK}</div>
             <h1>Agenda Sacramental</h1>
             <p class="tagline">Planeamento da reunião sacramental</p>
             ${tab === 'pending' ? pendingHtml(user) : (tab === 'join' ? joinHtml(user) : loginHtml())}
+            <p class="auth-notice">${NOT_OFFICIAL}</p>
         </div>`;
 
     const form = container.querySelector('form');

@@ -6,7 +6,7 @@ import { state, canEdit } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { renderAgendaHtml } from '../render-agenda.js';
-import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, setInviteStatus, hymnRepeats, HYMN_LABELS } from '../components/assign.js';
+import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats, HYMN_LABELS } from '../components/assign.js';
 import {
     nextSunday, toIsoDate, formatDateHeading, formatDateShort, blankMeeting, missingItems, speakers,
     newSpeaker, INVITE_STATUS, KINDS_WITHOUT_PROGRAM, MEETING_KINDS, parseIsoDate, weekIndex,
@@ -221,7 +221,7 @@ function onClick(ev) {
     switch (act.dataset.act) {
         case 'pick-spk': pickSpeaker(m, i, act, changed); break;
         case 'add-spk': { const idx = addSpeaker(m); changed(); const btn = root.querySelector(`[data-act="pick-spk"][data-i="${idx}"]`); if (btn) pickSpeaker(m, idx, btn, changed); break; }
-        case 'rm-spk': { const sp = speakers(m.program)[i]; m.program.splice(m.program.indexOf(sp), 1); changed(); break; }
+        case 'rm-spk': removeSpeaker(m, i); changed(); break;
         case 'move': { const sp = speakers(m.program)[i]; sp.position = sp.position === 'after' ? 'before' : 'after'; changed(); break; }
         case 'status': setInviteStatus(m, i, act.dataset.v); changed(); break;
         case 'pick-prayer': pickPrayer(m, act.dataset.k, act, changed); break;

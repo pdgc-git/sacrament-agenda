@@ -58,63 +58,117 @@ export function rankHymns(hymns, lastSung, opts = {}) {
         });
 }
 
+/**
+ * The name to offer as a non-member ("visitante") entry for what was typed in the search box,
+ * or null when nothing usable was typed or it exactly matches a member already on the roster.
+ */
+export function guestName(search, members = []) {
+    const name = String(search || '').trim().replace(/\s+/g, ' ');
+    if (name.length < 2) return null;
+    const lower = name.toLowerCase();
+    return members.some(m => m.name.trim().toLowerCase() === lower) ? null : name;
+}
+
 // ── DOM ─────────────────────────────────────────────────────────────────────
+// Pickers open as a large centered window (full-screen sheet on phones) so a whole month can be
+// planned from them: every candidate shows when they last did it, how often in the last 12 months
+// and, for talks, the last topic.
 
 let openEl = null;
 
 export function closePicker() {
     if (openEl) { openEl.remove(); openEl = null; }
-    document.removeEventListener('pointerdown', onOutside, true);
+    document.removeEventListener('keydown', onKey, true);
 }
 
-function onOutside(ev) {
-    if (openEl && !openEl.contains(ev.target)) closePicker();
+function onKey(ev) {
+    if (ev.key === 'Escape') { ev.preventDefault(); closePicker(); }
+}
+
+function mount(el, focusSearch = true) {
+    closePicker();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'picker-backdrop';
+    backdrop.appendChild(el);
+    backdrop.addEventListener('pointerdown', ev => { if (ev.target === backdrop) closePicker(); });
+    el.addEventListener('click', ev => { if (ev.target.closest('[data-act="close"]')) closePicker(); });
+    document.body.appendChild(backdrop);
+    openEl = backdrop;
+    document.addEventListener('keydown', onKey, true);
+    if (focusSearch && window.innerWidth >= 640) el.querySelector('.picker-search')?.focus();
+}
+
+function shortDate(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${d} ${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][m - 1]} ${y}`;
+}
+
+function keepSearchFocus(el, render) {
+    return ev => {
+        const pos = ev.target.selectionStart;
+        render();
+        const inp = el.querySelector('.picker-search');
+        inp.focus(); inp.setSelectionRange(pos, pos);
+    };
 }
 
 /**
- * Open a member picker anchored to `anchor`.
- * @param {HTMLElement} anchor
+ * Open a member picker.
+ * @param {HTMLElement} _anchor  kept for call compatibility; the window is centered
  * @param {object} cfg {
  *   title, verb ('falou'|'orou'), members, lastDates, excludeIds, declinedIds,
- *   balance (optional {sunday:b, month:b}), initialFilters, onPick(member), onClear()
+ *   stats (optional Map member_id -> {count12, lastTopic?}), balance (optional {sunday:b, month:b}),
+ *   initialFilters, onPick(member), onClear(),
+ *   onGuest(name) (optional: lets the typed name be used without registering a member)
  * }
  */
-export function openMemberPicker(anchor, cfg) {
-    closePicker();
+export function openMemberPicker(_anchor, cfg) {
     const filters = { gender: null, groups: new Set(), search: '', ...(cfg.initialFilters || {}) };
     const el = document.createElement('div');
     el.className = 'picker';
     el.setAttribute('role', 'dialog');
-    openEl = el;
+    el.setAttribute('aria-label', cfg.title || 'Escolher');
+    const talks = cfg.verb !== 'orou';
 
     const render = () => {
         const ranked = rankMembers(cfg.members, cfg.lastDates, filters, {
             excludeIds: cfg.excludeIds, declinedIds: cfg.declinedIds, recentDays: cfg.recentDays,
         });
+        const guest = cfg.onGuest ? guestName(filters.search, cfg.members) : null;
         const chip = (label, on, data) => `<button type="button" class="chip${on ? ' on' : ''}" ${data}>${label}</button>`;
         el.innerHTML = `
-            <div class="picker-head"><span>${escapeHtml(cfg.title || '')}</span><span>há mais tempo primeiro</span></div>
-            <div class="picker-filters">
-                ${chip('Todos', !filters.gender && filters.groups.size === 0, 'data-f="all"')}
-                ${chip('Homens', filters.gender === 'M', 'data-f="gender" data-v="M"')}
-                ${chip('Mulheres', filters.gender === 'F', 'data-f="gender" data-v="F"')}
-                ${Object.entries(GROUP_LABELS).filter(([g]) => g !== 'Primary').map(([g, label]) =>
-                    chip(label, filters.groups.has(g), `data-f="group" data-v="${g}"`)).join('')}
+            <div class="picker-head">
+                <div><h3>${escapeHtml(cfg.title || '')}</h3><p>Quem ${talks ? 'falou' : 'orou'} há mais tempo aparece primeiro.</p></div>
+                <button type="button" class="x" data-act="close" aria-label="Fechar">×</button>
             </div>
-            <input class="picker-search" type="search" placeholder="Pesquisar nome…" value="${escapeHtml(filters.search)}" autocomplete="off">
+            <div class="picker-tools">
+                <input class="picker-search" type="search" placeholder="${cfg.onGuest ? 'Pesquisar ou escrever um nome…' : 'Pesquisar nome…'}" value="${escapeHtml(filters.search)}" autocomplete="off">
+                <div class="picker-filters">
+                    ${chip('Todos', !filters.gender && filters.groups.size === 0, 'data-f="all"')}
+                    ${chip('Homens', filters.gender === 'M', 'data-f="gender" data-v="M"')}
+                    ${chip('Mulheres', filters.gender === 'F', 'data-f="gender" data-v="F"')}
+                    ${Object.entries(GROUP_LABELS).filter(([g]) => g !== 'Primary').map(([g, label]) =>
+                        chip(label, filters.groups.has(g), `data-f="group" data-v="${g}"`)).join('')}
+                </div>
+            </div>
+            ${cfg.balance ? `<div class="picker-balance">Este domingo: <b>${formatBalance(cfg.balance.sunday)}</b><span>Este mês: <b>${formatBalance(cfg.balance.month)}</b></span></div>` : ''}
+            <div class="picker-cols ${talks ? '' : 'no-topic'}" aria-hidden="true"><span>Nome</span><span>Última vez</span><span>12 meses</span>${talks ? '<span>Último tema</span>' : ''}</div>
             <div class="picker-list">
-                ${ranked.length === 0 ? '<div class="picker-empty">Ninguém com estes filtros.</div>' : ''}
-                ${ranked.slice(0, 40).map((r, i) => `
-                    <button type="button" class="picker-option${i === 0 && !r.declined ? ' top' : ''}${r.recent ? ' risk' : ''}${r.declined ? ' declined' : ''}" data-id="${r.member.id}">
-                        <span class="who">${escapeHtml(r.member.name)}
-                            <span class="sex">${r.member.gender || ''}${r.member.group && r.member.group !== 'Adult' ? ' · ' + escapeHtml(GROUP_LABELS[r.member.group] || r.member.group) : ''}</span>
-                            ${i === 0 && !r.declined ? '<span class="badge-sugerido">Sugerido</span>' : ''}
-                        </span>
-                        <span class="stat">${r.declined ? 'recusou este domingo' : (r.last ? `${cfg.verb || 'falou'} ${formatAgo(r.last)}` : `nunca ${cfg.verb === 'orou' ? 'orou' : 'falou'}`)}</span>
-                    </button>`).join('')}
+                ${guest ? `<button type="button" class="picker-option guest" data-act="guest"><span class="who">Usar «${escapeHtml(guest)}»</span><span class="stat">sem registar como membro</span></button>` : ''}
+                ${ranked.length === 0 && !guest ? `<div class="picker-empty">Ninguém com estes filtros.${cfg.onGuest ? ' Escreva o nome de quem não é membro da ala.' : ''}</div>` : ''}
+                ${ranked.map((r, i) => {
+                    const st = cfg.stats?.get(r.member.id);
+                    const meta = [r.member.gender === 'F' ? 'Mulher' : r.member.gender === 'M' ? 'Homem' : '', GROUP_LABELS[r.member.group] || ''].filter(Boolean).join(', ');
+                    return `
+                    <button type="button" class="picker-option ${talks ? '' : 'no-topic'}${i === 0 && !r.declined ? ' top' : ''}${r.recent ? ' risk' : ''}${r.declined ? ' declined' : ''}" data-id="${r.member.id}">
+                        <span class="who"><b>${escapeHtml(r.member.name)}</b>${i === 0 && !r.declined ? '<span class="badge-sugerido">Sugerido</span>' : ''}<small>${escapeHtml(meta)}</small></span>
+                        <span class="when">${r.declined ? '<b>recusou este domingo</b>' : r.last ? `<b>há ${escapeHtml(formatAgo(r.last).replace(/^há /, ''))}</b><small>${shortDate(r.last)}</small>` : `<b>nunca ${talks ? 'falou' : 'orou'}</b>`}</span>
+                        <span class="count">${st?.count12 ? `${st.count12}×` : '—'}</span>
+                        ${talks ? `<span class="topic-col">${escapeHtml(st?.lastTopic || '')}</span>` : ''}
+                    </button>`;
+                }).join('')}
             </div>
-            ${cfg.balance ? `<div class="picker-foot"><span>Domingo: ${formatBalance(cfg.balance.sunday)}</span><span>Mês: ${formatBalance(cfg.balance.month)}</span></div>` : ''}
-            ${cfg.onClear ? '<div class="picker-foot"><button type="button" class="link-btn" data-act="clear">Limpar atribuição</button></div>' : ''}
+            ${cfg.onClear ? '<div class="picker-foot"><button type="button" class="link-btn" data-act="clear">Limpar atribuição</button><span>Esc para fechar</span></div>' : ''}
         `;
     };
 
@@ -125,9 +179,14 @@ export function openMemberPicker(anchor, cfg) {
             if (f === 'all') { filters.gender = null; filters.groups.clear(); }
             else if (f === 'gender') filters.gender = filters.gender === v ? null : v;
             else if (f === 'group') { if (filters.groups.has(v)) filters.groups.delete(v); else filters.groups.add(v); }
-            const s = el.querySelector('.picker-search')?.value || '';
-            filters.search = s;
+            filters.search = el.querySelector('.picker-search')?.value || '';
             render();
+            return;
+        }
+        if (ev.target.closest('[data-act="guest"]')) {
+            const name = guestName(filters.search, cfg.members);
+            closePicker();
+            if (name) cfg.onGuest(name);
             return;
         }
         const opt = ev.target.closest('.picker-option');
@@ -139,45 +198,42 @@ export function openMemberPicker(anchor, cfg) {
         }
         if (ev.target.closest('[data-act="clear"]')) { closePicker(); cfg.onClear(); }
     });
+    const refocus = keepSearchFocus(el, render);
     el.addEventListener('input', ev => {
-        if (ev.target.classList.contains('picker-search')) {
-            filters.search = ev.target.value;
-            const pos = ev.target.selectionStart;
-            render();
-            const inp = el.querySelector('.picker-search');
-            inp.focus(); inp.setSelectionRange(pos, pos);
-        }
+        if (ev.target.classList.contains('picker-search')) { filters.search = ev.target.value; refocus(ev); }
     });
 
     render();
-    place(anchor, el);
-    setTimeout(() => document.addEventListener('pointerdown', onOutside, true), 0);
+    mount(el);
     return el;
 }
 
 /**
  * Open a hymn picker. cfg: { title, hymns, lastSung, repeatMonths, onPick(hymn), onClear() }
  */
-export function openHymnPicker(anchor, cfg) {
-    closePicker();
+export function openHymnPicker(_anchor, cfg) {
     const el = document.createElement('div');
-    el.className = 'picker';
-    openEl = el;
+    el.className = 'picker hymns';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', cfg.title || 'Hino');
     let search = '';
 
     const render = () => {
         const ranked = rankHymns(cfg.hymns, cfg.lastSung, { search, repeatMonths: cfg.repeatMonths });
         el.innerHTML = `
-            <div class="picker-head"><span>${escapeHtml(cfg.title || 'Hino')}</span><span>${search ? 'pesquisa' : 'há mais tempo sem cantar primeiro'}</span></div>
-            <input class="picker-search" type="search" placeholder="Número ou título…" value="${escapeHtml(search)}" autocomplete="off">
+            <div class="picker-head">
+                <div><h3>${escapeHtml(cfg.title || 'Hino')}</h3><p>${search ? 'Resultados da pesquisa.' : 'Os que não se cantam há mais tempo aparecem primeiro.'}</p></div>
+                <button type="button" class="x" data-act="close" aria-label="Fechar">×</button>
+            </div>
+            <div class="picker-tools"><input class="picker-search" type="search" placeholder="Número ou título…" value="${escapeHtml(search)}" autocomplete="off"></div>
             <div class="picker-list">
-                ${ranked.slice(0, 30).map((r, i) => `
-                    <button type="button" class="picker-option${i === 0 && !search ? ' top' : ''}${r.recent ? ' risk' : ''}" data-n="${escapeHtml(r.hymn.number)}">
-                        <span class="who hymn-plain"><span class="no">${escapeHtml(r.hymn.number)}</span> ${escapeHtml(r.hymn.title)}</span>
-                        <span class="stat">${r.last ? `cantado ${formatAgo(r.last)}${r.recent ? ' ⚠' : ''}` : 'não cantado recentemente'}</span>
+                ${ranked.slice(0, 120).map((r, i) => `
+                    <button type="button" class="picker-option hymn-opt${i === 0 && !search ? ' top' : ''}${r.recent ? ' risk' : ''}" data-n="${escapeHtml(r.hymn.number)}">
+                        <span class="who"><span class="no">${escapeHtml(r.hymn.number)}</span><b>${escapeHtml(r.hymn.title)}</b></span>
+                        <span class="when">${r.last ? `<b>cantado há ${escapeHtml(formatAgo(r.last).replace(/^há /, ''))}</b><small>${shortDate(r.last)}</small>` : '<small>sem registo recente</small>'}</span>
                     </button>`).join('')}
             </div>
-            ${cfg.onClear ? '<div class="picker-foot"><button type="button" class="link-btn" data-act="clear">Limpar</button></div>' : ''}
+            ${cfg.onClear ? '<div class="picker-foot"><button type="button" class="link-btn" data-act="clear">Limpar</button><span>Esc para fechar</span></div>' : ''}
         `;
     };
     el.addEventListener('click', ev => {
@@ -188,35 +244,11 @@ export function openHymnPicker(anchor, cfg) {
             cfg.onPick(hymn);
         } else if (ev.target.closest('[data-act="clear"]')) { closePicker(); cfg.onClear(); }
     });
+    const refocus = keepSearchFocus(el, render);
     el.addEventListener('input', ev => {
-        if (ev.target.classList.contains('picker-search')) {
-            search = ev.target.value;
-            const pos = ev.target.selectionStart;
-            render();
-            const inp = el.querySelector('.picker-search');
-            inp.focus(); inp.setSelectionRange(pos, pos);
-        }
+        if (ev.target.classList.contains('picker-search')) { search = ev.target.value; refocus(ev); }
     });
     render();
-    place(anchor, el);
-    setTimeout(() => {
-        document.addEventListener('pointerdown', onOutside, true);
-        el.querySelector('.picker-search')?.focus();
-    }, 0);
+    mount(el);
     return el;
-}
-
-// Fixed-position placement under the anchor, kept inside the viewport; full-width sheet on phones.
-function place(anchor, el) {
-    document.body.appendChild(el);
-    if (window.innerWidth < 640) { el.classList.add('sheet'); return; }
-    const r = anchor.getBoundingClientRect();
-    const w = 340;
-    let left = Math.min(r.left, window.innerWidth - w - 12);
-    let top = r.bottom + 6;
-    el.style.width = w + 'px';
-    el.style.left = Math.max(8, left) + 'px';
-    el.style.top = top + 'px';
-    const h = el.offsetHeight;
-    if (top + h > window.innerHeight - 8) el.style.top = Math.max(8, r.top - h - 6) + 'px';
 }
