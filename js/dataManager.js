@@ -60,9 +60,10 @@ async function accountsCall(path, body) {
     return out;
 }
 
-// -> {user_id, email, created, password}; password is null when the e-mail already had a login.
-export function createAccount({ email, name, role }) {
-    return accountsCall('/api/accounts', { email, name, role });
+// login: an e-mail or a username. -> {user_id, email, login, created, password}; password is null
+// when that login already existed.
+export function createAccount({ login, name, role }) {
+    return accountsCall('/api/accounts', { login, name, role });
 }
 
 // -> {user_id, email, password}; only for logins created from this app.

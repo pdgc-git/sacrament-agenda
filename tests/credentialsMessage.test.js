@@ -17,6 +17,11 @@ describe('credentialsMessage', () => {
         expect(msg).toContain('Palavra-passe temporária: Agenda-abcd-efgh');
         expect(msg).toContain('Na primeira entrada vai escolher a sua palavra-passe.');
     });
+    test('username login says Utilizador, not E-mail', () => {
+        const msg = credentialsMessage({ name: 'Ana', email: 'ana.jesus@utilizador.agenda.invalid', password: 'Agenda-abcd-efgh' }, url, 'Ala Benfica');
+        expect(msg).toContain('Utilizador: ana.jesus');
+        expect(msg).not.toContain('E-mail');
+    });
     test('existing login: no password in the message', () => {
         const msg = credentialsMessage({ name: 'Rui', email: 'rui@mail.pt', password: null }, url, 'Ala Benfica');
         expect(msg).not.toContain('temporária');

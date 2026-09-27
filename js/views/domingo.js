@@ -8,7 +8,7 @@ import { showToast } from '../components/Toast.js';
 import { renderAgendaHtml } from '../render-agenda.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats, HYMN_LABELS } from '../components/assign.js';
 import {
-    nextSunday, toIsoDate, formatDateHeading, formatDateShort, blankMeeting, missingItems, speakers,
+    nextSunday, toIsoDate, formatDateHeading, formatDateShort, blankMeeting, missingItems, missingCounts, formatMissing, speakers,
     newSpeaker, INVITE_STATUS, KINDS_WITHOUT_PROGRAM, MEETING_KINDS, parseIsoDate, weekIndex, applyWardDefaults,
 } from '../utils/meeting.js';
 
@@ -47,7 +47,8 @@ function draw() {
         <div class="view-head">
             <div>
                 <h2>${escapeHtml(formatDateHeading(d))}</h2>
-                <div class="sub">${done ? (isLocked(m) ? 'Reunião terminada' : 'Reunião terminada, a editar. As alterações guardam-se sozinhas.') : (missing.length ? `Falta ${missing.length}: ${escapeHtml(missing.join(', '))}` : 'Tudo atribuído')}
+                <div class="sub">${done ? (isLocked(m) ? 'Reunião terminada' : 'Reunião terminada, a editar. As alterações guardam-se sozinhas.') : isMusicOnly() ? (missingCounts(m).hymns ? `Falta${missingCounts(m).hymns === 1 ? '' : 'm'} ${escapeHtml(formatMissing(missingCounts(m), 'hymns'))}` : 'Hinos escolhidos')
+                    : (missing.length ? `Falta ${missing.length}: ${escapeHtml(missing.join(', '))}` : 'Tudo atribuído')}
                     &nbsp;·&nbsp; <a href="#domingo/${prev}">‹ ${formatDateShort(prev)}</a> &nbsp; <a href="#domingo/${next}">${formatDateShort(next)} ›</a></div>
             </div>
             <div class="actions">

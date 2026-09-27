@@ -17,11 +17,11 @@ describe('accounts service calls', () => {
 
     test('createAccount posts with the caller token and the ward', async () => {
         global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ user_id: 'n1', email: 'a@b.pt', created: true, password: 'Agenda-abcd-efgh' }) }));
-        const out = await createAccount({ name: 'Ana', email: 'a@b.pt', role: 'music' });
+        const out = await createAccount({ name: 'Ana', login: 'a@b.pt', role: 'music' });
         const [url, opts] = global.fetch.mock.calls[0];
         expect(url).toBe('/api/accounts');
         expect(opts.headers.Authorization).toBe('Bearer tok');
-        expect(JSON.parse(opts.body)).toEqual({ ward_id: 'ward-1', name: 'Ana', email: 'a@b.pt', role: 'music' });
+        expect(JSON.parse(opts.body)).toEqual({ ward_id: 'ward-1', name: 'Ana', login: 'a@b.pt', role: 'music' });
         expect(out.password).toBe('Agenda-abcd-efgh');
     });
 
@@ -33,7 +33,7 @@ describe('accounts service calls', () => {
     test('no session, no call', async () => {
         supabase.auth.getSession = jest.fn(() => Promise.resolve({ data: { session: null } }));
         global.fetch = jest.fn();
-        await expect(createAccount({ name: 'A', email: 'a@b.pt', role: 'viewer' })).rejects.toThrow('Sessão expirada');
+        await expect(createAccount({ name: 'A', login: 'a@b.pt', role: 'viewer' })).rejects.toThrow('Sessão expirada');
         expect(global.fetch).not.toHaveBeenCalled();
     });
 });

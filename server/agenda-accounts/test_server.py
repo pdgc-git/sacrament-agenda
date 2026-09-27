@@ -14,9 +14,16 @@ class TestValidation(unittest.TestCase):
         self.assertEqual(server.validate_create({"ward_id": WARD.upper(), "email": " Ana@Mail.PT ", "name": " Ana   Paula ", "role": "music"}),
                          (WARD, "ana@mail.pt", "Ana Paula", "music"))
 
+    def test_username_becomes_reserved_address(self):
+        self.assertEqual(server.validate_create({"ward_id": WARD, "login": "Ana.Jesus", "name": "Ana", "role": "viewer"})[1],
+                         "ana.jesus@utilizador.agenda.invalid")
+        self.assertEqual(server.display_login("ana.jesus@utilizador.agenda.invalid"), "ana.jesus")
+        self.assertEqual(server.display_login("a@b.pt"), "a@b.pt")
+
     def test_create_rejects_bad_input(self):
         for body in ({"ward_id": "x", "email": "a@b.pt", "name": "A", "role": "viewer"},
-                     {"ward_id": WARD, "email": "not-an-email", "name": "A", "role": "viewer"},
+                     {"ward_id": WARD, "email": "no", "name": "A", "role": "viewer"},
+                     {"ward_id": WARD, "login": "ana jesus", "name": "A", "role": "viewer"},
                      {"ward_id": WARD, "email": "a@b.pt", "name": "", "role": "viewer"},
                      {"ward_id": WARD, "email": "a@b.pt", "name": "A", "role": "owner"}):
             with self.assertRaises(server.ApiError):

@@ -2,9 +2,11 @@
 // the bishopric creates accounts from Administração (accounts service); people sign in, choose their
 // own password on first sign-in, or join another ward by code.
 import { supabase } from './supabase-client.js';
+import { toLoginEmail } from '../utils/login.js';
 
-export async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+// `login` is an e-mail or a username (see utils/login.js).
+export async function signIn(login, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: toLoginEmail(login), password });
     if (error) throw new Error(translateAuthError(error.message));
     return data.user;
 }
@@ -41,7 +43,7 @@ export function onAuthChange(callback) {
 
 export function translateAuthError(message = '') {
     const m = message.toLowerCase();
-    if (m.includes('invalid login credentials')) return 'E-mail ou palavra-passe incorretos.';
+    if (m.includes('invalid login credentials')) return 'Utilizador/e-mail ou palavra-passe incorretos.';
     if (m.includes('email not confirmed')) return 'E-mail ainda não confirmado.';
     if (m.includes('rate limit')) return 'Demasiadas tentativas. Aguarde um minuto.';
     if (m.includes('signups not allowed')) return 'Não há registo público. Peça ao bispado para criar a sua conta.';

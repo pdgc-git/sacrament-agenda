@@ -7,7 +7,7 @@ import { showToast } from '../components/Toast.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats } from '../components/assign.js';
 import {
     MEETING_KINDS, KINDS_WITHOUT_PROGRAM, INVITE_STATUS, sundaysInMonth, formatDateShort, formatMonth,
-    blankMeeting, missingItems, speakers, newSpeaker, balance, hymnNumber, hymnTitle, weekIndex, shiftMonth, applyWardDefaults,
+    blankMeeting, missingItems, speakers, newSpeaker, balance, hymnNumber, hymnTitle, weekIndex, shiftMonth, applyWardDefaults, missingCounts, formatMissing,
 } from '../utils/meeting.js';
 
 let month = ''; // 'YYYY-MM'
@@ -89,9 +89,13 @@ function draw() {
 
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
+// What is left this month, by kind. Música only sees hymns (that's the part they plan).
 function todoHtml() {
-    const n = dates.reduce((acc, d) => acc + missingItems(meetings.get(d)).length, 0);
-    return n === 0 ? 'Tudo atribuído este mês' : `<b>${n}</b> por fechar este mês`;
+    const total = { speakers: 0, prayers: 0, hymns: 0 };
+    dates.forEach(d => { const c = missingCounts(meetings.get(d)); Object.keys(total).forEach(k => { total[k] += c[k]; }); });
+    if (isMusicOnly()) return total.hymns ? `<b>${total.hymns} ${total.hymns === 1 ? 'hino' : 'hinos'}</b> por escolher este mês` : 'Hinos do mês todos escolhidos';
+    const txt = formatMissing(total);
+    return txt ? `Por fechar este mês: <b>${txt}</b>` : 'Tudo atribuído este mês';
 }
 
 function balanceHtml() {
@@ -120,9 +124,11 @@ function weekHtml(m) {
             <div class="wk-off">${escapeHtml(MEETING_KINDS[m.kind])}. Sem reunião sacramental na ala.</div></article>`;
     }
     const missing = missingItems(m);
+    const hymnsLeft = missingCounts(m).hymns;
     const status = done ? `<b>Feita</b>${isLocked(m) && canEdit() ? ` <button type="button" class="link-btn" data-d="${d}" data-act="unlock">Editar</button>` : ''}`
-        : missing.length === 0 ? '<b class="ready">Pronta</b>'
-            : `<b class="miss" title="${escapeHtml(missing.join(', '))}">Falta ${missing.length}</b>`;
+        : isMusicOnly() ? (hymnsLeft ? `<b class="miss">Faltam ${hymnsLeft} ${hymnsLeft === 1 ? 'hino' : 'hinos'}</b>` : '<b class="ready">Hinos prontos</b>')
+            : missing.length === 0 ? '<b class="ready">Pronta</b>'
+                : `<b class="miss" title="${escapeHtml(missing.join(', '))}">Falta ${missing.length}</b>`;
     const bal = balance(speakers(m.program), state.membersById);
     const balTxt = m.kind === 'fast' ? '' : `${bal.men} H, ${bal.women} M${bal.youth ? `, ${bal.youth} ${bal.youth === 1 ? 'jovem' : 'jovens'}` : ''}`;
     return `<article class="wk ${cls} ${isLocked(m) ? 'done' : ''}" data-d="${d}">${header}

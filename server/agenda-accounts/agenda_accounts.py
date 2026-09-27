@@ -5,7 +5,8 @@ Lets a ward's owner/admin create logins and reset passwords from Administração
 the shared GoTrue (it also serves forwartrans-hr) and creating users needs the service-role key,
 which can't live in the browser, so this tiny service holds it. Standard library only.
 
-  POST /api/accounts        {ward_id, email, name, role}  -> {user_id, email, created, password}
+  POST /api/accounts        {ward_id, login, name, role}  -> {user_id, email, login, created, password}
+                            (login = an e-mail, or a username stored as <username>@utilizador.agenda.invalid)
   POST /api/accounts/reset  {ward_id, user_id}            -> {user_id, email, password}
 
 Every call must carry the caller's own access token (Authorization: Bearer ...). The caller must be
@@ -34,6 +35,8 @@ ROLES = {"admin", "editor", "music", "viewer"}
 ADMIN_ROLES = {"owner", "admin"}
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,29}$")
+USERNAME_DOMAIN = "utilizador.agenda.invalid"  # same as js/utils/login.js; .invalid never delivers
 PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no 0/o, 1/l/i: read aloud or typed from a phone
 
 
@@ -51,7 +54,13 @@ def temp_password():
 
 def validate_create(body):
     ward_id = str(body.get("ward_id", "")).strip().lower()
-    email = str(body.get("email", "")).strip().lower()
+    login = str(body.get("login") or body.get("email") or "").strip().lower()
+    if "@" in login:
+        email = login
+    elif USERNAME_RE.match(login):
+        email = f"{login}@{USERNAME_DOMAIN}"
+    else:
+        raise ApiError(400, "Escreva um e-mail ou um nome de utilizador (3 a 30 letras, números, . _ -).")
     name = re.sub(r"\s+", " ", str(body.get("name", "")).strip())
     role = str(body.get("role", "")).strip()
     if not UUID_RE.match(ward_id):
@@ -63,6 +72,11 @@ def validate_create(body):
     if role not in ROLES:
         raise ApiError(400, "Papel inválido.")
     return ward_id, email, name, role
+
+
+def display_login(email):
+    suffix = "@" + USERNAME_DOMAIN
+    return email[: -len(suffix)] if email and email.endswith(suffix) else email
 
 
 def validate_reset(body):
@@ -149,7 +163,7 @@ def create_account(body, token):
                      headers={**REST, "Prefer": "resolution=merge-duplicates,return=minimal"})
     if status not in (200, 201, 204):
         raise ApiError(502, "A conta existe mas não foi possível dar acesso à ala.")
-    return {"user_id": user_id, "email": email, "created": password is not None, "password": password}
+    return {"user_id": user_id, "email": email, "login": display_login(email), "created": password is not None, "password": password}
 
 
 def reset_password(body, token):
@@ -167,7 +181,7 @@ def reset_password(body, token):
     status, _ = call("PUT", f"/auth/v1/admin/users/{user_id}", {"password": password, "user_metadata": meta})
     if status != 200:
         raise ApiError(502, "Não foi possível repor a palavra-passe.")
-    return {"user_id": user_id, "email": user.get("email"), "password": password}
+    return {"user_id": user_id, "email": user.get("email"), "login": display_login(user.get("email")), "password": password}
 
 
 ROUTES = {"/api/accounts": create_account, "/api/accounts/reset": reset_password}

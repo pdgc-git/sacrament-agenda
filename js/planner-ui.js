@@ -7,6 +7,7 @@ import { showToast } from './components/Toast.js';
 import { escapeHtml } from './utils/security.js';
 import { closePicker } from './components/picker.js';
 import { applyStoredTheme, isDark, toggleTheme } from './utils/theme.js';
+import { displayLogin } from './utils/login.js';
 import * as entrada from './views/entrada.js';
 import * as plano from './views/plano.js';
 import * as domingo from './views/domingo.js';
@@ -105,7 +106,7 @@ function renderChrome() {
     document.getElementById('brand-ward').textContent = state.ward?.name || '';
     document.getElementById('brand-role').textContent = roleLabel(state.role);
     document.getElementById('user-box').innerHTML =
-        `${escapeHtml(state.user?.email || '')}<br><button type="button" class="link-btn" id="btn-signout">Sair</button>`;
+        `${escapeHtml(displayLogin(state.user?.email))}<br><button type="button" class="link-btn" id="btn-signout">Sair</button>`;
     document.getElementById('btn-signout').addEventListener('click', () => Auth.signOut());
 
     const tabbar = document.getElementById('tabbar');

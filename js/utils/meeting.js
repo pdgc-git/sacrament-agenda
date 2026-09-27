@@ -197,6 +197,27 @@ export function missingItems(m) {
     return out;
 }
 
+// Same as missingItems, counted by kind: what each role has left to do.
+export function missingCounts(m) {
+    const c = { speakers: 0, prayers: 0, hymns: 0 };
+    if (!m || KINDS_WITHOUT_PROGRAM.has(m.kind)) return c;
+    if (m.kind !== 'fast') speakers(m.program).forEach(s => { if (!s.name || s.invite_status !== 'confirmed') c.speakers++; });
+    if (!m.invocation && !m.invocation_member_id) c.prayers++;
+    if (!m.benediction && !m.benediction_member_id) c.prayers++;
+    ['opening_hymn', 'sacrament_hymn', 'closing_hymn'].forEach(k => { if (!m[k]) c.hymns++; });
+    return c;
+}
+
+// "3 oradores, 1 oração, 2 hinos" (only what is missing); `only` limits it to one kind.
+export function formatMissing(c, only = null) {
+    const parts = [];
+    const add = (n, one, many) => { if (n) parts.push(`${n} ${n === 1 ? one : many}`); };
+    if (!only || only === 'speakers') add(c.speakers, 'orador', 'oradores');
+    if (!only || only === 'prayers') add(c.prayers, 'oração', 'orações');
+    if (!only || only === 'hymns') add(c.hymns, 'hino', 'hinos');
+    return parts.join(', ');
+}
+
 // ── Balance (H · M · jovens) ────────────────────────────────────────────────
 // Given the speakers of one or more meetings and the member roster, count by gender and youth.
 

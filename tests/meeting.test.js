@@ -1,6 +1,6 @@
 import {
     toIsoDate, parseIsoDate, nextSunday, sundaysFrom, formatDateLong, formatAgo, speakersBefore, speakersAfter,
-    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, memberAvailability, applyWardDefaults, newSpeaker,
+    blankMeeting, missingItems, balance, formatBalance, hymnNumber, hymnTitle, buildActivity, memberAvailability, applyWardDefaults, missingCounts, formatMissing, newSpeaker,
 } from '../js/utils/meeting.js';
 
 describe('meeting utils — dates', () => {
@@ -145,5 +145,19 @@ describe('meeting utils — ward defaults on saved meetings', () => {
     test('leaves finished meetings alone', () => {
         const m = applyWardDefaults({ date: '2026-09-20', status: 'completed', presiding: '' }, settings, 0);
         expect(m.presiding).toBe('');
+    });
+});
+
+describe('meeting utils — missing by kind', () => {
+    test('counts speakers not confirmed, prayers and the three required hymns', () => {
+        const m = { kind: 'normal', program: [{ type: 'speaker', name: 'A', invite_status: 'confirmed' }, { type: 'speaker', name: '', invite_status: 'to_ask' }, { type: 'speaker', name: 'B', invite_status: 'asked' }],
+            invocation: 'X', benediction: '', opening_hymn: '2 - Tal Como um Facho', sacrament_hymn: '', closing_hymn: '' };
+        expect(missingCounts(m)).toEqual({ speakers: 2, prayers: 1, hymns: 2 });
+        expect(formatMissing(missingCounts(m))).toBe('2 oradores, 1 oração, 2 hinos');
+        expect(formatMissing(missingCounts(m), 'hymns')).toBe('2 hinos');
+    });
+    test('fast Sundays have no speakers to find; conferences have nothing', () => {
+        expect(missingCounts({ kind: 'fast', program: [{ type: 'speaker', name: '' }] }).speakers).toBe(0);
+        expect(missingCounts({ kind: 'conference' })).toEqual({ speakers: 0, prayers: 0, hymns: 0 });
     });
 });

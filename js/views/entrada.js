@@ -5,6 +5,7 @@ import * as DM from '../dataManager.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { CHAPEL_MARK, NOT_OFFICIAL } from '../components/mark.js';
+import { displayLogin } from '../utils/login.js';
 
 export function render(container, { mode = 'login', user, onJoined, onSignOut }) {
     const tab = mode === 'pending' ? 'pending' : mode === 'setpw' ? 'setpw' : (user ? 'join' : 'login');
@@ -63,7 +64,7 @@ export function render(container, { mode = 'login', user, onJoined, onSignOut })
 function loginHtml() {
     return `
         <form novalidate>
-            <div class="field"><label for="email">E-mail</label><input class="input" id="email" name="email" type="email" autocomplete="username" required></div>
+            <div class="field"><label for="email">E-mail ou utilizador</label><input class="input" id="email" name="email" type="text" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required></div>
             <div class="field"><label for="password">Palavra-passe</label><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
             <div class="auth-error" role="alert"></div>
             <button class="btn primary block" type="submit">Entrar</button>
@@ -73,7 +74,7 @@ function loginHtml() {
 
 function setPasswordHtml(user) {
     return `
-        <p class="center small muted">Sessão: ${escapeHtml(user?.email || '')} · <button type="button" class="link-btn" id="btn-signout">Sair</button></p>
+        <p class="center small muted">Sessão: ${escapeHtml(displayLogin(user?.email))} · <button type="button" class="link-btn" id="btn-signout">Sair</button></p>
         <form novalidate>
             <p class="center" style="margin:14px 0 18px">Entrou com uma palavra-passe temporária. Escolha agora a sua.</p>
             <div class="field"><label for="password">Nova palavra-passe</label><input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
@@ -85,7 +86,7 @@ function setPasswordHtml(user) {
 
 function joinHtml(user) {
     return `
-        <p class="center small muted">Sessão: ${escapeHtml(user?.email || '')} · <button type="button" class="link-btn" id="btn-signout">Sair</button></p>
+        <p class="center small muted">Sessão: ${escapeHtml(displayLogin(user?.email))} · <button type="button" class="link-btn" id="btn-signout">Sair</button></p>
         <form novalidate>
             <div class="field" style="margin-top:14px"><label for="code">Código de convite da ala</label>
                 <input class="input code-input" id="code" name="code" maxlength="8" autocomplete="off" placeholder="8 carateres"></div>
@@ -104,7 +105,7 @@ function joinHtml(user) {
 function pendingHtml(user) {
     return `
         <div class="alert info" style="justify-content:center">Pedido enviado — à espera de aprovação do bispado.</div>
-        <p class="center small muted" style="margin-top:16px">${escapeHtml(user?.email || '')}</p>
+        <p class="center small muted" style="margin-top:16px">${escapeHtml(displayLogin(user?.email))}</p>
         <div class="actions" style="justify-content:center; margin-top:14px">
             <button type="button" class="btn" id="btn-refresh">Verificar de novo</button>
             <button type="button" class="btn" id="btn-signout">Sair</button>

@@ -5,6 +5,7 @@ import { state, canAdmin, reloadSettings } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { setTheme } from '../utils/theme.js';
+import { displayLogin, isUsernameLogin, suggestUsername } from '../utils/login.js';
 
 const ROLE_LABELS = { owner: 'Proprietário', admin: 'Bispado', editor: 'Editor', music: 'Música (só hinos)', viewer: 'Leitor (só ver)' };
 let root = null;
@@ -47,7 +48,7 @@ function draw() {
                     ${pending.length === 0 ? '<div class="empty-note">Sem pedidos.</div>' : ''}
                     ${pending.map(u => `<div class="approval-row" data-uid="${u.user_id}">
                         <div class="avatar">${escapeHtml(initials(u.name || u.email))}</div>
-                        <div class="meta"><div class="name">${escapeHtml(u.name || u.email || u.user_id)}</div><div class="sub">${escapeHtml(u.email || '')} · pedido ${escapeHtml(formatAgoTs(u.joined_at))}</div></div>
+                        <div class="meta"><div class="name">${escapeHtml(u.name || displayLogin(u.email) || u.user_id)}</div><div class="sub">${escapeHtml(displayLogin(u.email))} · pedido ${escapeHtml(formatAgoTs(u.joined_at))}</div></div>
                         <select class="input" style="width:auto; padding:6px 8px" data-role>
                             ${['editor', 'admin', 'music', 'viewer'].map(r => `<option value="${r}">${ROLE_LABELS[r]}</option>`).join('')}</select>
                         <button type="button" class="btn ok tiny" data-act="approve">Aprovar</button>
@@ -58,7 +59,8 @@ function draw() {
                 ${canAdmin() ? `<form class="card" id="account-form">
                     <div class="section-label" style="margin-bottom:10px">Criar conta</div>
                     <div class="field"><label for="a-name">Nome</label><input class="input" id="a-name" name="name" autocomplete="off" required></div>
-                    <div class="field"><label for="a-email">E-mail</label><input class="input" id="a-email" name="email" type="email" autocomplete="off" required></div>
+                    <div class="field"><label for="a-login">Utilizador ou e-mail</label><input class="input" id="a-login" name="login" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="ana.jesus ou ana@mail.pt" required>
+                        <span class="small muted">Sem e-mail? Um nome de utilizador chega (sugerido a partir do nome).</span></div>
                     <div class="field"><label for="a-role">Papel</label><select class="input" id="a-role" name="role">
                         ${['editor', 'admin', 'music', 'viewer'].map(r => `<option value="${r}">${ROLE_LABELS[r]}</option>`).join('')}</select></div>
                     <div class="actions" style="justify-content:flex-end"><button type="submit" class="btn primary">Criar conta</button></div>
@@ -74,7 +76,7 @@ function draw() {
                 <div class="card">
                     <div class="section-label" style="margin-bottom:6px">Acessos</div>
                     ${active.map(u => `<div class="row-kv" data-uid="${u.user_id}">
-                        <span class="v" style="font-weight:400">${escapeHtml(u.name || u.email || u.user_id)}</span>
+                        <span class="v" style="font-weight:400">${escapeHtml(u.name || displayLogin(u.email) || u.user_id)}${u.name ? ` <span class="muted small">${escapeHtml(displayLogin(u.email))}</span>` : ''}</span>
                         ${u.role === 'owner' || !canAdmin()
                             ? `<span class="badge ${u.role === 'owner' ? 'owner' : ''}">${ROLE_LABELS[u.role]}</span>`
                             : `<select class="input" style="width:auto; padding:4px 8px" data-setrole>${['admin', 'editor', 'music', 'viewer'].map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}</select>
@@ -94,7 +96,14 @@ function draw() {
 
     const wrap = root.querySelector('#adm-root');
     wrap.querySelector('#settings-form').addEventListener('submit', saveSettings);
-    wrap.querySelector('#account-form')?.addEventListener('submit', createAccount);
+    const accForm = wrap.querySelector('#account-form');
+    accForm?.addEventListener('submit', createAccount);
+    // Suggest a username from the name until the field is typed in by hand.
+    accForm?.name.addEventListener('input', () => {
+        if (accForm.login.dataset.touched) return;
+        accForm.login.value = suggestUsername(accForm.name.value);
+    });
+    accForm?.login.addEventListener('input', () => { accForm.login.dataset.touched = '1'; });
     wrap.addEventListener('click', onClick);
     wrap.addEventListener('change', onChange);
 }
@@ -104,14 +113,15 @@ function credentialsHtml(c) {
         <div class="section-label" style="margin-bottom:8px">${c.reset ? 'Palavra-passe reposta' : c.created ? 'Conta criada' : 'Acesso dado'}</div>
         <p class="small" style="margin:0 0 10px">${c.password
             ? 'Envie esta mensagem à pessoa (WhatsApp, SMS…). A palavra-passe só aparece agora.'
-            : `${escapeHtml(c.email)} já tinha conta: entra com a palavra-passe que já usa.`}</p>
+            : `${escapeHtml(displayLogin(c.email))} já tinha conta: entra com a palavra-passe que já usa.`}</p>
         <pre class="creds-msg" id="creds-msg">${escapeHtml(credentialsMessage(c))}</pre>
         <div class="actions" style="justify-content:flex-end"><button type="button" class="btn tiny" id="btn-creds-close">Fechar</button><button type="button" class="btn primary tiny" id="btn-creds-copy">Copiar mensagem</button></div>
     </div>`;
 }
 
 export function credentialsMessage(c, url = location.origin + '/planner.html', ward = state.ward?.name || '') {
-    const lines = [`Olá, ${c.name}. Já tem acesso à Agenda Sacramental da ${ward}.`, '', `Entre em: ${url}`, `E-mail: ${c.email}`];
+    const who = isUsernameLogin(c.email) ? `Utilizador: ${displayLogin(c.email)}` : `E-mail: ${c.email}`;
+    const lines = [`Olá, ${c.name}. Já tem acesso à Agenda Sacramental da ${ward}.`, '', `Entre em: ${url}`, who];
     if (c.password) lines.push(`Palavra-passe temporária: ${c.password}`, '', 'Na primeira entrada vai escolher a sua palavra-passe.');
     else lines.push('Use a palavra-passe que já tem.');
     return lines.join('\n');
@@ -124,7 +134,7 @@ async function createAccount(ev) {
     btn.disabled = true;
     try {
         const name = f.name.value.trim();
-        const out = await DM.createAccount({ name, email: f.email.value.trim(), role: f.role.value });
+        const out = await DM.createAccount({ name, login: f.login.value.trim(), role: f.role.value });
         lastCredentials = { name, email: out.email, password: out.password, created: out.created };
         users = await DM.getWardUsers(); draw();
         showToast(out.created ? 'Conta criada.' : 'Acesso dado.', 'success');
