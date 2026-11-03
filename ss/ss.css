@@ -1,0 +1,60 @@
+/* Sociedade de Socorro test page — only what planner.css doesn't already have. */
+.ss-banner { background: var(--accent); color: var(--on-accent); font-size: 12.5px; font-weight: 700; padding: 6px 16px; display: flex; justify-content: center; align-items: center; gap: 8px 18px; flex-wrap: wrap; }
+.ss-banner select { font-size: 12.5px; font-weight: 700; padding: 3px 6px; border: none; border-radius: var(--radius); background: var(--card); color: var(--ink); margin-left: 4px; }
+.sidebar { height: auto; min-height: 100vh; }
+.ss-stack { display: flex; flex-direction: column; gap: 12px; }
+.ss-task { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--accent); padding: 14px 16px; text-decoration: none; color: var(--ink); }
+.ss-task span { grid-column: 1; font-size: 13px; color: var(--ink-faint); }
+.ss-task i { grid-row: 1 / 3; grid-column: 2; align-self: center; font-style: normal; font-size: 22px; color: var(--link); }
+.ss-task:hover b { color: var(--link); }
+.ss-total { text-align: right; line-height: 1; }
+.ss-total b { font-size: 34px; font-weight: 900; display: block; }
+.ss-total span { font-size: 12px; color: var(--ink-faint); }
+.ss-zone { font-size: 12px; font-weight: 800; color: var(--ink-soft); padding: 14px 0 4px; border-bottom: 1px solid var(--rule); }
+.tog.present.on { background: var(--ok); }
+.abs-row:disabled { cursor: default; }
+.ss-savebar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; background: var(--paper); border-top: 1px solid var(--rule); margin-top: 10px; z-index: 5; }
+.ss-grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+.ss-bars { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding-top: 18px; }
+.ss-bars .bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; min-width: 0; }
+.ss-bars .bar span { width: 100%; background: var(--accent); opacity: .85; min-height: 2px; }
+.ss-bars .bar em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--ink-soft); order: -1; margin-bottom: 2px; }
+.ss-bars .bar small { font-size: 10px; color: var(--ink-faint); margin-top: 4px; white-space: nowrap; overflow: hidden; max-width: 100%; }
+select.input.ss-inline { display: inline-block; width: auto; padding: 2px 6px; font-size: 13px; }
+.view-head .sub a { color: var(--link); text-decoration: none; font-weight: 600; }
+.shell { overflow-x: clip; }
+.ss-msg.sent { opacity: .6; }
+.ss-text { display: block; white-space: pre-line; color: var(--ink-soft); font-size: 14px; margin: 6px 0 12px; }
+.ss-text.small { font-size: 12.5px; margin: 4px 0 0; }
+.ss-alert-card { border-left: 3px solid var(--bad); margin-bottom: 12px; }
+.ss-bday { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.ss-bday:last-child { border-bottom: none; }
+.ss-bday.today { background: color-mix(in srgb, var(--accent) 6%, transparent); margin: 0 -18px; padding: 12px 18px; }
+.ss-bday .when { width: 40px; flex: none; text-align: center; line-height: 1.1; }
+.ss-bday .when b { display: block; font-size: 22px; font-weight: 900; }
+.ss-bday .when span { font-size: 11px; color: var(--ink-faint); }
+.ss-bday .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ss-bday .actions { flex: none; justify-content: flex-end; }
+.ss-table tr.open td { background: var(--accent-wash); }
+.ss-edit td { background: var(--accent-wash); }
+.ss-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 14px; padding: 6px 0 10px; }
+.ss-form label { font-size: 12px; font-weight: 600; color: var(--ink-soft); display: flex; flex-direction: column; gap: 4px; }
+.ss-h3 { font-size: 18px; font-weight: 900; margin: 26px 0 10px; }
+.ss-pairs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.ss-settings { display: flex; flex-direction: column; gap: 14px; }
+.ss-settings .lbl { margin-top: 10px; }
+.ss-settings textarea { width: 100%; resize: vertical; line-height: 1.45; }
+.ss-list { margin: 0 0 10px; padding-left: 18px; font-size: 14px; color: var(--ink-soft); }
+.ss-list li { margin: 3px 0; }
+
+@media (max-width: 760px) {
+    .ss-grid2 { grid-template-columns: 1fr; }
+    .ss-bday { flex-wrap: wrap; }
+    .ss-bday .actions { width: 100%; padding-left: 54px; justify-content: flex-start; }
+    .ss-bday.today { margin: 0 -18px; }
+    .ss-savebar { bottom: 52px; }
+    .tabbar { overflow-x: auto; scrollbar-width: none; }
+    .tabbar .t { flex: none; padding: 11px 12px 12px; font-size: 11.5px; text-decoration: none; }
+    .ss-bars .bar:nth-child(-n+4) { display: none; }
+    .ss-banner span { display: none; }
+}

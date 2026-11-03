@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="data:,">
+    <title>Sociedade de Socorro — teste</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../planner.css">
+    <link rel="stylesheet" href="ss.css">
+</head>
+
+<body>
+    <div class="ss-banner"><span>Versão de teste · dados fictícios, só neste navegador</span><label>Ver como <select id="role-select"></select></label></div>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <svg class="glyph" viewBox="0 0 40 40" aria-hidden="true">
+                    <rect width="40" height="40" />
+                    <g fill="none" stroke-width="1.8" stroke-linejoin="round">
+                        <path d="M20 5 L24 14 V18 H16 V14 Z" />
+                        <path d="M9 34 V21 L20 16 L31 21 V34 Z" />
+                        <path d="M17.5 34 V28 a2.5 2.5 0 0 1 5 0 V34" />
+                        <path d="M6 34 H34" />
+                    </g>
+                </svg>
+                <div>
+                    <div class="app">Sociedade de Socorro</div>
+                    <div class="ward">Ala de teste</div>
+                    <div class="role" id="brand-role"></div>
+                </div>
+            </div>
+            <nav id="nav"></nav>
+        </aside>
+        <div class="main-col">
+            <button type="button" class="theme-btn" id="theme-btn" aria-label="Mudar tema" title="Mudar tema">
+                <svg class="i-moon" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M15.5 12.5 A6.5 6.5 0 0 1 7.5 4.5 A6.5 6.5 0 1 0 15.5 12.5 Z" /></svg>
+                <svg class="i-sun" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="3.5" /><path d="M10 2 V4 M10 16 V18 M2 10 H4 M16 10 H18 M4.3 4.3 L5.7 5.7 M14.3 14.3 L15.7 15.7 M4.3 15.7 L5.7 14.3 M14.3 5.7 L15.7 4.3" /></svg>
+            </button>
+            <main id="view"></main>
+            <p class="notice">Esta aplicação não é um site oficial de A Igreja de Jesus Cristo dos Santos dos Últimos Dias
+                e não é gerida nem aprovada pela Igreja. É uma ferramenta de planeamento para uso interno da ala.</p>
+        </div>
+        <nav class="tabbar" id="tabbar"></nav>
+    </div>
+    <script type="module" src="ss.js"></script>
+</body>
+
+</html>
