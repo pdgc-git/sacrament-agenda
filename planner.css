@@ -342,6 +342,12 @@ textarea.input { resize: vertical; min-height: 60px; }
 .kind-select { font-size: 12.5px; padding: 4px 6px; border-radius: var(--radius); border: 1px solid var(--rule-strong); background: var(--card); color: var(--ink); width: auto; }
 .topic-input { font-size: 12px; border: none; border-bottom: 1px dashed var(--rule-strong); background: transparent; padding: 1px 0; width: 100%; color: var(--ink-soft); font-style: italic; }
 .topic-input:focus { outline: none; border-bottom-color: var(--link); }
+textarea.topic-input { display: block; resize: none; overflow: hidden; font-family: inherit; line-height: 1.4; field-sizing: content; min-height: 0; }
+.spk-actions { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px; font-size: 11.5px; }
+.spk-actions a, .spk-actions .link-btn { font-size: 11.5px; font-weight: 600; color: var(--link); text-decoration: none; padding: 2px 0; background: none; border: none; }
+.spk-actions a:hover, .spk-actions .link-btn:hover { text-decoration: underline; }
+.wk .spk .spk-actions { margin-left: 18px; }
+.topic a { color: var(--link); text-decoration: none; font-style: normal; }
 .status-menu { display: flex; gap: 2px; margin-top: 3px; align-items: center; flex-wrap: wrap; }
 .status-menu .small { margin-right: 4px; white-space: nowrap; color: var(--ink-faint); font-size: 11.5px; }
 .status-menu button { padding: 3px; border-radius: var(--radius); border: 1px solid transparent; background: none; line-height: 0; }

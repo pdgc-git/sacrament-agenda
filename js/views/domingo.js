@@ -7,6 +7,7 @@ import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
 import { renderAgendaHtml } from '../render-agenda.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats, HYMN_LABELS } from '../components/assign.js';
+import { speakerExtrasHtml, topicReadHtml, autosizeTopics, topicEdited, askLink, sendInvite } from '../components/speaker-extras.js';
 import {
     nextSunday, toIsoDate, formatDateHeading, formatDateShort, blankMeeting, missingItems, missingCounts, formatMissing, speakers,
     newSpeaker, INVITE_STATUS, KINDS_WITHOUT_PROGRAM, MEETING_KINDS, parseIsoDate, weekIndex, applyWardDefaults,
@@ -129,6 +130,7 @@ function wire() {
     wrap.addEventListener('input', onInput);
     wrap.addEventListener('change', ev => { if (ev.target.dataset.f === 'kind') { m.kind = ev.target.value; redrawLists(); refreshPreview(); save(); } });
     wrap.addEventListener('click', onClick);
+    autosizeTopics(wrap);
 }
 
 function shiftDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
@@ -171,11 +173,11 @@ function programRows(editable, hymnsEditable = editable) {
                     ${pickBtn(editable, 'pick-spk', `data-i="${i}"`, s.name ? '' : 'warn', `<i class="st ${st}" title="${INVITE_STATUS[st]}"></i>${escapeHtml(s.name || 'por atribuir')}`)}
                     ${editable ? `<button type="button" class="x" data-act="rm-spk" data-i="${i}" title="Remover orador" aria-label="Remover orador">✕</button>` : ''}
                 </span>
-                ${editable && s.name ? `<input class="topic-input" data-f="topic" data-i="${i}" value="${escapeHtml(s.topic || '')}" placeholder="tema">
+                ${editable && s.name ? `${speakerExtrasHtml(s, i)}
                     <div class="status-menu"><span class="muted small">${INVITE_STATUS[st]}</span>${Object.entries(INVITE_STATUS).map(([k, label]) =>
                         `<button type="button" class="${st === k ? 'on' : ''}" data-act="status" data-i="${i}" data-v="${k}" title="${label}" aria-label="${label}"><i class="st ${k}"></i></button>`).join('')}
                         <button type="button" class="link-btn" data-act="move" data-i="${i}">${s.position === 'after' ? '↑ antes do hino' : '↓ depois do hino'}</button></div>`
-                    : (s.topic ? `<span class="topic">${escapeHtml(s.topic)}</span>` : '')}
+                    : topicReadHtml(s)}
             </span></div>`;
     };
     let html = sp.filter(s => (s.position || 'before') === 'before').map(row).join('');
@@ -220,6 +222,7 @@ function onInput(ev) {
         m[el.dataset.list][Number(el.dataset.i)][el.dataset.f] = el.value;
     } else if (el.dataset.f === 'topic') {
         speakers(m.program)[Number(el.dataset.i)].topic = el.value;
+        topicEdited(el);
     } else if (el.dataset.f === 'kind') {
         return;
     } else if (el.dataset.f) {
@@ -259,6 +262,12 @@ function onClick(ev) {
         case 'rm-spk': removeSpeaker(m, i); changed(); break;
         case 'move': { const sp = speakers(m.program)[i]; sp.position = sp.position === 'after' ? 'before' : 'after'; changed(); break; }
         case 'status': setInviteStatus(m, i, act.dataset.v); changed(); break;
+        case 'set-link': if (askLink(speakers(m.program)[i])) changed(); break;
+        case 'invite': {
+            const sp = speakers(m.program)[i];
+            sendInvite(sp, m.date).then(sent => { if (sent && (sp.invite_status || 'to_ask') === 'to_ask') { setInviteStatus(m, i, 'asked'); changed(); } });
+            break;
+        }
         case 'pick-prayer': pickPrayer(m, act.dataset.k, act, changed); break;
         case 'pick-hymn': pickHymn(m, act.dataset.k, act, changed); break;
     }

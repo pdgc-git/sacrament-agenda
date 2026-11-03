@@ -4,6 +4,7 @@ import * as DM from '../dataManager.js';
 import { state, canEdit, canEditMeeting, canEditMeetingHymns, isLocked, isMusicOnly, unlockMeeting, cacheMeetings, reloadStats } from '../app-state.js';
 import { escapeHtml } from '../utils/security.js';
 import { showToast } from '../components/Toast.js';
+import { speakerExtrasHtml, topicReadHtml, autosizeTopics, topicEdited, askLink, sendInvite } from '../components/speaker-extras.js';
 import { pickSpeaker, pickPrayer, pickHymn, addSpeaker, removeSpeaker, setInviteStatus, hymnRepeats } from '../components/assign.js';
 import {
     MEETING_KINDS, KINDS_WITHOUT_PROGRAM, INVITE_STATUS, sundaysInMonth, formatDateShort, formatMonth,
@@ -84,6 +85,7 @@ function draw() {
     weeks.addEventListener('click', onGridClick);
     weeks.addEventListener('change', onGridChange);
     weeks.addEventListener('input', onGridInput);
+    autosizeTopics(weeks);
     root.querySelector('#month-select').addEventListener('change', ev => { location.hash = '#plano/' + ev.target.value; });
 }
 
@@ -178,10 +180,10 @@ function speakerHtml(m, s, i, editable) {
             ${editable ? removeBtn(m, i) : ''}
         </div>
         ${editable
-            ? `<input class="topic-input" data-d="${m.date}" data-f="topic" data-i="${i}" value="${escapeHtml(s.topic || '')}" placeholder="tema" aria-label="Tema">
+            ? `${speakerExtrasHtml(s, i, `data-d="${m.date}"`)}
                <div class="status-menu"><span class="small">${INVITE_STATUS[st]}</span>${Object.entries(INVITE_STATUS).map(([k, label]) =>
                 `<button type="button" class="${st === k ? 'on' : ''}" data-d="${m.date}" data-act="status" data-i="${i}" data-v="${k}" title="${label}" aria-label="${label}"><i class="st ${k}"></i></button>`).join('')}</div>`
-            : (s.topic ? `<span class="topic">${escapeHtml(s.topic)}</span>` : '')}
+            : topicReadHtml(s)}
     </div>`;
 }
 
@@ -250,6 +252,13 @@ function onGridClick(ev) {
         pickSpeaker(m, target, rowCell(m.date, target), changed, mb());
     } else if (act === 'pick-spk') {
         pickSpeaker(m, i, btn, changed, mb());
+    } else if (act === 'set-link') {
+        if (askLink(speakers(m.program)[i])) changed();
+    } else if (act === 'invite') {
+        const s = speakers(m.program)[i];
+        sendInvite(s, m.date).then(sent => {
+            if (sent && (s.invite_status || 'to_ask') === 'to_ask') { setInviteStatus(m, i, 'asked'); changed(); }
+        });
     } else if (act === 'status') {
         setInviteStatus(m, i, btn.dataset.v);
         changed();
@@ -273,7 +282,7 @@ function onGridInput(ev) {
     const el = ev.target;
     if (!el.classList.contains('topic-input') && !el.classList.contains('dirige-input')) return;
     const m = meetings.get(el.dataset.d);
-    if (el.dataset.f === 'topic') speakers(m.program)[Number(el.dataset.i)].topic = el.value;
+    if (el.dataset.f === 'topic') { speakers(m.program)[Number(el.dataset.i)].topic = el.value; topicEdited(el); }
     else m[el.dataset.f] = el.value;
     save(m, 900);
 }
@@ -287,7 +296,9 @@ function redrawRow(m) {
     if (!el) return;
     const tmp = document.createElement('div');
     tmp.innerHTML = weekHtml(m);
-    el.replaceWith(tmp.firstElementChild);
+    const fresh = tmp.firstElementChild;
+    el.replaceWith(fresh);
+    autosizeTopics(fresh);
     root.querySelector('#plan-todo').innerHTML = todoHtml();
     root.querySelector('#plan-balance').innerHTML = balanceHtml();
 }
