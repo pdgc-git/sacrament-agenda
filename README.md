@@ -2,7 +2,7 @@
 
 A web-based tool to easily create, preview, and print agendas for LDS (Church of Jesus Christ of Latter-day Saints) Sacrament Meetings.
 
-**Status (2026-09-28):** v2 on branch `v2-supabase` (HEAD `4fc89be`, unpushed), **live at https://agenda.89-58-18-212.nip.io** and in real use by Ala Benfica: style "Semanas, capela", Sunday-column Plano, rotation picker, roles (Bispado/Editor/Música só hinos/Leitor só ver), accounts created from Administração via `server/agenda-accounts`, username logins. **Next:** Paulo's feedback, push, domain decision, Phase 4 cleanup (Firebase files, Netlify, smoke ward).
+**Status (2026-11-03):** v2 on `main` (= `v2-supabase`, `ff72148`, pushed), **live at https://agenda.89-58-18-212.nip.io** and in real use by Ala Benfica: style "Semanas, capela", Sunday-column Plano, rotation picker, roles (Bispado/Editor/Música só hinos/Leitor só ver), accounts from Administração via `server/agenda-accounts`, username logins, speaker topic link + invite message. **Relief Society test page** at `/ss/` (standalone, fictitious data in the browser). **Next:** feedback on `/ss/` from the SS presidency, domain decision, Phase 4 cleanup (Firebase files, Netlify, smoke ward).
 
 ## Features
 
